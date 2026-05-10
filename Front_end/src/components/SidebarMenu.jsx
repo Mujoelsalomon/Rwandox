@@ -7,8 +7,7 @@ const sidebarItems = [
   { label: 'Patient Records', to: '/patients', icon: 'user' },
   { label: 'Prediction History', to: '/prediction-history', icon: 'history' },
   { label: 'Model Performance', to: '/train', icon: 'barChart' },
-  { label: 'Alerts', icon: 'bell' },
-  { label: 'Settings', icon: 'settings' },
+  { label: 'Settings', to: '/settings', icon: 'settings' },
 ]
 
 export default function SidebarMenu({ isOpen, onNavigate }) {
@@ -18,12 +17,12 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
     <aside
       className={`shrink-0 transition-all duration-300 ${
         isOpen
-          ? 'fixed bottom-[57px] left-0 right-0 top-[73px] z-40 w-full overflow-y-auto px-3 py-3 sm:px-4 lg:static lg:h-full lg:w-[292px] lg:overflow-hidden lg:py-4'
-          : 'hidden w-full px-3 py-0 sm:px-4 lg:block lg:h-full lg:w-[92px] lg:overflow-hidden lg:py-4'
+          ? 'fixed bottom-[57px] left-0 right-0 top-[73px] z-40 w-full overflow-y-auto bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)] sm:p-4 lg:static lg:h-full lg:w-[292px] lg:overflow-hidden lg:p-3'
+          : 'hidden w-full bg-gradient-to-b from-[#06295e] to-[#001b42] p-0 shadow-[0_18px_38px_rgba(4,23,58,0.22)] lg:block lg:h-full lg:w-[92px] lg:overflow-hidden lg:p-3'
       }`}
     >
-      <div className="flex h-full min-h-0 flex-col rounded-[12px] bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)]">
-        <nav className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:block lg:space-y-2">
+      <div className="flex h-full min-h-0 flex-col">
+        <nav className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-col lg:space-y-2 lg:overflow-y-auto">
           {sidebarItems.map((item) => (
             item.to ? (
               <Link
@@ -47,20 +46,20 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
                 key={item.label}
                 title={item.label}
                 onClick={onNavigate}
-                className={`flex h-12 items-center rounded-[8px] px-3 text-[14px] font-semibold transition sm:h-14 sm:text-[15px] lg:h-[60px] lg:px-4 lg:text-[16px] ${
+                className={`flex h-12 min-w-0 cursor-pointer items-center rounded-[8px] px-3 text-[14px] font-semibold transition sm:h-14 sm:text-[15px] lg:h-[60px] lg:px-4 lg:text-[16px] ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
                 } ${
                   'text-white hover:bg-[#0d3c78]'
                 }`}
               >
                 <Icon name={item.icon} className="h-6 w-6 shrink-0 lg:h-7 lg:w-7" />
-                <span className={`truncate ${isOpen ? 'block' : 'lg:hidden'}`}>{item.label}</span>
+                <span className={`min-w-0 truncate ${isOpen ? 'block' : 'lg:hidden'}`}>{item.label}</span>
               </div>
             )
           ))}
         </nav>
 
-        <div className={`mt-3 hidden rounded-[8px] bg-[#0c438c] p-4 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] lg:mt-auto ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
+        <div className={`mt-3 hidden shrink-0 rounded-[8px] bg-[#0c438c] p-4 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 overflow-hidden rounded-full bg-[#dbe6f5]">
               <div className="flex h-full w-full items-end justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">

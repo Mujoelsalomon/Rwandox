@@ -2,28 +2,52 @@ import React, { useEffect, useRef, useState } from 'react'
 
 export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
-  const [notificationCount] = useState(0)
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false)
+  const [notificationBellRinging, setNotificationBellRinging] = useState(false)
+  const [notifications, setNotifications] = useState([])
   const profileMenuRef = useRef(null)
+  const notificationMenuRef = useRef(null)
 
   useEffect(() => {
     function handleClickOutside(event) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setProfileMenuOpen(false)
       }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target)) {
+        setNotificationMenuOpen(false)
+      }
     }
 
     function handleEscape(event) {
       if (event.key === 'Escape') {
         setProfileMenuOpen(false)
+        setNotificationMenuOpen(false)
       }
+    }
+
+    function handleAppNotification(event) {
+      const message = event.detail?.message || 'New notification'
+      const type = event.detail?.type || 'info'
+      setNotifications((items) => [
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          message,
+          type,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+        ...items,
+      ])
+      setNotificationMenuOpen(true)
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
+    window.addEventListener('app-notification', handleAppNotification)
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
+      window.removeEventListener('app-notification', handleAppNotification)
     }
   }, [])
 
@@ -39,7 +63,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
               Clinical ML
             </span>
             <span className="hidden max-w-[230px] truncate text-[11px] font-extrabold text-[#225000] sm:block md:max-w-none md:text-[12px]">
-              Kibagabaga Level Two Teaching Hospital
+             Post-op Oxygen Requirement Prediction 
             </span>
           </div>
           <button
@@ -54,23 +78,65 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
         </div>
 
         <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-3 md:gap-5">
-          <button
-            type="button"
-            aria-label="Notifications"
-            onClick={() => {
-              if (notificationCount === 0) {
-                window.alert('No notification !')
-              }
-            }}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#172a53] transition hover:bg-[#f2f6fc] sm:h-10 sm:w-10"
-          >
-            <Icon name="bell" className="h-5 w-5 sm:h-6 sm:w-6" />
-            {notificationCount > 0 && (
-              <span className="absolute right-0.5 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1768f2] px-1 text-[11px] font-bold text-white sm:right-1">
-                {notificationCount}
-              </span>
+          <div ref={notificationMenuRef} className="relative">
+            <button
+              type="button"
+              aria-label="Notifications"
+              aria-expanded={notificationMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => {
+                setNotificationBellRinging(true)
+                window.setTimeout(() => setNotificationBellRinging(false), 650)
+                setNotificationMenuOpen((open) => !open)
+              }}
+              className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#172a53] transition hover:bg-[#f2f6fc] sm:h-10 sm:w-10"
+            >
+              <Icon
+                name="bell"
+                className={`h-5 w-5 sm:h-6 sm:w-6 ${notificationBellRinging ? 'animate-[bell-ring_0.65s_ease-in-out]' : ''}`}
+              />
+              {notifications.length > 0 && (
+                <span className="absolute right-0.5 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1768f2] px-1 text-[11px] font-bold text-white sm:right-1">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
+
+            {notificationMenuOpen && (
+              <div
+                role="menu"
+                className="fixed left-2 right-2 top-[66px] max-h-[calc(100vh-84px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-2 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-auto sm:right-24 sm:top-[74px] sm:w-[360px] md:absolute md:left-auto md:right-0 md:top-[54px]"
+              >
+                <div className="flex items-center justify-between border-b border-[#edf2f8] px-4 pb-2">
+                  <p className="text-[14px] font-extrabold text-[#14234a]">Notifications</p>
+                  {notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setNotifications([])}
+                      className="text-[12px] font-bold text-[#1768f2] hover:text-[#0f4eb2]"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <p className="px-4 py-5 text-[14px] text-[#526383]">No notifications yet.</p>
+                ) : (
+                  <div className="py-1">
+                    {notifications.map((item) => (
+                      <div key={item.id} className="flex gap-3 px-4 py-3 hover:bg-[#f6f9fd]">
+                        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getNotificationDotClass(item.type)}`} />
+                        <div className="min-w-0">
+                          <p className="break-words text-[14px] font-bold leading-5 text-[#14234a]">{item.message}</p>
+                          <p className="mt-0.5 text-[12px] text-[#526383]">{item.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
-          </button>
+          </div>
 
           <div ref={profileMenuRef} className="relative">
             <button
@@ -106,6 +172,16 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
           </div>
         </div>
       </div>
+      <style>{`
+        @keyframes bell-ring {
+          0%, 100% { transform: rotate(0deg); }
+          15% { transform: rotate(18deg); }
+          30% { transform: rotate(-16deg); }
+          45% { transform: rotate(12deg); }
+          60% { transform: rotate(-8deg); }
+          75% { transform: rotate(4deg); }
+        }
+      `}</style>
     </header>
   )
 }
@@ -123,6 +199,13 @@ function MenuAction({ icon, title, detail, bordered = false }) {
       </div>
     </button>
   )
+}
+
+function getNotificationDotClass(type) {
+  if (type === 'error') return 'bg-[#ef4444]'
+  if (type === 'success') return 'bg-[#22c55e]'
+  if (type === 'warning') return 'bg-[#facc15]'
+  return 'bg-[#1768f2]'
 }
 
 function Icon({ name, className = '' }) {

@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+function notify(message, type = 'info') {
+  window.dispatchEvent(new CustomEvent('app-notification', { detail: { message, type } }))
+}
+
 export default function TrainingPortal() {
   const [file, setFile] = useState(null)
   const [target, setTarget] = useState('')
@@ -30,7 +34,7 @@ export default function TrainingPortal() {
 
   async function uploadAndStart() {
     if (!file) {
-      alert('Choose a dataset file first')
+      notify('Choose a dataset file first', 'warning')
       return
     }
 
@@ -66,7 +70,9 @@ export default function TrainingPortal() {
     } catch (e) {
       console.error(e)
       setTrainingLoading(false)
-      setTrainingNotice(e.message || 'Could not start training.')
+      const message = e.message || 'Could not start training.'
+      setTrainingNotice(message)
+      notify(message, 'error')
     }
   }
 
@@ -79,11 +85,12 @@ export default function TrainingPortal() {
       if (j.status === 'completed' || j.status === 'failed') {
         clearInterval(iv)
         setTrainingLoading(false)
-        setTrainingNotice(
+        const message =
           j.status === 'completed'
             ? 'Training is done. The new model is available.'
             : `Training failed${j.error ? `: ${j.error}` : '.'}`
-        )
+        setTrainingNotice(message)
+        notify(message, j.status === 'completed' ? 'success' : 'error')
         fetchModels()
       }
     }, 1000)
@@ -99,13 +106,13 @@ export default function TrainingPortal() {
       })
       const data = await resp.json()
       if (!resp.ok) {
-        alert(data.error || 'Could not activate model')
+        notify(data.error || 'Could not activate model', 'error')
         return
       }
       fetchModels()
     } catch (e) {
       console.error(e)
-      alert('Could not activate model')
+      notify('Could not activate model', 'error')
     } finally {
       setActivatingId(null)
     }
