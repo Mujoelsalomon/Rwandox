@@ -1,0 +1,236 @@
+{% extends 'base.html' %} {% block title %}Dashboard{% endblock %} {% block
+content %}
+<style>
+  .dashboard-metrics {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .metric-card {
+    background: #fff;
+    border: 1px solid #dbe5f1;
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(13, 28, 61, 0.07);
+    min-width: 0;
+    padding: 22px;
+  }
+
+  .metric-card-top {
+    align-items: flex-start;
+    display: flex;
+    gap: 18px;
+  }
+
+  .metric-icon {
+    align-items: center;
+    border-radius: 999px;
+    color: #fff;
+    display: flex;
+    flex: 0 0 auto;
+    height: 58px;
+    justify-content: center;
+    width: 58px;
+  }
+
+  .metric-icon svg {
+    height: 30px;
+    width: 30px;
+  }
+
+  .metric-icon.blue {
+    background: #1768f2;
+  }
+
+  .metric-icon.green {
+    background: #31b966;
+  }
+
+  .metric-icon.orange {
+    background: #ff9f12;
+  }
+
+  .metric-icon.purple {
+    background: #8b5cf6;
+  }
+
+  .metric-label {
+    color: #071b49;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  .metric-value {
+    color: #071b49;
+    font-size: 36px;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: 10px;
+  }
+
+  .metric-subtitle {
+    color: #53668a;
+    font-size: 15px;
+    line-height: 1.45;
+    margin-top: 10px;
+  }
+
+  .metric-footer {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+    margin-top: 24px;
+    padding-left: 76px;
+  }
+
+  .metric-pill {
+    border-radius: 7px;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 8px 10px;
+  }
+
+  .metric-pill.blue {
+    background: #eaf2ff;
+    color: #1768f2;
+  }
+
+  .metric-pill.green {
+    background: #eaf8ef;
+    color: #15984d;
+  }
+
+  .metric-pill.orange {
+    background: #fff0e6;
+    color: #f06b00;
+  }
+
+  .metric-pill.purple {
+    background: #f0ebff;
+    color: #7c3aed;
+  }
+
+  .metric-note {
+    color: #53668a;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 1200px) {
+    .dashboard-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 700px) {
+    .dashboard-metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .metric-card {
+      padding: 18px;
+    }
+
+    .metric-footer {
+      padding-left: 0;
+    }
+  }
+</style>
+
+<div class="dashboard-metrics">
+  <article class="metric-card">
+    <div class="metric-card-top">
+      <div class="metric-icon blue">
+        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M3 17l6-6 4 4 8-8"></path>
+          <path d="M15 7h6v6"></path>
+        </svg>
+      </div>
+      <div>
+        <h3 class="metric-label">Predictions Today</h3>
+        <div class="metric-value">{{ predictions_today }}</div>
+        <div class="metric-subtitle">{{ high_risk_today }} high-risk cases</div>
+      </div>
+    </div>
+    <div class="metric-footer">
+      <span class="metric-pill blue">&uarr; 14%</span>
+      <span class="metric-note">vs yesterday</span>
+    </div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-card-top">
+      <div class="metric-icon green">
+        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+      <div>
+        <h3 class="metric-label">Average Risk Score</h3>
+        <div class="metric-value">{{ avg_probability }}%</div>
+        <div class="metric-subtitle">Across all assessed patients</div>
+      </div>
+    </div>
+    <div class="metric-footer">
+      <span class="metric-pill green">&darr; 5%</span>
+      <span class="metric-note">vs yesterday</span>
+    </div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-card-top">
+      <div class="metric-icon orange">
+        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+          <path d="m12 3 10 18H2L12 3Z"></path>
+          <path d="M12 9v4"></path>
+          <path d="M12 17h.01"></path>
+        </svg>
+      </div>
+      <div>
+        <h3 class="metric-label">High-Risk Alerts</h3>
+        <div class="metric-value">{{ high_risk_today }}</div>
+        <div class="metric-subtitle">Require close oxygen review</div>
+      </div>
+    </div>
+    <div class="metric-footer">
+      <span class="metric-pill orange">Critical</span>
+    </div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-card-top">
+      <div class="metric-icon purple">
+        <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+          <path d="M12 8v7"></path>
+          <path d="M9 11l3-3 3 3"></path>
+        </svg>
+      </div>
+      <div>
+        <h3 class="metric-label">Model AUC</h3>
+        <div class="metric-value">{{ model_auc }}</div>
+        <div class="metric-subtitle">Latest validated version</div>
+      </div>
+    </div>
+    <div class="metric-footer">
+      <span class="metric-pill purple">Excellent</span>
+    </div>
+  </article>
+</div>
+
+<div style="margin-top: 18px" class="card">
+  <h3>System workflow</h3>
+  <div style="margin-top: 8px">
+    Designed to support rapid postoperative oxygen risk review in PACU and
+    surgical wards.
+  </div>
+</div>
+
+{% endblock %}

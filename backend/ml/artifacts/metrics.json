@@ -1,0 +1,10 @@
+{
+  "model_name": "XGBoost",
+  "version": "v1.0",
+  "auc": 0.84,
+  "sensitivity": 0.81,
+  "specificity": 0.76,
+  "precision": 0.79,
+  "recall": 0.81,
+  "f1_score": 0.8
+}
