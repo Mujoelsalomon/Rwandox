@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
+  const navigate = useNavigate()
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false)
   const [notificationBellRinging, setNotificationBellRinging] = useState(false)
@@ -51,12 +54,22 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
     }
   }, [])
 
+  function handleLogout() {
+    window.localStorage.removeItem('postop_o2_session')
+    setProfileMenuOpen(false)
+    navigate('/login')
+  }
+
   return (
     <header className="fixed left-0 right-0 top-0 z-50 border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-2 py-2 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur sm:px-4 sm:py-3 md:px-5">
       <div className="flex h-12 items-center justify-between gap-2 md:h-14 md:gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#1f7df2] to-[#33d3df] text-white shadow-sm sm:h-10 sm:w-10 md:h-11 md:w-11">
-            <Icon name="lungs" className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-white/70 sm:h-11 sm:w-11 md:h-12 md:w-12">
+            <img
+              src={postopO2Logo}
+              alt="PostOp O2 AI"
+              className="h-full w-full object-cover"
+            />
           </div>
           <div className="min-w-0">
             <span className="block truncate text-[17px] font-extrabold leading-5 text-[#123000] sm:text-[20px] md:text-[22px]">
@@ -166,7 +179,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 <MenuAction icon="user" title="User" detail="Anesthetist account" />
                 {/* <MenuAction icon="database" title="Database" detail="PostgreSQL" /> */}
                 <MenuAction icon="sync" title="Sync with EMR" bordered />
-                <MenuAction icon="logout" title="Logout" bordered />
+                <MenuAction icon="logout" title="Logout" bordered onClick={handleLogout} />
               </div>
             )}
           </div>
@@ -186,10 +199,11 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
   )
 }
 
-function MenuAction({ icon, title, detail, bordered = false }) {
+function MenuAction({ icon, title, detail, bordered = false, onClick }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className={`flex min-h-[54px] w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#f6f9fd] focus:bg-[#f6f9fd] focus:outline-none ${bordered ? 'border-t border-[#edf2f8]' : ''}`}
     >
       <Icon name={icon} className="h-5 w-5 shrink-0 text-[#172a53]" />
@@ -220,13 +234,6 @@ function Icon({ name, className = '' }) {
   }
 
   const paths = {
-    lungs: (
-      <>
-        <path d="M12 4v16" />
-        <path d="M12 12c-2.9-4-6-4.5-7.4-1.6-1.2 2.5-1.1 7.7.7 8.6 2 1 4.7-1.8 5.1-5.1" />
-        <path d="M12 12c2.9-4 6-4.5 7.4-1.6 1.2 2.5 1.1 7.7-.7 8.6-2 1-4.7-1.8-5.1-5.1" />
-      </>
-    ),
     menu: (
       <>
         <path d="M4 7h16" />
