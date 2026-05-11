@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">PostOp O2 AI lung logo</title>
+  <desc id="desc">Blue and teal lungs with oxygen and artificial intelligence symbols.</desc>
+  <defs>
+    <linearGradient id="lungGradient" x1="72" y1="84" x2="434" y2="410" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1768f2"/>
+      <stop offset="1" stop-color="#22c5b5"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#0f315f" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="96" fill="#ffffff"/>
+
+  <g filter="url(#softShadow)">
+    <path
+      fill="url(#lungGradient)"
+      d="M235 119c-54-25-134 62-153 150-14 68-4 140 35 153 42 14 89-30 92-77 2-23-9-45-7-68 2-28 26-50 40-75 17-31 14-68-7-83Z"
+    />
+    <path
+      fill="url(#lungGradient)"
+      d="M277 119c54-25 134 62 153 150 14 68 4 140-35 153-42 14-89-30-92-77-2-23 9-45 7-68-2-28-26-50-40-75-17-31-14-68 7-83Z"
+    />
+    <path
+      fill="url(#lungGradient)"
+      d="M239 52h34v113c0 39 22 61 54 76 10 5 14 17 9 27-5 9-17 13-27 8-23-11-41-25-53-43-12 18-30 32-53 43-10 5-22 1-27-8-5-10-1-22 9-27 32-15 54-37 54-76V52Z"
+    />
+  </g>
+
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="16">
+    <path d="M95 245h52l52 36 6-94"/>
+    <path d="M148 337V245l57-58"/>
+    <path d="M148 337l57-56"/>
+    <circle cx="148" cy="245" r="20" fill="#ffffff" stroke="none"/>
+    <circle cx="205" cy="187" r="20" fill="#ffffff" stroke="none"/>
+    <circle cx="205" cy="281" r="20" fill="#ffffff" stroke="none"/>
+    <circle cx="148" cy="337" r="20" fill="#ffffff" stroke="none"/>
+    <path d="M322 281h50l17-74 27 138 23-68h38"/>
+    <circle cx="477" cy="277" r="14" fill="#ffffff" stroke="none"/>
+  </g>
+
+  <g fill="#ffffff">
+    <path d="M256 190c17 31 51 62 58 105 9 54-20 109-58 109s-67-55-58-109c7-43 41-74 58-105Z"/>
+    <circle cx="256" cy="341" r="31" fill="none" stroke="#1db7c3" stroke-width="16"/>
+    <text x="295" y="367" fill="#1db7c3" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="800">2</text>
+  </g>
+</svg>
