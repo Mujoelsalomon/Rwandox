@@ -1,0 +1,201 @@
+Row ID,Patient_ID,Department,Diagnosis,Treatment,Outcome,Length_of_Stay,Doctor,Training_Hours,Knowledge_Sharing_Sessions,Resources_Used,Readmission
+1,P1**,Pediatrics,Anemia,Medication B,Improved,12,Dr.*****,13,3,8,Yes
+2,P0**,Cardiology,Hypertension,Medication D,Cured,14,Dr.*****,12,6,9,Yes
+3,P1**,Cardiology,Heart Failure,Medication D,Improved,4,Dr.*****,30,5,4,Yes
+4,P0**,Surgery,Gallstones,Surgery + Med C,Critical,6,Dr.*****,30,5,3,No
+5,P0**,Surgery,Gallstones,Surgery + Med C,Stable,2,Dr.*****,16,8,15,No
+6,P0**,Cardiology,Hypertension,Medication D,Stable,11,Dr.*****,17,1,10,Yes
+7,P0**,Oncology,Breast Cancer,Radiation Therapy,Cured,2,Dr.*****,25,4,12,Yes
+8,P1**,Cardiology,Heart Failure,Surgery A,Improved,12,Dr.*****,8,2,9,Yes
+9,P1**,Oncology,Breast Cancer,Radiation Therapy,Improved,2,Dr.*****,19,3,1,No
+10,P1**,Cardiology,Hypertension,Surgery A,Cured,11,Dr.*****,15,3,8,Yes
+11,P2**,Cardiology,Heart Failure,Medication D,Critical,8,Dr.*****,23,7,15,No
+12,P0**,Neurology,Stroke,Medication F,Cured,4,Dr.*****,12,6,7,No
+13,P1**,Cardiology,Arrhythmia,Medication A,Critical,3,Dr.*****,29,5,9,Yes
+14,P0**,Pediatrics,Malaria,Medication C,Critical,9,Dr.*****,19,1,10,Yes
+15,P1**,Oncology,Breast Cancer,Chemotherapy,Improved,12,Dr.*****,8,5,5,Yes
+16,P1**,Cardiology,Hypertension,Surgery A,Critical,17,Dr.*****,5,2,5,No
+17,P1**,Cardiology,Arrhythmia,Surgery A,Improved,19,Dr.*****,28,3,13,Yes
+18,P1**,Surgery,Hernia,Surgery + Med D,Cured,20,Dr.*****,9,1,2,Yes
+19,P0**,Cardiology,Heart Failure,Medication D,Critical,2,Dr. *****,13,7,12,Yes
+20,P0**,Pediatrics,Pneumonia,Medication B,Stable,13,Dr.*****,24,1,5,Yes
+21,P0**,Orthopedics,Osteoporosis,Surgery B,Cured,4,Dr.*****,19,7,12,Yes
+22,P1**,Oncology,Breast Cancer,Chemotherapy,Stable,14,Dr.*****,28,1,1,No
+23,P0**,Pediatrics,Anemia,Medication B,Critical,2,Dr.*****,9,8,7,No
+24,P0**,Cardiology,Hypertension,Medication A,Critical,2,Dr.*****,26,2,7,Yes
+25,P0**,Cardiology,Hypertension,Medication D,Stable,9,Dr.*****,21,3,6,Yes
+26,P0**,Pediatrics,Pneumonia,Medication B,Cured,11,Dr.*****,18,8,5,No
+27,P0**,Orthopedics,Fracture,Surgery B,Cured,13,Dr. *****,8,1,2,No
+28,P0**,Neurology,Migraine,Medication F,Critical,2,Dr.*****,26,4,6,Yes
+29,P1**,Orthopedics,Osteoporosis,Surgery B,Critical,17,Dr. *****,17,4,2,No
+30,P1**,Pediatrics,Anemia,Medication B,Cured,19,Dr.*****,15,7,1,Yes
+31,P0**,Orthopedics,Fracture,Surgery B,Cured,16,Dr.*****,13,4,10,No
+32,P0**,Oncology,Lung Cancer,Chemotherapy,Improved,8,Dr.*****,26,5,11,Yes
+33,P0**,Cardiology,Hypertension,Surgery A,Improved,12,Dr.*****,17,8,6,Yes
+34,P1**,Neurology,Migraine,Therapy A,Critical,18,Dr.*****,21,8,15,Yes
+35,P0**,Oncology,Lung Cancer,Radiation Therapy,Critical,11,Dr.*****,16,3,10,Yes
+36,P0**,Orthopedics,Arthritis,Medication G,Improved,8,Dr.*****,30,2,3,No
+37,P1**,Pediatrics,Anemia,Medication C,Cured,16,Dr.*****,8,7,15,No
+38,P0**,Pediatrics,Malaria,Medication B,Critical,6,Dr.*****,24,5,2,Yes
+39,P1**,Pediatrics,Anemia,Medication B,Critical,8,Dr. *****,14,1,9,No
+40,P0**,Oncology,Lung Cancer,Medication E,Cured,11,Dr. *****,10,8,10,Yes
+41,P1**,Pediatrics,Malaria,Medication C,Cured,20,Dr.*****,24,3,4,Yes
+42,P0**,Cardiology,Heart Failure,Medication A,Improved,4,Dr.*****,16,7,14,Yes
+43,P0**,Pediatrics,Anemia,Medication B,Stable,19,Dr.*****,9,7,1,No
+44,P1**,Cardiology,Heart Failure,Surgery A,Critical,14,Dr. *****,26,2,10,No
+45,P0**,Surgery,Appendicitis,Surgery + Med C,Stable,4,Dr. *****,19,8,12,Yes
+46,P1**,Orthopedics,Arthritis,Medication G,Improved,16,Dr.*****,25,6,13,Yes
+47,P0**,Surgery,Gallstones,Surgery + Med D,Cured,5,Dr.*****,17,3,12,Yes
+48,P1**,Oncology,Breast Cancer,Medication E,Stable,10,Dr.*****,26,1,15,No
+49,P0**,Cardiology,Arrhythmia,Medication A,Improved,2,Dr.*****,13,2,5,Yes
+50,P1**,Orthopedics,Arthritis,Medication G,Stable,2,Dr.*****,17,8,1,Yes
+51,P1**,Pediatrics,Anemia,Medication B,Cured,13,Dr.*****,19,6,1,Yes
+52,P1**,Cardiology,Hypertension,Medication A,Improved,14,Dr.*****,16,2,7,No
+53,P0**,Surgery,Gallstones,Surgery + Med C,Stable,11,Dr.*****,22,3,12,No
+54,P0**,Cardiology,Heart Failure,Medication A,Cured,18,Dr.*****,19,7,15,Yes
+55,P0**,Oncology,Lung Cancer,Medication E,Improved,11,Dr.*****,25,4,3,No
+56,P1**,Neurology,Migraine,Medication F,Cured,5,Dr.*****,29,8,15,Yes
+57,P0**,Cardiology,Arrhythmia,Surgery A,Improved,19,Dr.*****,20,6,9,Yes
+58,P1**,Neurology,Epilepsy,Medication F,Improved,13,Dr. *****,22,4,10,No
+59,P1**,Neurology,Migraine,Therapy A,Improved,10,Dr.*****,12,6,7,No
+60,P1**,Neurology,Migraine,Therapy A,Critical,18,Dr.*****,22,7,11,Yes
+61,P0**,Pediatrics,Malaria,Medication C,Critical,17,Dr.*****,21,5,4,Yes
+62,P1**,Orthopedics,Osteoporosis,Medication G,Cured,14,Dr.*****,19,7,14,No
+63,P1**,Cardiology,Hypertension,Surgery A,Critical,14,Dr.*****,8,6,13,No
+64,P1**,Oncology,Leukemia,Medication E,Critical,4,Dr.*****,12,7,7,No
+65,P1**,Cardiology,Hypertension,Medication D,Critical,13,Dr.*****,18,5,2,Yes
+66,P0**,Neurology,Migraine,Medication F,Cured,13,Dr.*****,9,4,12,Yes
+67,P1**,Surgery,Hernia,Surgery + Med D,Improved,6,Dr.*****,17,4,9,Yes
+68,P1**,Neurology,Migraine,Therapy A,Stable,18,Dr.*****,27,1,2,Yes
+69,P1**,Surgery,Hernia,Surgery + Med C,Cured,17,Dr.*****,19,1,10,No
+70,P1**,Surgery,Appendicitis,Surgery + Med D,Stable,20,Dr.*****,23,5,9,No
+71,P0**,Surgery,Hernia,Surgery + Med D,Stable,11,Dr.*****,9,8,9,No
+72,P1**,Neurology,Stroke,Therapy A,Critical,4,Dr.*****,25,1,11,No
+73,P0**,Orthopedics,Fracture,Medication G,Cured,19,Dr.*****,21,5,3,Yes
+74,P1**,Orthopedics,Arthritis,Medication G,Cured,20,Dr.*****,15,1,6,No
+75,P1**,Neurology,Stroke,Medication F,Critical,15,Dr.*****,29,1,3,No
+76,P0**,Neurology,Epilepsy,Medication F,Critical,14,Dr.*****,16,7,15,Yes
+77,P1**,Cardiology,Arrhythmia,Surgery A,Improved,4,Dr.*****,16,4,8,No
+78,P0**,Pediatrics,Anemia,Medication C,Stable,3,Dr.*****,12,7,3,Yes
+79,P0**,Pediatrics,Malaria,Medication B,Improved,8,Dr.*****,28,6,5,Yes
+80,P1**,Pediatrics,Anemia,Medication C,Improved,16,Dr.*****,19,7,7,No
+81,P1**,Orthopedics,Osteoporosis,Surgery B,Cured,2,Dr.*****,6,6,2,Yes
+82,P0**,Neurology,Migraine,Therapy A,Improved,20,Dr.*****,23,6,2,No
+83,P0**,Orthopedics,Osteoporosis,Surgery B,Critical,19,Dr. *****,22,2,7,Yes
+84,P1**,Neurology,Stroke,Medication F,Critical,4,Dr.*****,16,3,5,No
+85,P0**,Oncology,Lung Cancer,Chemotherapy,Stable,15,Dr.*****,12,2,4,Yes
+86,P1**,Neurology,Migraine,Therapy A,Stable,12,Dr.*****,18,3,10,No
+87,P0**,Oncology,Breast Cancer,Radiation Therapy,Improved,12,Dr.*****,9,3,10,Yes
+88,P1**,Cardiology,Arrhythmia,Surgery A,Cured,6,Dr.*****,28,7,6,No
+89,P1**,Oncology,Leukemia,Chemotherapy,Cured,13,Dr.*****,10,4,6,Yes
+90,P1**,Pediatrics,Pneumonia,Medication C,Cured,14,Dr.*****,28,2,12,No
+91,P0**,Oncology,Breast Cancer,Chemotherapy,Critical,9,Dr.*****,13,6,6,Yes
+92,P1**,Oncology,Leukemia,Chemotherapy,Improved,3,Dr.*****,25,1,9,Yes
+93,P0**,Surgery,Gallstones,Surgery + Med C,Improved,10,Dr.*****,26,6,3,No
+94,P1**,Cardiology,Heart Failure,Medication D,Cured,18,Dr.*****,17,6,4,No
+95,P1**,Surgery,Gallstones,Surgery + Med C,Cured,4,Dr.*****,9,7,2,No
+96,P0**,Cardiology,Heart Failure,Medication A,Improved,13,Dr.*****,29,5,5,No
+97,P0**,Oncology,Lung Cancer,Radiation Therapy,Cured,19,Dr. *****,30,5,14,No
+98,P1**,Cardiology,Heart Failure,Surgery A,Improved,2,Dr.*****,24,4,6,No
+99,P0**,Neurology,Stroke,Therapy A,Critical,17,Dr.*****,27,8,5,No
+100,P0**,Cardiology,Arrhythmia,Medication D,Improved,4,Dr.*****,20,6,5,No
+101,P1**,Pediatrics,Pneumonia,Medication C,Improved,19,Dr.*****,6,8,14,Yes
+102,P0**,Pediatrics,Pneumonia,Medication C,Stable,16,Dr.*****,25,3,14,No
+103,P0**,Pediatrics,Anemia,Medication C,Stable,6,Dr.*****,28,6,8,No
+104,P1**,Pediatrics,Pneumonia,Medication B,Stable,11,Dr. *****,5,2,11,No
+105,P0**,Neurology,Migraine,Therapy A,Stable,8,Dr.*****,17,3,15,Yes
+106,P0**,Pediatrics,Anemia,Medication B,Stable,12,Dr.*****,9,1,1,No
+107,P1**,Neurology,Stroke,Medication F,Critical,19,Dr.*****,16,7,1,Yes
+108,P0**,Neurology,Stroke,Medication F,Improved,6,Dr.*****,8,6,1,No
+109,P0**,Surgery,Hernia,Surgery + Med D,Critical,2,Dr.*****,14,7,11,No
+110,P1**,Pediatrics,Pneumonia,Medication C,Stable,18,Dr.*****,27,4,14,Yes
+111,P1**,Orthopedics,Fracture,Surgery B,Stable,18,Dr.*****,11,2,14,Yes
+112,P1**,Cardiology,Hypertension,Surgery A,Critical,12,Dr.*****,20,1,9,Yes
+113,P0**,Cardiology,Heart Failure,Surgery A,Improved,19,Dr.*****,19,5,10,No
+114,P0**,Oncology,Breast Cancer,Medication E,Cured,18,Dr.*****,27,4,11,Yes
+115,P1**,Cardiology,Hypertension,Surgery A,Stable,17,Dr.*****,16,2,10,Yes
+116,P1**,Neurology,Migraine,Medication F,Improved,20,Dr.*****,18,6,12,Yes
+117,P1**,Oncology,Breast Cancer,Radiation Therapy,Improved,17,Dr. *****,26,8,8,Yes
+118,P1**,Oncology,Lung Cancer,Chemotherapy,Stable,10,Dr.*****,26,2,13,No
+119,P1**,Oncology,Lung Cancer,Medication E,Critical,13,Dr.*****,8,8,9,No
+120,P0**,Pediatrics,Pneumonia,Medication C,Stable,12,Dr.*****,13,7,3,No
+121,P1**,Neurology,Migraine,Therapy A,Cured,5,Dr.*****,5,1,14,No
+122,P0**,Pediatrics,Pneumonia,Medication C,Critical,16,Dr.*****,15,8,5,Yes
+123,P1**,Cardiology,Arrhythmia,Medication D,Critical,8,Dr.*****,24,2,11,No
+124,P1**,Orthopedics,Osteoporosis,Surgery B,Cured,10,Dr.*****,16,5,3,Yes
+125,P1**,Neurology,Epilepsy,Therapy A,Critical,16,Dr.*****,18,7,10,Yes
+126,P1**,Oncology,Lung Cancer,Chemotherapy,Improved,20,Dr. *****,7,7,12,No
+127,P1**,Cardiology,Heart Failure,Medication D,Critical,10,Dr.*****,23,3,12,No
+128,P1**,Oncology,Lung Cancer,Chemotherapy,Cured,8,Dr.*****,24,7,15,No
+129,P1**,Neurology,Migraine,Medication F,Critical,7,Dr.*****,11,5,15,Yes
+130,P0**,Oncology,Leukemia,Medication E,Stable,11,Dr.*****,11,8,13,Yes
+131,P1**,Orthopedics,Fracture,Surgery B,Improved,17,Dr.*****,20,8,10,No
+132,P0**,Pediatrics,Anemia,Medication C,Stable,12,Dr.*****,20,1,9,Yes
+133,P0**,Surgery,Appendicitis,Surgery + Med C,Cured,3,Dr.*****,14,3,10,No
+134,P1**,Oncology,Lung Cancer,Radiation Therapy,Critical,5,Dr.*****,19,7,14,Yes
+135,P0**,Cardiology,Hypertension,Medication D,Critical,9,Dr.*****,6,4,11,No
+136,P1**,Oncology,Lung Cancer,Radiation Therapy,Cured,19,Dr.*****,5,1,8,Yes
+137,P0**,Orthopedics,Fracture,Surgery B,Cured,19,Dr.*****,8,4,13,Yes
+138,P1**,Orthopedics,Arthritis,Medication G,Cured,5,Dr.*****,17,5,6,No
+139,P0**,Surgery,Hernia,Surgery + Med C,Stable,5,Dr.*****,9,5,12,No
+140,P0**,Cardiology,Arrhythmia,Medication D,Cured,3,Dr.*****,17,4,12,No
+141,P0**,Surgery,Hernia,Surgery + Med D,Improved,13,Dr.*****,7,7,2,No
+142,P0**,Oncology,Breast Cancer,Radiation Therapy,Stable,9,Dr.*****,14,1,3,No
+143,P1**,Pediatrics,Anemia,Medication B,Stable,20,Dr.*****,5,8,14,No
+144,P1**,Oncology,Leukemia,Radiation Therapy,Cured,2,Dr.*****,12,1,14,No
+145,P0**,Orthopedics,Fracture,Medication G,Cured,14,Dr.*****,7,7,14,Yes
+146,P1**,Surgery,Gallstones,Surgery + Med D,Critical,17,Dr.*****,30,3,14,Yes
+147,P0**,Surgery,Hernia,Surgery + Med D,Critical,2,Dr.*****,29,8,10,Yes
+148,P0**,Orthopedics,Osteoporosis,Medication G,Cured,9,Dr.*****,9,4,15,Yes
+149,P1**,Oncology,Leukemia,Radiation Therapy,Improved,3,Dr.*****,28,5,6,No
+150,P1**,Oncology,Lung Cancer,Medication E,Critical,2,Dr.*****,28,7,9,Yes
+151,P0**,Pediatrics,Anemia,Medication B,Critical,7,Dr.*****,22,5,2,No
+152,P1**,Cardiology,Heart Failure,Medication D,Stable,12,Dr.*****,30,6,2,No
+153,P0**,Neurology,Migraine,Therapy A,Critical,16,Dr.*****,22,3,5,Yes
+154,P0**,Neurology,Epilepsy,Therapy A,Improved,14,Dr.*****,10,6,15,No
+155,P0**,Surgery,Appendicitis,Surgery + Med C,Stable,14,Dr.*****,23,6,2,Yes
+156,P1**,Orthopedics,Arthritis,Surgery B,Improved,5,Dr. *****,21,8,15,No
+157,P0**,Orthopedics,Fracture,Surgery B,Improved,19,Dr.*****,12,4,2,Yes
+158,P0**,Neurology,Migraine,Therapy A,Cured,15,Dr.*****,22,8,4,Yes
+159,P1**,Orthopedics,Fracture,Surgery B,Cured,2,Dr. *****,14,7,6,No
+160,P0**,Oncology,Lung Cancer,Chemotherapy,Improved,11,Dr.*****,23,1,5,No
+161,P0**,Pediatrics,Pneumonia,Medication B,Improved,4,Dr.*****,20,7,7,No
+162,P1**,Orthopedics,Arthritis,Surgery B,Critical,12,Dr.*****,11,6,12,No
+163,P1**,Pediatrics,Pneumonia,Medication C,Critical,16,Dr.*****,10,1,8,Yes
+164,P1**,Surgery,Hernia,Surgery + Med C,Stable,17,Dr.*****,29,5,4,No
+165,P1**,Neurology,Epilepsy,Medication F,Stable,17,Dr.*****,6,8,6,Yes
+166,P1**,Neurology,Stroke,Medication F,Improved,14,Dr.*****,27,1,7,No
+167,P0**,Orthopedics,Osteoporosis,Surgery B,Cured,12,Dr.*****,28,2,2,No
+168,P1**,Pediatrics,Malaria,Medication C,Stable,6,Dr.*****,21,4,14,Yes
+169,P1**,Surgery,Appendicitis,Surgery + Med C,Critical,2,Dr. *****,18,8,9,Yes
+170,P1**,Oncology,Leukemia,Medication E,Critical,11,Dr.*****,19,6,15,Yes
+171,P1**,Pediatrics,Pneumonia,Medication B,Improved,10,Dr.*****,12,8,3,No
+172,P0**,Surgery,Hernia,Surgery + Med C,Improved,11,Dr.*****,26,1,7,No
+173,P0**,Surgery,Gallstones,Surgery + Med D,Cured,2,Dr. *****,14,6,12,Yes
+174,P0**,Oncology,Leukemia,Medication E,Critical,18,Dr. *****,28,1,6,Yes
+175,P0**,Orthopedics,Fracture,Surgery B,Improved,14,Dr. *****,23,4,5,Yes
+176,P1**,Surgery,Appendicitis,Surgery + Med D,Cured,6,Dr. *****,22,2,7,Yes
+177,P0**,Pediatrics,Malaria,Medication B,Critical,19,Dr.*****,17,2,8,No
+178,P1**,Orthopedics,Fracture,Surgery B,Critical,6,Dr.*****,26,2,9,No
+179,P1**,Cardiology,Heart Failure,Surgery A,Cured,6,Dr.*****,5,8,1,Yes
+180,P0**,Surgery,Hernia,Surgery + Med D,Critical,7,Dr.*****,20,5,7,Yes
+181,P0**,Pediatrics,Malaria,Medication B,Critical,20,Dr. *****,22,7,2,No
+182,P0**,Pediatrics,Pneumonia,Medication B,Critical,8,Dr.*****,8,3,7,Yes
+183,P0**,Neurology,Epilepsy,Medication F,Cured,18,Dr. *****,27,7,1,No
+184,P0**,Pediatrics,Pneumonia,Medication B,Stable,15,Dr. *****,6,1,3,No
+185,P1**,Oncology,Leukemia,Medication E,Critical,13,Dr.*****,19,3,8,Yes
+186,P0**,Cardiology,Arrhythmia,Medication A,Cured,12,Dr.*****,18,2,1,No
+187,P1**,Cardiology,Arrhythmia,Surgery A,Cured,11,Dr.*****,9,4,9,No
+188,P0**,Orthopedics,Arthritis,Medication G,Improved,9,Dr. *****,29,4,3,Yes
+189,P1**,Pediatrics,Malaria,Medication B,Cured,20,Dr.*****,5,5,12,Yes
+190,P1**,Pediatrics,Malaria,Medication B,Critical,11,Dr.*****,28,4,5,No
+191,P0**,Neurology,Epilepsy,Medication F,Stable,11,Dr.*****,23,3,5,Yes
+192,P0**,Surgery,Gallstones,Surgery + Med C,Critical,2,Dr.*****,23,1,10,Yes
+193,P1**,Pediatrics,Anemia,Medication C,Stable,2,Dr.*****,9,5,10,No
+194,P0**,Neurology,Epilepsy,Therapy A,Stable,5,Dr.*****,17,4,10,No
+195,P0**,Pediatrics,Anemia,Medication B,Improved,2,Dr.*****,26,7,14,No
+196,P0**,Oncology,Breast Cancer,Chemotherapy,Critical,5,Dr. *****,22,7,10,No
+197,P0**,Oncology,Leukemia,Medication E,Stable,8,Dr. *****,11,7,10,Yes
+198,P1**,Pediatrics,Anemia,Medication B,Cured,15,Dr.*****,18,6,3,Yes
+199,P1**,Orthopedics,Fracture,Medication G,Cured,12,Dr. *****,7,8,7,No
+200,P0**,Orthopedics,Arthritis,Surgery B,Cured,19,Dr.*****,8,6,10,Yes

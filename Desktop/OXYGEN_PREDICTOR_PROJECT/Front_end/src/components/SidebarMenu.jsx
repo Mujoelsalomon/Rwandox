@@ -6,7 +6,7 @@ const sidebarItems = [
   { label: 'New Prediction', to: '/new-prediction', icon: 'plus' },
   { label: 'Patient Records', to: '/patients', icon: 'user' },
   { label: 'Prediction History', to: '/prediction-history', icon: 'history' },
-  { label: 'Model Performance', to: '/train', icon: 'barChart' },
+  { label: 'System Administration', to: '/system-administration', icon: 'shield' },
   { label: 'Settings', to: '/settings', icon: 'settings' },
 ]
 
@@ -30,7 +30,7 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
                 to={item.to}
                 title={item.label}
                 onClick={onNavigate}
-                className={`flex h-12 items-center rounded-[8px] px-3 text-[14px] font-semibold transition sm:h-14 sm:text-[15px] lg:h-[60px] lg:px-4 lg:text-[16px] ${
+                className={`flex h-12 items-center rounded-[8px] px-3 text-[20px] font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
                 } ${
                   location.pathname === item.to
@@ -46,7 +46,7 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
                 key={item.label}
                 title={item.label}
                 onClick={onNavigate}
-                className={`flex h-12 min-w-0 cursor-pointer items-center rounded-[8px] px-3 text-[14px] font-semibold transition sm:h-14 sm:text-[15px] lg:h-[60px] lg:px-4 lg:text-[16px] ${
+                className={`flex h-12 min-w-0 cursor-pointer items-center rounded-[8px] px-3 text-[20px] font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
                 } ${
                   'text-white hover:bg-[#0d3c78]'
@@ -67,8 +67,8 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[16px] font-extrabold">Anesthetist</p>
-              <p className="text-[14px] text-[#d7e8ff]">Clinician</p>
+              <p className="truncate text-[20px] font-extrabold">Anesthetist</p>
+              <p className="text-[20px] text-[#d7e8ff]">Clinician</p>
             </div>
             <Icon name="chevronRight" className="h-5 w-5" />
           </div>
@@ -130,6 +130,12 @@ function Icon({ name, className = '' }) {
       <>
         <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
         <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+        <path d="M9 12l2 2 4-4" />
       </>
     ),
     settings: (

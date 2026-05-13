@@ -1,15 +1,9 @@
 import React, { useState } from 'react'
 
-const preferenceItems = [
-  { label: 'Topbar notifications', detail: 'Show clinical and model alerts in the notification bell.' },
-  { label: 'High-risk sound cue', detail: 'Play a short cue when a high-risk prediction is created.' },
-  { label: 'Auto-refresh dashboard', detail: 'Refresh patient summaries and model metrics during active sessions.' },
-]
-
 const defaultPreferences = {
-  'Topbar notifications': true,
-  'High-risk sound cue': true,
-  'Auto-refresh dashboard': false,
+  'High-risk patient alerts': true,
+  'Prediction completion alerts': true,
+  'System update alerts': false,
 }
 
 const defaultThresholds = {
@@ -17,14 +11,41 @@ const defaultThresholds = {
   highMin: 70,
 }
 
-const defaultUsers = [
-  { id: 'USR-001', name: 'Joel Munyaneza', email: 'munyanezajoel3@gmail.com', role: 'Super user' },
-  { id: 'USR-002', name: 'Anesthetist', email: 'anesthetist@hospital.local', role: 'Clinician' },
-  { id: 'USR-003', name: 'Nurse Supervisor', email: 'nurse.supervisor@hospital.local', role: 'Reviewer' },
-  { id: 'USR-004', name: 'Model Admin', email: 'model.admin@hospital.local', role: 'Administrator' },
+const notificationItems = [
+  {
+    label: 'High-risk patient alerts',
+    detail: 'Notify the account when a generated prediction identifies a high-risk patient.',
+  },
+  {
+    label: 'Prediction completion alerts',
+    detail: 'Notify the account when upload or form-based prediction has completed.',
+  },
+  {
+    label: 'System update alerts',
+    detail: 'Notify the account about application updates, maintenance, and service notices.',
+  },
 ]
 
-const roleOptions = ['Super user', 'Administrator', 'Clinician', 'Reviewer', 'Viewer']
+const personalInformation = [
+  { label: 'Full name', value: 'Anesthetist' },
+  { label: 'Email', value: 'anesthetist@hospital.local' },
+  { label: 'User ID', value: 'USR-002' },
+  { label: 'Facility', value: 'Kibagabaga Level Two Teaching Hospital' },
+]
+
+const roleInformation = [
+  { label: 'Current role', value: 'Clinician' },
+  { label: 'Access level', value: 'Prediction entry and clinical review' },
+  { label: 'Workspace', value: 'Post-op Oxygen Requirement Prediction' },
+]
+
+const loginSecurity = [
+  { label: 'Change password', value: 'Update the password used to access this account.', action: true },
+  { label: 'Two-factor authentication', value: 'Not enabled', action: true },
+  { label: 'Last login date', value: '11 May 2026, 08:35' },
+  { label: 'Login activity', value: 'Current browser session, Kigali timezone' },
+  { label: 'Logout from all devices', value: 'End active sessions on other devices.', action: true, danger: true },
+]
 
 function notify(message, type = 'info') {
   window.dispatchEvent(new CustomEvent('app-notification', { detail: { message, type } }))
@@ -33,9 +54,7 @@ function notify(message, type = 'info') {
 export default function SettingsContent() {
   const [enabled, setEnabled] = useState(defaultPreferences)
   const [thresholds, setThresholds] = useState(defaultThresholds)
-  const [activeAdminPanel, setActiveAdminPanel] = useState(null)
-  const [users, setUsers] = useState(defaultUsers)
-  const [editingUserId, setEditingUserId] = useState(null)
+  const [selectedRisk, setSelectedRisk] = useState('amber')
 
   function toggle(label) {
     setEnabled((current) => ({ ...current, [label]: !current[label] }))
@@ -44,11 +63,16 @@ export default function SettingsContent() {
   function discardChanges() {
     setEnabled(defaultPreferences)
     setThresholds(defaultThresholds)
+    setSelectedRisk('amber')
     notify('Settings changes were discarded.', 'warning')
   }
 
   function saveChanges() {
     notify('Settings changes saved.', 'success')
+  }
+
+  function handleSecurityAction(label) {
+    notify(`${label} selected.`, label === 'Logout from all devices' ? 'warning' : 'info')
   }
 
   function updateLowMax(value) {
@@ -61,47 +85,59 @@ export default function SettingsContent() {
     setThresholds((current) => ({ ...current, highMin: next }))
   }
 
-  function openAdminPanel(title) {
-    if (title === 'User access') {
-      setActiveAdminPanel((current) => (current === 'users' ? null : 'users'))
-      return
-    }
-
-    notify(`${title} administration opened.`, 'info')
+  function updateModerateMax(value) {
+    const next = clampThreshold(value, thresholds.lowMax + 1, 94)
+    setThresholds((current) => ({ ...current, highMin: next + 1 }))
   }
 
-  function updateUserRole(userId, role) {
-    setUsers((current) => current.map((user) => (user.id === userId ? { ...user, role } : user)))
-    setEditingUserId(null)
-    notify('User role updated.', 'success')
+  function selectRisk(tone) {
+    setSelectedRisk(tone)
+    notify(`${riskLabel(tone)} threshold selected.`, 'info')
   }
 
   return (
-    <div className="min-w-0 space-y-5">
+    <div className="settings-content-18 min-w-0 space-y-5">
       <section className="rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
-        <p className="text-[13px] font-black uppercase tracking-[0.22em] text-[#1768f2]">System settings</p>
+        <p className="text-[13px] font-black uppercase tracking-[0.22em] text-[#1768f2]">Account settings</p>
         <div className="mt-2">
-          <div className="min-w-0">
-            <h1 className="break-words text-[30px] font-black leading-[34px] text-[#071b49]">
-              Clinical workspace settings
-            </h1>
-            <p className="mt-2 max-w-[760px] text-[16px] leading-7 text-[#53668a]">
-              Configure notification behavior, risk thresholds, model preferences, and account details for the oxygen prediction workflow.
-            </p>
-          </div>
+          <h1 className="break-words text-[30px] font-black leading-[34px] text-[#071b49]">
+            User account and security
+          </h1>
+          <p className="mt-2 max-w-[760px] text-[16px] leading-7 text-[#53668a]">
+            View personal information, role access, login security, and account notification preferences.
+          </p>
         </div>
       </section>
 
-      <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
-        <div className="min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
-          <h2 className="text-[22px] font-black text-[#071b49]">Notification preferences</h2>
-          <div className="mt-4 space-y-3">
-            {preferenceItems.map((item) => (
+      <section className="grid min-w-0 gap-5 xl:grid-cols-2">
+        <AccountPanel title="Personal information">
+          {personalInformation.map((item) => (
+            <ReadOnlyField key={item.label} {...item} />
+          ))}
+        </AccountPanel>
+
+        <AccountPanel title="Role">
+          {roleInformation.map((item) => (
+            <ReadOnlyField key={item.label} {...item} />
+          ))}
+        </AccountPanel>
+      </section>
+
+      <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+        <AccountPanel title="Login security">
+          {loginSecurity.map((item) => (
+            <SecurityField key={item.label} onAction={handleSecurityAction} {...item} />
+          ))}
+        </AccountPanel>
+
+        <AccountPanel title="Notification preferences">
+          <div className="grid gap-3">
+            {notificationItems.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 onClick={() => toggle(item.label)}
-                className="flex w-full min-w-0 items-center justify-between gap-4 rounded-[12px] border border-[#d9e5f3] bg-[#f8fbff] px-4 py-4 text-left transition hover:border-[#b8cce6]"
+                className="flex w-full min-w-0 items-center justify-between gap-4 rounded-[12px] border border-[#d9e5f3] bg-[#f8fbff] px-4 py-4 text-left transition hover:border-[#b8cce6] hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#1768f2]"
               >
                 <span className="min-w-0">
                   <span className="block break-words text-[16px] font-extrabold text-[#071b49]">{item.label}</span>
@@ -113,109 +149,67 @@ export default function SettingsContent() {
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-4 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] sm:px-5 md:px-6">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h2 className="break-words text-[22px] font-black text-[#071b49]">Risk thresholds</h2>
-              <p className="mt-1 text-[14px] font-semibold leading-5 text-[#64799e]">
-                Adjust probability bands used across prediction views.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid min-w-0 gap-3">
-            <ThresholdCard
-              label="Low risk maximum"
-              rangeText={`0-${thresholds.lowMax}%`}
-              tone="green"
-              value={thresholds.lowMax}
-              min={5}
-              max={thresholds.highMin - 2}
-              onChange={updateLowMax}
-              compactLabel="Max"
-            />
-            <ThresholdCard
-              label="Moderate risk"
-              rangeText={`${thresholds.lowMax + 1}-${thresholds.highMin - 1}%`}
-              tone="amber"
-            />
-            <ThresholdCard
-              label="High risk starts at"
-              rangeText={`${thresholds.highMin}-100%`}
-              tone="red"
-              value={thresholds.highMin}
-              min={thresholds.lowMax + 2}
-              max={95}
-              onChange={updateHighMin}
-              compactLabel="Start"
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="grid min-w-0 gap-5 lg:grid-cols-2">
-        <SettingsPanel title="Model defaults">
-          <Field label="Default model" value="XGBoost postoperative oxygen model" />
-          <Field label="Validation metric" value="AUC with calibration review" />
-          <Field label="Decision support mode" value="Clinical review required before action" />
-        </SettingsPanel>
-
-        <SettingsPanel title="Account and hospital">
-          <Field label="Role" value="Anesthetist - Clinician" />
-          <Field label="Facility" value="Kibagabaga Level Two Teaching Hospital" />
-          <Field label="Workspace" value="Post-op Oxygen Requirement Prediction" />
-        </SettingsPanel>
+        </AccountPanel>
       </section>
 
       <section className="min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
-        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-[13px] font-black uppercase tracking-[0.22em] text-[#1768f2]">System administration</p>
-            <h2 className="mt-2 break-words text-[24px] font-black leading-8 text-[#071b49]">
-              Administrative controls
-            </h2>
-            <p className="mt-2 max-w-[760px] text-[15px] font-semibold leading-6 text-[#64799e]">
-              Manage access, audit visibility, model registry operations, and maintenance settings for the clinical prediction workspace.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <AdminAction
-            title="User access"
-            detail="Review roles and account permissions."
-            isActive={activeAdminPanel === 'users'}
-            onClick={() => openAdminPanel('User access')}
+        <h2 className="text-[22px] font-black text-[#071b49]">Risk thresholds</h2>
+        <p className="mt-1 text-[14px] font-semibold leading-5 text-[#64799e]">
+          Adjust probability bands used across prediction views.
+        </p>
+        <ThresholdGraph selectedRisk={selectedRisk} thresholds={thresholds} />
+        <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-3">
+          <ThresholdCard
+            isSelected={selectedRisk === 'green'}
+            label="Low risk maximum"
+            onSelect={() => selectRisk('green')}
+            rangeText={`0-${thresholds.lowMax}%`}
+            tone="green"
+            value={thresholds.lowMax}
+            min={5}
+            max={thresholds.highMin - 2}
+            onChange={updateLowMax}
+            compactLabel="Max"
           />
-          <AdminAction title="Audit logs" detail="View recent settings and prediction activity." onClick={() => openAdminPanel('Audit logs')} />
-          <AdminAction title="Model registry" detail="Manage active and archived model artifacts." onClick={() => openAdminPanel('Model registry')} />
-          <AdminAction title="Maintenance" detail="Check API, database, and sync status." onClick={() => openAdminPanel('Maintenance')} />
-        </div>
-
-        {activeAdminPanel === 'users' && (
-          <UsersTable
-            users={users}
-            editingUserId={editingUserId}
-            onEdit={setEditingUserId}
-            onRoleChange={updateUserRole}
+          <ThresholdCard
+            isSelected={selectedRisk === 'amber'}
+            label="Moderate risk"
+            onSelect={() => selectRisk('amber')}
+            rangeText={`${thresholds.lowMax + 1}-${thresholds.highMin - 1}%`}
+            tone="amber"
+            value={thresholds.highMin - 1}
+            min={thresholds.lowMax + 1}
+            max={94}
+            onChange={updateModerateMax}
+            compactLabel="End"
           />
-        )}
+          <ThresholdCard
+            isSelected={selectedRisk === 'red'}
+            label="High risk starts at"
+            onSelect={() => selectRisk('red')}
+            rangeText={`${thresholds.highMin}-100%`}
+            tone="red"
+            value={thresholds.highMin}
+            min={thresholds.lowMax + 2}
+            max={95}
+            onChange={updateHighMin}
+            compactLabel="Start"
+          />
+        </div>
       </section>
 
       <div className="sticky bottom-0 z-10 -mx-3 flex flex-col gap-3 border-t border-[#d9e5f3] bg-[#eef5fb]/95 px-3 py-4 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-0">
         <button
           type="button"
           onClick={discardChanges}
-          className="min-h-12 w-full rounded-full bg-[#dc2626] px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white shadow-[0_10px_24px_rgba(220,38,38,0.24)] transition hover:bg-[#b91c1c] focus:outline-none focus:ring-2 focus:ring-[#ef4444] sm:w-auto sm:min-w-[180px]"
+          className="min-h-12 w-full rounded-full bg-[#111b3b] px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white shadow-[0_10px_24px_rgba(17,27,59,0.22)] transition hover:bg-[#172653] focus:outline-none focus:ring-2 focus:ring-[#1768f2] sm:w-auto sm:min-w-[180px]"
         >
           Discard changes
         </button>
         <button
           type="button"
           onClick={saveChanges}
-          className="min-h-12 w-full rounded-full bg-[#111b3b] px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white shadow-[0_10px_24px_rgba(17,27,59,0.22)] transition hover:bg-[#172653] focus:outline-none focus:ring-2 focus:ring-[#1768f2] sm:w-auto sm:min-w-[170px]"
+          className="min-h-12 w-full rounded-full bg-[#16894f] px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white shadow-[0_10px_24px_rgba(22,137,79,0.22)] transition hover:bg-[#126f41] focus:outline-none focus:ring-2 focus:ring-[#22c55e] sm:w-auto sm:min-w-[170px]"
         >
           Save changes
         </button>
@@ -224,7 +218,7 @@ export default function SettingsContent() {
   )
 }
 
-function SettingsPanel({ title, children }) {
+function AccountPanel({ children, title }) {
   return (
     <div className="min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
       <h2 className="text-[22px] font-black text-[#071b49]">{title}</h2>
@@ -233,7 +227,7 @@ function SettingsPanel({ title, children }) {
   )
 }
 
-function Field({ label, value }) {
+function ReadOnlyField({ label, value }) {
   return (
     <div className="min-w-0 rounded-[12px] border border-[#d9e5f3] bg-[#f8fbff] px-4 py-3">
       <p className="text-[13px] font-bold text-[#6c7f9f]">{label}</p>
@@ -242,153 +236,78 @@ function Field({ label, value }) {
   )
 }
 
-function Icon({ name, className = '' }) {
-  const common = {
-    className,
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeLinecap: 'round',
-    strokeLinejoin: 'round',
-    strokeWidth: 2,
-    viewBox: '0 0 24 24',
-  }
+function SecurityField({ action = false, danger = false, label, onAction, value }) {
+  if (!action) return <ReadOnlyField label={label} value={value} />
 
-  const paths = {
-    edit: (
-      <>
-        <path d="M12 20h9" />
-        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-      </>
-    ),
-  }
-
-  return <svg {...common}>{paths[name]}</svg>
-}
-
-function AdminAction({ title, detail, isActive = false, onClick }) {
   return (
     <button
       type="button"
-      className={`min-h-[112px] min-w-0 rounded-[12px] border px-4 py-4 text-left transition hover:border-[#b8cce6] hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#1768f2] ${
-        isActive
-          ? 'border-[#1768f2] bg-white shadow-[0_12px_28px_rgba(23,104,242,0.14)]'
-          : 'border-[#d9e5f3] bg-[#f8fbff]'
+      onClick={() => onAction(label)}
+      className={`min-w-0 rounded-[12px] border px-4 py-3 text-left transition hover:bg-white focus:outline-none focus:ring-2 ${
+        danger
+          ? 'border-[#fecaca] bg-[#fff5f5] hover:border-[#ef4444] focus:ring-[#ef4444]'
+          : 'border-[#d9e5f3] bg-[#f8fbff] hover:border-[#b8cce6] focus:ring-[#1768f2]'
       }`}
-      onClick={onClick}
     >
-      <span className="block break-words text-[16px] font-extrabold text-[#071b49]">{title}</span>
-      <span className="mt-2 block break-words text-[13px] font-semibold leading-5 text-[#64799e]">{detail}</span>
+      <p className={`text-[13px] font-bold ${danger ? 'text-[#b91c1c]' : 'text-[#6c7f9f]'}`}>{label}</p>
+      <p className="mt-1 break-words text-[15px] font-extrabold text-[#071b49]">{value}</p>
     </button>
   )
 }
 
-function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
+function ThresholdGraph({ selectedRisk, thresholds }) {
+  const lowWidth = thresholds.lowMax + 1
+  const moderateWidth = thresholds.highMin - thresholds.lowMax - 1
+  const highWidth = 100 - thresholds.highMin
+
   return (
-    <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
-      <div className="flex min-w-0 flex-col gap-2 border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h3 className="text-[20px] font-black text-[#071b49]">Users</h3>
-          <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Manage user roles and account permissions.</p>
-        </div>
+    <div className="mt-5 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] px-4 py-4">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <RiskLegend isSelected={selectedRisk === 'green'} label={`Low 0-${thresholds.lowMax}%`} tone="green" />
+        <RiskLegend isSelected={selectedRisk === 'amber'} label={`Moderate ${thresholds.lowMax + 1}-${thresholds.highMin - 1}%`} tone="amber" />
+        <RiskLegend isSelected={selectedRisk === 'red'} label={`High ${thresholds.highMin}-100%`} tone="red" />
       </div>
-
-      <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
-            <tr>
-              <th className="px-4 py-3">Names</th>
-              <th className="px-4 py-3">User ID</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3 text-right">Edit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-t border-[#edf2f8]">
-                <td className="px-4 py-4 text-[14px] font-extrabold text-[#071b49]">{user.name}</td>
-                <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.id}</td>
-                <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.email}</td>
-                <td className="px-4 py-4">
-                  {editingUserId === user.id ? (
-                    <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
-                  ) : (
-                    <span className="inline-flex rounded-full bg-[#eef5ff] px-3 py-1 text-[13px] font-extrabold text-[#1768f2]">
-                      {user.role}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-4 text-right">
-                  <button
-                    type="button"
-                    aria-label={`Edit ${user.name} role`}
-                    onClick={() => onEdit(editingUserId === user.id ? null : user.id)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f6fd] text-[#172a53] transition hover:bg-[#dbeafe] hover:text-[#1768f2] focus:outline-none focus:ring-2 focus:ring-[#1768f2]"
-                  >
-                    <Icon name="edit" className="h-5 w-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex h-8 min-w-0 overflow-hidden rounded-full border border-white shadow-inner">
+        <div className="bg-[#22c55e]" style={{ width: `${lowWidth}%` }} title="Low risk" />
+        <div className="bg-[#facc15]" style={{ width: `${moderateWidth}%` }} title="Moderate risk" />
+        <div className="bg-[#ef4444]" style={{ width: `${highWidth}%` }} title="High risk" />
       </div>
-
-      <div className="grid gap-3 p-3 lg:hidden">
-        {users.map((user) => (
-          <div key={user.id} className="rounded-[12px] border border-[#e5edf7] bg-[#f8fbff] p-4">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="break-words text-[15px] font-extrabold text-[#071b49]">{user.name}</p>
-                <p className="mt-1 break-words text-[13px] font-semibold text-[#64799e]">{user.email}</p>
-                <p className="mt-1 text-[12px] font-black uppercase tracking-[0.12em] text-[#8aa0bf]">{user.id}</p>
-              </div>
-              <button
-                type="button"
-                aria-label={`Edit ${user.name} role`}
-                onClick={() => onEdit(editingUserId === user.id ? null : user.id)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#172a53] shadow-sm transition hover:bg-[#dbeafe] hover:text-[#1768f2] focus:outline-none focus:ring-2 focus:ring-[#1768f2]"
-              >
-                <Icon name="edit" className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="mt-3">
-              <p className="mb-2 text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">Role</p>
-              {editingUserId === user.id ? (
-                <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
-              ) : (
-                <span className="inline-flex rounded-full bg-[#eef5ff] px-3 py-1 text-[13px] font-extrabold text-[#1768f2]">
-                  {user.role}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+      <div className="relative mt-2 h-6 text-[12px] font-black text-[#64799e]">
+        <span className="absolute left-0">0%</span>
+        <span className="absolute -translate-x-1/2" style={{ left: `${lowWidth}%` }}>{thresholds.lowMax}%</span>
+        <span className="absolute -translate-x-1/2" style={{ left: `${thresholds.highMin}%` }}>{thresholds.highMin}%</span>
+        <span className="absolute right-0">100%</span>
       </div>
     </div>
   )
 }
 
-function RoleSelect({ value, onChange }) {
+function RiskLegend({ isSelected, label, tone }) {
   return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full min-w-[150px] rounded-[10px] border border-[#c9d8eb] bg-white px-3 text-[14px] font-extrabold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#b8d3ff] lg:w-auto"
-    >
-      {roleOptions.map((role) => (
-        <option key={role} value={role}>{role}</option>
-      ))}
-    </select>
+    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-extrabold ${
+      isSelected ? `${riskSoftClass(tone)} ring-2 ring-offset-1 ${riskRingClass(tone)}` : 'bg-white text-[#53668a]'
+    }`}>
+      <span className={`h-3 w-3 rounded-full ${dotClass(tone)}`} />
+      {label}
+    </span>
   )
 }
 
-function ThresholdCard({ label, rangeText, tone, value, min, max, onChange, compactLabel }) {
+function ThresholdCard({ isSelected = false, label, rangeText, tone, value, min, max, onChange, onSelect, compactLabel }) {
   const isEditable = typeof onChange === 'function'
 
   return (
-    <div className="min-w-0 rounded-[12px] bg-[#f8fbff] px-4 py-4">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') onSelect?.()
+      }}
+      className={`min-w-0 cursor-pointer rounded-[12px] border px-4 py-4 transition hover:bg-white focus:outline-none focus:ring-2 ${riskBorderClass(tone)} ${
+        isSelected ? `${riskSoftClass(tone)} ${riskRingClass(tone)} ring-2 ring-offset-1` : 'bg-[#f8fbff]'
+      }`}
+    >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="break-words text-[16px] font-extrabold text-[#071b49]">{label}</p>
@@ -403,6 +322,7 @@ function ThresholdCard({ label, rangeText, tone, value, min, max, onChange, comp
               min={min}
               max={max}
               value={value}
+              onClick={(event) => event.stopPropagation()}
               onChange={(event) => onChange(event.target.value)}
               className="h-10 w-full min-w-0 rounded-[10px] border border-[#c9d8eb] bg-white px-3 text-center text-[15px] font-extrabold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#b8d3ff] sm:w-[78px]"
             />
@@ -420,8 +340,9 @@ function ThresholdCard({ label, rangeText, tone, value, min, max, onChange, comp
             min={min}
             max={max}
             value={value}
+            onClick={(event) => event.stopPropagation()}
             onChange={(event) => onChange(event.target.value)}
-            className="min-w-0 flex-1 accent-[#1768f2]"
+            className={`min-w-0 flex-1 ${rangeAccentClass(tone)}`}
             aria-label={`${label} slider`}
           />
           <span className={`h-3 w-3 shrink-0 rounded-full ${dotClass(tone)}`} />
@@ -441,4 +362,34 @@ function dotClass(tone) {
   if (tone === 'red') return 'bg-[#ef4444]'
   if (tone === 'amber') return 'bg-[#f59e0b]'
   return 'bg-[#22c55e]'
+}
+
+function riskLabel(tone) {
+  if (tone === 'red') return 'High risk'
+  if (tone === 'amber') return 'Moderate risk'
+  return 'Low risk'
+}
+
+function riskBorderClass(tone) {
+  if (tone === 'red') return 'border-[#fecaca] hover:border-[#ef4444] focus:ring-[#ef4444]'
+  if (tone === 'amber') return 'border-[#fde68a] hover:border-[#f59e0b] focus:ring-[#f59e0b]'
+  return 'border-[#bbf7d0] hover:border-[#22c55e] focus:ring-[#22c55e]'
+}
+
+function riskSoftClass(tone) {
+  if (tone === 'red') return 'bg-[#fff1f2] text-[#b91c1c]'
+  if (tone === 'amber') return 'bg-[#fffbeb] text-[#92400e]'
+  return 'bg-[#f0fdf4] text-[#166534]'
+}
+
+function riskRingClass(tone) {
+  if (tone === 'red') return 'ring-[#ef4444]'
+  if (tone === 'amber') return 'ring-[#f59e0b]'
+  return 'ring-[#22c55e]'
+}
+
+function rangeAccentClass(tone) {
+  if (tone === 'red') return 'accent-[#ef4444]'
+  if (tone === 'amber') return 'accent-[#f59e0b]'
+  return 'accent-[#22c55e]'
 }

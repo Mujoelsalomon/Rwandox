@@ -60,6 +60,16 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
     navigate('/login')
   }
 
+  function handleViewProfile() {
+    setProfileMenuOpen(false)
+    window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: 'Profile view opened.', type: 'info' } }))
+  }
+
+  function handleAccountSettings() {
+    setProfileMenuOpen(false)
+    navigate('/settings')
+  }
+
   return (
     <header className="fixed left-0 right-0 top-0 z-50 border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-2 py-2 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur sm:px-4 sm:py-3 md:px-5">
       <div className="flex h-12 items-center justify-between gap-2 md:h-14 md:gap-4">
@@ -176,9 +186,8 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 role="menu"
                 className="fixed left-2 right-2 top-[66px] max-h-[calc(100vh-84px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-1 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-4 sm:right-4 sm:top-[74px] md:absolute md:left-auto md:right-0 md:top-[54px] md:w-[260px]"
               >
-                <MenuAction icon="user" title="User" detail="Anesthetist account" />
-                {/* <MenuAction icon="database" title="Database" detail="PostgreSQL" /> */}
-                <MenuAction icon="sync" title="Sync with EMR" bordered />
+                <MenuAction icon="user" title="View Profile" onClick={handleViewProfile} />
+                <MenuAction icon="settings" title="Account Settings" bordered onClick={handleAccountSettings} />
                 <MenuAction icon="logout" title="Logout" bordered onClick={handleLogout} />
               </div>
             )}
@@ -267,6 +276,12 @@ function Icon({ name, className = '' }) {
         <path d="M18 3v5h-5" />
         <path d="M21 12a9 9 0 0 1-15 6.7" />
         <path d="M6 21v-5h5" />
+      </>
+    ),
+    settings: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z" />
       </>
     ),
     logout: (

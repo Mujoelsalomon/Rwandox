@@ -1,0 +1,147 @@
+{% extends 'base.html' %} {% block title %}New Prediction{% endblock %} {% block
+content %}
+<div class="grid" style="grid-template-columns: 1.3fr 0.7fr; gap: 20px">
+  <div class="card">
+    <div
+      style="display: flex; justify-content: space-between; align-items: center"
+    >
+      <div>
+        <h3 style="margin: 0">Patient assessment form</h3>
+        <div class="muted">
+          Structured input screen based on the variables in the study protocol.
+        </div>
+      </div>
+      <button class="btn btn-dark" type="submit" form="prediction-form">
+        Generate prediction
+      </button>
+    </div>
+
+    <form method="post" id="prediction-form" style="margin-top: 18px">
+      {% csrf_token %}
+      <div class="grid grid-2">
+        <div class="section">
+          <h4>Patient factors</h4>
+          <div class="grid grid-2">
+            <div class="field">
+              <label>Hospital ID</label>{{ form.hospital_id }}
+            </div>
+            <div class="field"><label>Age</label>{{ form.age }}</div>
+            <div class="field"><label>Sex</label>{{ form.sex }}</div>
+            <div class="field"><label>BMI</label>{{ form.bmi }}</div>
+            <div class="field">
+              <label>Smoking history</label>{{ form.smoking_history }}
+            </div>
+            <div class="field">
+              <label>Baseline SpO₂</label>{{ form.baseline_spo2 }}
+            </div>
+            <div class="field" style="grid-column: 1 / -1">
+              <label>Comorbidities</label>{{ form.comorbidities }}
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h4>Surgical factors</h4>
+          <div class="grid grid-2">
+            <div class="field">
+              <label>Surgery type</label>{{ form.surgery_type }}
+            </div>
+            <div class="field"><label>Urgency</label>{{ form.urgency }}</div>
+            <div class="field">
+              <label>Duration</label>{{ form.surgery_duration }}
+            </div>
+            <div class="field">
+              <label>Blood loss</label>{{ form.blood_loss }}
+            </div>
+            <div class="field"><label>Ward</label>{{ form.ward }}</div>
+            <div class="field">
+              <label>Procedure date</label>{{ form.procedure_date }}
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h4>Anesthesia factors</h4>
+          <div class="grid grid-2">
+            <div class="field">
+              <label>Anesthesia type</label>{{ form.anesthesia_type }}
+            </div>
+            <div class="field">
+              <label>ASA class</label>{{ form.asa_class }}
+            </div>
+            <div class="field">
+              <label>Residual effects</label>{{ form.residual_effects }}
+            </div>
+            <div class="field">
+              <label>Opioid use</label>{{ form.opioid_use }}
+            </div>
+            <div class="field">
+              <label>Airway event</label>{{ form.airway_event }}
+            </div>
+            <div class="field">
+              <label>Recovery status</label>{{ form.recovery_status }}
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h4>Immediate postoperative factors</h4>
+          <div class="grid grid-2">
+            <div class="field">
+              <label>Post-op SpO₂</label>{{ form.postop_spo2 }}
+            </div>
+            <div class="field">
+              <label>Respiratory rate</label>{{ form.respiratory_rate }}
+            </div>
+            <div class="field">
+              <label>Pain status</label>{{ form.pain_status }}
+            </div>
+            <div class="field">
+              <label>Consciousness</label>{{ form.consciousness }}
+            </div>
+            <div class="field">
+              <label>Time since surgery</label>{{ form.time_since_surgery }}
+            </div>
+            <div class="field">
+              <label>Oxygen before prediction</label>{{
+              form.oxygen_before_prediction }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top: 0">Recent predictions</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>Risk</th>
+          <th>Probability</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_predictions %}
+        <tr>
+          <td>{{ item.record.patient.hospital_id }}</td>
+          <td>
+            <span
+              class="badge {% if item.risk_level == 'High' %}high{% elif item.risk_level == 'Moderate' %}moderate{% else %}low{% endif %}"
+            >
+              {{ item.risk_level }}
+            </span>
+          </td>
+          <td>{{ item.predicted_probability|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3">No predictions yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+[2m16:49:57[22m [31m[1m[vite][22m[39m Pre-transform error: spawn EPERM
+[2m16:49:57[22m [31m[1m[vite][22m[39m [31mInternal server error: spawn EPERM[39m
+      at ChildProcess.spawn (node:internal/child_process:420:11)
+      at spawn (node:child_process:796:9)
+      at Object.execFile (node:child_process:349:17)
+      at exec (node:child_process:236:25)
+      at optimizeSafeRealPathSync (file:///C:/Users/HP-/Desktop/OXYGEN_PREDICTOR_PROJECT/Front_end/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:17165:3)
+      at windowsSafeRealPathSync (file:///C:/Users/HP-/Desktop/OXYGEN_PREDICTOR_PROJECT/Front_end/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:17146:5)
+      at getRealPath (file:///C:/Users/HP-/Desktop/OXYGEN_PREDICTOR_PROJECT/Front_end/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45901:16)
+      at Object.tryResolveRealFileOrType (file:///C:/Users/HP-/Desktop/OXYGEN_PREDICTOR_PROJECT/Front_end/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45892:20)
+      at tryCleanFsResolve (file:///C:/Users/HP-/Desktop/OXYGEN_PREDICTOR_PROJECT/Front_end/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46337:30)
+      at tryFsResolve (file:///C:/Users/HP-/Desktop/OXYGEN_PREDICTOR_PROJECT/Front_end/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:46323:15)
