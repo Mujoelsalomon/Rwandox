@@ -7,6 +7,7 @@ import PredictionHistoryContent from './components/PredictionHistoryContent.jsx'
 import SettingsContent from './components/SettingsContent.jsx'
 import SystemAdministrationContent from './components/SystemAdministrationContent.jsx'
 import Login_Form from './components/Login_Form.jsx'
+import Sign_Up_Form from './components/Sign_Up_Form.jsx'
 import PostoperativeOxygenMLUIMockup from './PostoperativeOxygenMLUIMockup.jsx'
 import TrainingPortal from './TrainingPortal.jsx'
 
@@ -16,6 +17,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<PostoperativeOxygenMLUIMockup />} />
         <Route path="/login" element={<Login_Form />} />
+        <Route path="/signup" element={<Sign_Up_Form />} />
+        <Route path="/signup" element={<Sign_Up_Form />} />
         <Route
           path="/new-prediction"
           element={(

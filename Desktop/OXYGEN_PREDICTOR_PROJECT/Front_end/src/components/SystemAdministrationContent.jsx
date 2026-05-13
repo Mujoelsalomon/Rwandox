@@ -23,6 +23,10 @@ export default function SystemAdministrationContent() {
       setActiveAdminPanel((current) => (current === 'users' ? null : 'users'))
       return
     }
+    if (title === 'Audit logs') {
+      setActiveAdminPanel((current) => (current === 'audit' ? null : 'audit'))
+      return
+    }
 
     notify(`${title} administration opened.`, 'info')
   }
@@ -55,7 +59,7 @@ export default function SystemAdministrationContent() {
             isActive={activeAdminPanel === 'users'}
             onClick={() => openAdminPanel('User access')}
           />
-          <AdminAction title="Audit logs" detail="View recent settings and prediction activity." onClick={() => openAdminPanel('Audit logs')} />
+          <AdminAction title="Audit logs" detail="View recent users activities" onClick={() => openAdminPanel('Audit logs')} />
           <AdminAction title="Model registry" detail="Manage active and archived model artifacts." onClick={() => openAdminPanel('Model registry')} />
           <AdminAction title="Maintenance" detail="Check API, database, and sync status." onClick={() => openAdminPanel('Maintenance')} />
         </div>
@@ -68,10 +72,75 @@ export default function SystemAdministrationContent() {
             onRoleChange={updateUserRole}
           />
         )}
+        {activeAdminPanel === 'audit' && (
+          <AuditLogs />
+        )}
       </section>
     </div>
   )
 }
+
+  function AuditLogs() {
+    const stored = JSON.parse(localStorage.getItem('postop_o2_audit') || '[]')
+    const [logs] = useState(stored.length ? stored : [
+      { id: 1, name: 'Joel Munyaneza', userId: 'USR-001', time: '2026-05-13T16:30:00Z', action: 'Logged in' },
+      { id: 2, name: 'Anesthetist', userId: 'USR-002', time: '2026-05-13T16:40:00Z', action: 'Viewed patient record' },
+      { id: 3, name: 'Model Admin', userId: 'USR-004', time: '2026-05-13T16:50:00Z', action: 'Updated model registry' },
+    ])
+
+    function exportCsv() {
+      if (!logs || logs.length === 0) return
+      const header = ['Name', 'User ID', 'Time', 'Action']
+      const rows = logs.map((l) => [l.name, l.userId, l.time, l.action])
+      const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `audit_logs_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'')}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    }
+
+    return (
+      <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-[20px] font-black text-[#071b49]">Audit logs</h2>
+            <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Recent user activity and system events.</p>
+          </div>
+          <div>
+            <button onClick={exportCsv} className="rounded bg-[#1768f2] px-3 py-2 text-white font-bold">Export CSV</button>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse text-left">
+            <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
+              <tr>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">User ID</th>
+                <th className="px-4 py-3">Time</th>
+                <th className="px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l) => (
+                <tr key={l.id} className="border-t border-[#edf2f8]">
+                  <td className="px-4 py-3 text-[14px] font-extrabold text-[#071b49]">{l.name}</td>
+                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{l.userId}</td>
+                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{new Date(l.time).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{l.action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
 
 function AdminAction({ title, detail, isActive = false, onClick }) {
   return (

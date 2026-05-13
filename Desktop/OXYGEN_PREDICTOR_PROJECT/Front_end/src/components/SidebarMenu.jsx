@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const sidebarItems = [
@@ -12,6 +12,11 @@ const sidebarItems = [
 
 export default function SidebarMenu({ isOpen, onNavigate }) {
   const location = useLocation()
+  const [profileOpen, setProfileOpen] = useState(false)
+
+  function toggleProfile() {
+    setProfileOpen((s) => !s)
+  }
 
   return (
     <aside
@@ -59,19 +64,44 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
           ))}
         </nav>
 
-        <div className={`mt-3 hidden shrink-0 rounded-[8px] bg-[#0c438c] p-4 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 overflow-hidden rounded-full bg-[#dbe6f5]">
-              <div className="flex h-full w-full items-end justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">
-                <div className="mb-1 h-8 w-8 rounded-full bg-[#24334f]" />
+        <div className={`mt-3 shrink-0 rounded-[8px] bg-[#0c438c] p-0 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
+          <button
+            type="button"
+            aria-expanded={profileOpen}
+            onClick={toggleProfile}
+            className="w-full p-3 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 overflow-hidden rounded-full bg-[#dbe6f5]">
+                <div className="flex h-full w-full items-end justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">
+                  <div className="mb-1 h-8 w-8 rounded-full bg-[#24334f]" />
+                </div>
               </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[20px] font-extrabold">Anesthetist</p>
+                <p className="text-[20px] text-[#d7e8ff]">Clinician</p>
+              </div>
+              <Icon name={profileOpen ? 'chevronRight' : 'chevronRight'} className="h-5 w-5" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[20px] font-extrabold">Anesthetist</p>
-              <p className="text-[20px] text-[#d7e8ff]">Clinician</p>
+          </button>
+
+          {profileOpen && (
+            <div className="border-t border-white/10 bg-[#083a85] p-3">
+              <Link to="/settings" onClick={onNavigate} className="block py-2 text-sm text-white hover:underline">
+                Account settings
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  window.localStorage.removeItem('postop_o2_session')
+                  window.location.href = '/login'
+                }}
+                className="mt-2 w-full rounded bg-[#155fbf] px-3 py-2 text-left text-sm font-semibold text-white"
+              >
+                Sign out
+              </button>
             </div>
-            <Icon name="chevronRight" className="h-5 w-5" />
-          </div>
+          )}
         </div>
       </div>
     </aside>

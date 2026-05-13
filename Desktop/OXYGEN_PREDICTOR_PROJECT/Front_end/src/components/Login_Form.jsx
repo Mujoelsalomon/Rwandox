@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 const SUPER_USER = {
@@ -168,6 +168,13 @@ export default function Login_Form() {
           >
             Login
           </button>
+
+          <div className="mt-4 text-center text-[14px] font-semibold text-[#53668a]">
+            Don't have an account?{' '}
+            <Link to="/signup" className="font-black text-[#0876df] transition hover:text-[#075eb4] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe]">
+              Sign up
+            </Link>
+          </div>
         </form>
       </section>
 
