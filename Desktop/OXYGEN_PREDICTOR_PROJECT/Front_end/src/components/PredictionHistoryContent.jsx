@@ -43,7 +43,7 @@ export default function PredictionHistoryContent() {
 
     async function loadHistory() {
       try {
-        const resp = await fetch(`${API_URL}/prediction-history`)
+        const resp = await fetch(`${API_URL}/prediction-history`, { credentials: 'include' })
         const data = await resp.json()
         if (!active) return
         if (!resp.ok) throw new Error(data.error || 'Could not load prediction history.')

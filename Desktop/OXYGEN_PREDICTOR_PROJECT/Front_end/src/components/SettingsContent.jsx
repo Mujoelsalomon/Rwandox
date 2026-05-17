@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { logoutFromAllDevices } from '../authSession.js'
 
 const defaultPreferences = {
   'High-risk patient alerts': true,
@@ -52,6 +54,7 @@ function notify(message, type = 'info') {
 }
 
 export default function SettingsContent() {
+  const navigate = useNavigate()
   const [enabled, setEnabled] = useState(defaultPreferences)
   const [thresholds, setThresholds] = useState(defaultThresholds)
   const [selectedRisk, setSelectedRisk] = useState('amber')
@@ -72,7 +75,14 @@ export default function SettingsContent() {
   }
 
   function handleSecurityAction(label) {
-    notify(`${label} selected.`, label === 'Logout from all devices' ? 'warning' : 'info')
+    if (label === 'Logout from all devices') {
+      logoutFromAllDevices()
+      notify('Logged out from all devices. Sign in again to continue.', 'warning')
+      navigate('/login', { replace: true })
+      return
+    }
+
+    notify(`${label} selected.`, 'info')
   }
 
   function updateLowMax(value) {

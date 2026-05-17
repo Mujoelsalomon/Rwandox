@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { clearCurrentSession } from '../authSession.js'
 
 const sidebarItems = [
-  { label: 'Dashboard', to: '/', icon: 'grid' },
+  { label: 'Dashboard', to: '/dashboard', icon: 'grid' },
   { label: 'New Prediction', to: '/new-prediction', icon: 'plus' },
   { label: 'Patient Records', to: '/patients', icon: 'user' },
   { label: 'Prediction History', to: '/prediction-history', icon: 'history' },
@@ -93,7 +94,7 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
               <button
                 type="button"
                 onClick={() => {
-                  window.localStorage.removeItem('postop_o2_session')
+                  clearCurrentSession()
                   window.location.href = '/login'
                 }}
                 className="mt-2 w-full rounded bg-[#155fbf] px-3 py-2 text-left text-sm font-semibold text-white"

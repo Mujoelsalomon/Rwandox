@@ -1,9 +1,22 @@
 import React, { useMemo, useState } from 'react'
+import { getSession } from '../authSession.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const yesNo = ['No', 'Yes']
 const yesNoUnknown = ['No', 'Yes', 'Not documented']
+const requiredPredictionFields = [
+  ['patientCodedId', 'Patient Hospital ID'],
+  ['age', 'Age'],
+  ['sex', 'Sex'],
+  ['weight', 'Weight'],
+  ['height', 'Height'],
+  ['baselineSpo2', 'Baseline room-air SpO2'],
+  ['surgeryStatus', 'Surgery status'],
+  ['durationOfSurgery', 'Duration of surgery'],
+  ['typeOfAnesthesia', 'Type of anesthesia'],
+  ['asaClass', 'ASA class'],
+]
 
 const initialForm = {
   wardService: 'Surgery',
@@ -150,6 +163,7 @@ export default function NewPredictionContent() {
   const [statusMessage, setStatusMessage] = useState('')
   const [predictionResult, setPredictionResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState('')
 
   const bmi = useMemo(() => {
@@ -187,7 +201,7 @@ export default function NewPredictionContent() {
     setLoading(true)
     setStatusMessage('')
     try {
-      const resp = await fetch(`${API_URL}/patients/search?q=${encodeURIComponent(existingSearch)}`)
+      const resp = await fetch(`${API_URL}/patients/search?q=${encodeURIComponent(existingSearch)}`, { credentials: 'include' })
       const data = await resp.json()
       const patient = data.patients?.[0]
       if (!resp.ok || !patient) {
@@ -206,9 +220,9 @@ export default function NewPredictionContent() {
   }
 
   async function submitAssessment(generatePrediction) {
-    setLoading(true)
     setActionLoading(generatePrediction ? 'prediction' : 'draft')
     setStatusMessage('')
+    setError('')
     if (!generatePrediction) setPredictionResult(null)
 
     const draft = { ...form, bmi }
@@ -220,21 +234,36 @@ export default function NewPredictionContent() {
         return
       }
 
+      const missingFields = validatePredictionFields(form, bmi)
+      if (missingFields.length > 0) {
+        setError(`Complete required fields before generating a prediction: ${missingFields.join(', ')}.`)
+        return
+      }
+
+      setLoading(true)
+      setPredictionResult(null)
+
+      const session = getSession()
       const resp = await fetch(`${API_URL}/predict`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.token || ''}`,
+          'X-User-Email': session?.email || '',
+        },
+        credentials: 'include',
         body: JSON.stringify({ features: buildPredictionPayload(form, bmi), model_type: modelType }),
       })
       const data = await resp.json()
       if (!resp.ok) {
-        setStatusMessage(data.error || 'Could not generate prediction.')
+        setError(resp.status === 401 ? 'Your login session has expired. Please sign in again before generating a prediction.' : data.error || 'Could not generate prediction.')
         return
       }
       setPredictionResult(data)
-      setStatusMessage(`Prediction generated. Risk: ${data.risk_level || 'pending'}`)
+      setStatusMessage('')
     } catch (error) {
       console.error(error)
-      setStatusMessage(generatePrediction ? 'Could not generate prediction.' : 'Could not save draft.')
+      setError(generatePrediction ? 'Could not generate prediction. Check that the backend is running and try again.' : 'Could not save draft.')
     } finally {
       setLoading(false)
       setActionLoading('')
@@ -271,7 +300,7 @@ export default function NewPredictionContent() {
     try {
       const fd = new FormData()
       fd.append('file', datasetFile)
-      const uploadResp = await fetch(`${API_URL}/upload-dataset`, { method: 'POST', body: fd })
+      const uploadResp = await fetch(`${API_URL}/upload-dataset`, { method: 'POST', body: fd, credentials: 'include' })
       const uploadData = await uploadResp.json()
       if (!uploadResp.ok) {
         setStatusMessage(uploadData.error || 'Could not upload dataset.')
@@ -373,7 +402,11 @@ export default function NewPredictionContent() {
             </div>
           </section>
 
-          {predictionResult && <GeneratedOutcomeSection prediction={predictionResult} />}
+          <PredictionResultPanel
+            error={error}
+            loading={actionLoading === 'prediction' && loading}
+            prediction={predictionResult}
+          />
         </>
       )}
 
@@ -487,40 +520,76 @@ function ModeButton({ active, children, onClick }) {
   )
 }
 
-function GeneratedOutcomeSection({ prediction }) {
-  const probability = Math.round(Number(prediction.predicted_probability || prediction.probability || 0) * 100)
-  const riskLevel = prediction.risk_level || 'Pending'
-  const oxygenRequired = prediction.predicted_class || (probability >= 50 ? 'Yes' : 'No')
-  const recommendation = dispositionRecommendation(riskLevel)
-
-  return (
-    <section className="rounded-[16px] border border-[#cfdded] bg-[#f8fbff] px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.05)] md:px-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-          <h2 className="text-[24px] font-black text-[#071b49]">Generated prediction summary</h2>
-          <p className="mt-2 max-w-[760px] text-[15px] leading-6 text-[#53668a]">
-            Risk: <span className="font-black text-[#071b49]">{riskLevel}</span>. Recommended destination:{' '}
-            <span className="font-black text-[#071b49]">{recommendation.unit}</span>.
-          </p>
-          <div className="mt-4 rounded-[12px] border border-[#d7e4f4] bg-white px-4 py-4">
-            <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#1768f2]">Recommendation</p>
-            <p className="mt-2 text-[15px] font-semibold leading-6 text-[#20365f]">{recommendation.text}</p>
+function PredictionResultPanel({ error, loading, prediction }) {
+  if (loading) {
+    return (
+      <section className="rounded-[16px] border border-[#d7e4f4] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6" aria-live="polite">
+        <div className="flex items-center gap-4">
+          <span className="h-10 w-10 shrink-0 animate-spin rounded-full border-4 border-[#dbeafe] border-t-[#1768f2]" />
+          <div>
+            <h2 className="text-[21px] font-black text-[#071b49]">Generating prediction</h2>
+            <p className="mt-1 text-[15px] font-semibold text-[#53668a]">
+              Sending the completed clinical form to the prediction service. Please wait.
+            </p>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
-          <OutcomeMetric label="Probability" value={`${Number.isFinite(probability) ? probability : 0}%`} />
-          <OutcomeMetric label="Oxygen required" value={oxygenRequired} />
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="rounded-[16px] border border-[#fecaca] bg-[#fff5f5] px-5 py-5 shadow-[0_10px_28px_rgba(185,28,28,0.08)] md:px-6" role="alert">
+        <h2 className="text-[21px] font-black text-[#991b1b]">Prediction could not be generated</h2>
+        <p className="mt-2 text-[15px] font-semibold leading-6 text-[#7f1d1d]">{error}</p>
+      </section>
+    )
+  }
+
+  if (!prediction) return null
+
+  const probability = normalizeProbability(prediction.predicted_probability ?? prediction.probability)
+  const riskLevel = classifyRisk(probability)
+  const recommendation = clinicalRecommendation(riskLevel)
+  const tone = riskTone(riskLevel)
+
+  return (
+    <section className={`rounded-[16px] border ${tone.border} ${tone.bg} px-5 py-5 shadow-[0_14px_34px_rgba(13,28,61,0.08)] md:px-6`} aria-live="polite">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <p className={`inline-flex rounded-full px-3 py-1 text-[12px] font-black uppercase tracking-[0.14em] ${tone.badge}`}>
+            Prediction Result
+          </p>
+          <h2 className="mt-3 text-[25px] font-black text-[#071b49]">Postoperative oxygen requirement assessment</h2>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:max-w-[620px]">
+            <OutcomeMetric label="Probability of Postoperative Oxygen Requirement" value={`${probability}%`} />
+            <OutcomeMetric label="Risk Classification" value={riskLevel} valueClass={tone.text} />
+          </div>
+          <div className="mt-4 rounded-[12px] border border-white/80 bg-white px-4 py-4 shadow-sm">
+            <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#53668a]">Recommendation</p>
+            <p className="mt-2 text-[15px] font-semibold leading-6 text-[#20365f]">{recommendation}</p>
+          </div>
+        </div>
+
+        <div className="w-full rounded-[14px] border border-white/80 bg-white px-5 py-5 shadow-sm xl:max-w-[310px]">
+          <div className={`mx-auto flex h-32 w-32 items-center justify-center rounded-full border-[10px] ${tone.ring}`}>
+            <span className={`text-[32px] font-black ${tone.text}`}>{probability}%</span>
+          </div>
+          <p className={`mt-4 text-center text-[18px] font-black ${tone.text}`}>{riskLevel}</p>
+          <p className="mt-2 text-center text-[13px] font-semibold leading-5 text-[#64799e]">
+            Classification uses Low &lt;30%, Moderate 30-69%, High 70% and above.
+          </p>
         </div>
       </div>
     </section>
   )
 }
 
-function OutcomeMetric({ label, value }) {
+function OutcomeMetric({ label, value, valueClass = 'text-[#071b49]' }) {
   return (
     <div className="rounded-[12px] border border-[#d7e4f4] bg-white px-4 py-3">
       <p className="text-[13px] font-bold text-[#6c7f9f]">{label}</p>
-      <p className="mt-1 text-[22px] font-black text-[#071b49]">{value}</p>
+      <p className={`mt-1 text-[22px] font-black ${valueClass}`}>{value}</p>
     </div>
   )
 }
@@ -731,23 +800,67 @@ function buildPredictionPayload(form, bmi) {
   }
 }
 
-function dispositionRecommendation(riskLevel) {
-  const normalizedRisk = String(riskLevel || '').toLowerCase()
-  if (normalizedRisk.includes('high')) {
+function validatePredictionFields(form, bmi) {
+  const missing = requiredPredictionFields
+    .filter(([key]) => !String(form[key] ?? '').trim())
+    .map(([, label]) => label)
+
+  if (!bmi) missing.push('Body mass index')
+  return missing
+}
+
+function normalizeProbability(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return 0
+  const percentValue = numericValue <= 1 ? numericValue * 100 : numericValue
+  return Math.min(100, Math.max(0, Math.round(percentValue)))
+}
+
+function classifyRisk(probability) {
+  if (probability < 30) return 'Low Risk'
+  if (probability < 70) return 'Moderate Risk'
+  return 'High Risk'
+}
+
+function clinicalRecommendation(riskLevel) {
+  if (riskLevel === 'High Risk') {
+    return 'Patient has a high predicted risk of requiring postoperative oxygen. Provide close postoperative monitoring, prepare oxygen support, monitor SpO2 continuously, and consider early senior clinician review or extended recovery observation.'
+  }
+
+  if (riskLevel === 'Moderate Risk') {
+    return 'Patient has a moderate predicted risk of requiring postoperative oxygen. Monitor SpO2 closely, ensure oxygen equipment is available, and reassess respiratory status frequently during the early postoperative period.'
+  }
+
+  return 'Patient has a low predicted risk of requiring postoperative oxygen. Continue routine postoperative monitoring, maintain standard recovery room observation, and reassess if clinical condition changes.'
+}
+
+function riskTone(riskLevel) {
+  if (riskLevel === 'High Risk') {
     return {
-      unit: 'ICU',
-      text: 'Prepare oxygen support, monitor SpO2 closely, alert anesthesia/recovery team, and escalate if saturation remains low or respiratory distress occurs.',
+      bg: 'bg-[#fff1f2]',
+      border: 'border-[#fecaca]',
+      badge: 'bg-[#fee2e2] text-[#991b1b]',
+      ring: 'border-[#fecaca] bg-[#fff5f5]',
+      text: 'text-[#b91c1c]',
     }
   }
-  if (normalizedRisk.includes('moderate') || normalizedRisk.includes('medium')) {
+
+  if (riskLevel === 'Moderate Risk') {
     return {
-      unit: 'HDU',
-      text: 'Monitor SpO2 regularly, keep oxygen available, reassess before ward transfer, and escalate if the patient deteriorates.',
+      bg: 'bg-[#fffbeb]',
+      border: 'border-[#fde68a]',
+      badge: 'bg-[#fef3c7] text-[#92400e]',
+      ring: 'border-[#fde68a] bg-[#fff7ed]',
+      text: 'text-[#b45309]',
     }
   }
+
   return {
-    unit: 'Ward',
-    text: 'Continue routine postoperative monitoring. Oxygen is not required unless SpO2 decreases or symptoms develop.',
+    bg: 'bg-[#f0fdf4]',
+    border: 'border-[#bbf7d0]',
+    badge: 'bg-[#dcfce7] text-[#166534]',
+    ring: 'border-[#bbf7d0] bg-[#f0fdf4]',
+    text: 'text-[#15803d]',
   }
 }
 

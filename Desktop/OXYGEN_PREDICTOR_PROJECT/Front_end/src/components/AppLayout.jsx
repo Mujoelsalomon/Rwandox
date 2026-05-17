@@ -1,13 +1,38 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { isSessionActive, SESSION_EVENT, SESSION_KEY, SESSION_REVOKED_AT_KEY } from '../authSession.js'
 import Footer from './Footer.jsx'
 import SidebarMenu from './SidebarMenu.jsx'
 import TopMenu from './TopMenu.jsx'
 
 export default function AppLayout({ children }) {
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true
     return window.innerWidth >= 1024
   })
+
+  useEffect(() => {
+    function enforceActiveSession() {
+      if (!isSessionActive()) {
+        navigate('/login', { replace: true })
+      }
+    }
+
+    function handleStorage(event) {
+      if (event.key === SESSION_KEY || event.key === SESSION_REVOKED_AT_KEY) {
+        enforceActiveSession()
+      }
+    }
+
+    enforceActiveSession()
+    window.addEventListener(SESSION_EVENT, enforceActiveSession)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener(SESSION_EVENT, enforceActiveSession)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [navigate])
 
   useEffect(() => {
     function handleResize() {

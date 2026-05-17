@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { API_URL } from '../authSession.js'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 export default function Sign_Up_Form() {
@@ -22,7 +23,7 @@ export default function Sign_Up_Form() {
     return password.length >= 8
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
     setError('')
     setSuccess('')
@@ -65,31 +66,28 @@ export default function Sign_Up_Form() {
       return
     }
 
-    // Store new user in localStorage
-    const existingUsers = JSON.parse(localStorage.getItem('postop_o2_users') || '[]')
-    
-    // Check if email already exists
-    if (existingUsers.some((user) => user.email === normalizedEmail)) {
-      setError('An account with this email already exists.')
-      return
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: normalizedName, email: normalizedEmail, password }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Could not create account.')
+        return
+      }
+
+      setSuccess('Account created successfully! Redirecting to login...')
+      setTimeout(() => {
+        navigate('/login')
+      }, 1500)
+    } catch (requestError) {
+      console.error(requestError)
+      setError('Could not connect to the authentication server.')
     }
-
-    const newUser = {
-      id: Date.now(),
-      name: normalizedName,
-      email: normalizedEmail,
-      password,
-      role: 'Clinician',
-      createdAt: new Date().toISOString(),
-    }
-
-    existingUsers.push(newUser)
-    localStorage.setItem('postop_o2_users', JSON.stringify(existingUsers))
-
-    setSuccess('Account created successfully! Redirecting to login...')
-    setTimeout(() => {
-      navigate('/login')
-    }, 1500)
   }
 
   return (

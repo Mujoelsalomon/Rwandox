@@ -27,6 +27,15 @@ export default function SystemAdministrationContent() {
       setActiveAdminPanel((current) => (current === 'audit' ? null : 'audit'))
       return
     }
+    if (title === 'Model registry') {
+      setActiveAdminPanel((current) => (current === 'model' ? null : 'model'))
+      return
+    }
+
+    if (title === 'Maintenance') {
+      setActiveAdminPanel((current) => (current === 'maintenance' ? null : 'maintenance'))
+      return
+    }
 
     notify(`${title} administration opened.`, 'info')
   }
@@ -59,9 +68,24 @@ export default function SystemAdministrationContent() {
             isActive={activeAdminPanel === 'users'}
             onClick={() => openAdminPanel('User access')}
           />
-          <AdminAction title="Audit logs" detail="View recent users activities" onClick={() => openAdminPanel('Audit logs')} />
-          <AdminAction title="Model registry" detail="Manage active and archived model artifacts." onClick={() => openAdminPanel('Model registry')} />
-          <AdminAction title="Maintenance" detail="Check API, database, and sync status." onClick={() => openAdminPanel('Maintenance')} />
+          <AdminAction
+            title="Audit logs"
+            detail="view recent users activitues"
+            isActive={activeAdminPanel === 'audit'}
+            onClick={() => openAdminPanel('Audit logs')}
+          />
+          <AdminAction
+            title="Model registry"
+            detail="Manage active and archived model artifacts."
+            isActive={activeAdminPanel === 'model'}
+            onClick={() => openAdminPanel('Model registry')}
+          />
+          <AdminAction
+            title="Maintenance"
+            detail="Check API, database, and sync status."
+            isActive={activeAdminPanel === 'maintenance'}
+            onClick={() => openAdminPanel('Maintenance')}
+          />
         </div>
 
         {activeAdminPanel === 'users' && (
@@ -75,10 +99,118 @@ export default function SystemAdministrationContent() {
         {activeAdminPanel === 'audit' && (
           <AuditLogs />
         )}
+        {activeAdminPanel === 'model' && (
+          <ModelRegistry />
+        )}
+        {activeAdminPanel === 'maintenance' && (
+          <Maintenance />
+        )}
       </section>
     </div>
   )
 }
+
+  function ModelRegistry() {
+    const stored = JSON.parse(localStorage.getItem('postop_o2_models') || '[]')
+    const models = stored.length
+      ? stored
+      : [
+          { id: 'M-001', name: 'postop-o2-v1', version: '1.0.0', uploadedAt: '2026-05-12T10:00:00Z', status: 'active' },
+          { id: 'M-002', name: 'postop-o2-v2', version: '2.0.0', uploadedAt: '2026-05-13T09:12:00Z', status: 'archived' },
+        ]
+
+    function exportCsv() {
+      const header = ['Model ID', 'Name', 'Version', 'Uploaded At', 'Status']
+      const rows = models.map((m) => [m.id, m.name, m.version, m.uploadedAt, m.status])
+      const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `model_registry_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'')}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    }
+
+    return (
+      <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-[20px] font-black text-[#071b49]">Model registry</h2>
+            <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Manage active and archived model artifacts.</p>
+          </div>
+          <div>
+            <button onClick={exportCsv} className="rounded bg-[#1768f2] px-3 py-2 text-white font-bold">Export CSV</button>
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse text-left">
+            <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
+              <tr>
+                <th className="px-4 py-3">Model ID</th>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Version</th>
+                <th className="px-4 py-3">Uploaded At</th>
+                <th className="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {models.map((m) => (
+                <tr key={m.id} className="border-t border-[#edf2f8]">
+                  <td className="px-4 py-3 text-[14px] font-extrabold text-[#071b49]">{m.id}</td>
+                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.name}</td>
+                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.version}</td>
+                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{new Date(m.uploadedAt).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
+  function Maintenance() {
+    const [status, setStatus] = useState({ api: 'ok', db: 'ok', sync: 'ok' })
+
+    function refresh() {
+      // placeholder: toggle statuses to simulate check
+      setStatus((s) => ({ api: s.api === 'ok' ? 'degraded' : 'ok', db: s.db, sync: s.sync === 'ok' ? 'syncing' : 'ok' }))
+    }
+
+    return (
+      <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-[20px] font-black text-[#071b49]">Maintenance</h2>
+            <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Check API, database, and sync status.</p>
+          </div>
+          <div>
+            <button onClick={refresh} className="rounded bg-[#1768f2] px-3 py-2 text-white font-bold">Refresh</button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded border p-3">
+            <p className="text-sm font-black text-[#64799e]">API</p>
+            <p className="mt-1 font-extrabold">{status.api}</p>
+          </div>
+          <div className="rounded border p-3">
+            <p className="text-sm font-black text-[#64799e]">Database</p>
+            <p className="mt-1 font-extrabold">{status.db}</p>
+          </div>
+          <div className="rounded border p-3">
+            <p className="text-sm font-black text-[#64799e]">Sync</p>
+            <p className="mt-1 font-extrabold">{status.sync}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   function AuditLogs() {
     const stored = JSON.parse(localStorage.getItem('postop_o2_audit') || '[]')
@@ -164,7 +296,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
     <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
       <div className="flex min-w-0 flex-col gap-2 border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-[20px] font-black text-[#071b49]">Users</h2>
+          <h2 className="text-[20px] font-black text-[#071b49]">User management</h2>
           <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Manage user roles and account permissions.</p>
         </div>
       </div>

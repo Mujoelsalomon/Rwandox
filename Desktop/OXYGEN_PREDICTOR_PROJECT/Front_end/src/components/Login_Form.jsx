@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { API_URL, createSession } from '../authSession.js'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 const SUPER_USER = {
+  username: 'anesthetist',
   email: 'munyanezajoel3@gmail.com',
   password: 'Munyaneza@123',
   name: 'Anesthetist',
@@ -21,27 +23,42 @@ export default function Login_Form() {
   const [resetStatus, setResetStatus] = useState('')
   const [resetError, setResetError] = useState('')
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
-    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedLogin = email.trim().toLowerCase()
 
-    if (normalizedEmail !== SUPER_USER.email || password !== SUPER_USER.password) {
-      setError('Invalid super user email or password.')
+    if (!normalizedLogin || !password) {
+      setError('Enter your username/email and password.')
       return
     }
 
-    window.localStorage.setItem(
-      'postop_o2_session',
-      JSON.stringify({
-        email: SUPER_USER.email,
-        name: SUPER_USER.name,
-        role: SUPER_USER.role,
-        rememberMe,
-        loggedInAt: new Date().toISOString(),
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: normalizedLogin, password }),
       })
-    )
-    setError('')
-    navigate('/')
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Invalid username/email or password.')
+        return
+      }
+
+      createSession({
+        email: data.user?.email || SUPER_USER.email,
+        name: data.user?.name || SUPER_USER.name,
+        role: data.user?.role || SUPER_USER.role,
+        username: data.user?.username || SUPER_USER.username,
+        rememberMe,
+      })
+      setError('')
+      navigate('/dashboard')
+    } catch (error) {
+      console.error(error)
+      setError('Could not connect to the authentication server.')
+    }
   }
 
   function openResetDialog() {

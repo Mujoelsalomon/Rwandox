@@ -1,0 +1,28 @@
+# Generated for API-backed React integration.
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = []
+
+    operations = [
+        migrations.CreateModel(
+            name="Patient",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("hospital_id", models.CharField(max_length=50, unique=True)),
+                ("age", models.PositiveIntegerField()),
+                ("sex", models.CharField(max_length=10)),
+                ("bmi", models.FloatField(blank=True, null=True)),
+                ("smoking_history", models.BooleanField(default=False)),
+                ("comorbidities", models.TextField(blank=True)),
+                ("baseline_spo2", models.FloatField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+    ]

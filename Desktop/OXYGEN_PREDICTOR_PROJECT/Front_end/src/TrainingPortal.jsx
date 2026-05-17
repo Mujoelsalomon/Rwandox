@@ -24,7 +24,7 @@ export default function TrainingPortal() {
 
   async function fetchModels() {
     try {
-      const r = await fetch(`${API_URL}/models`)
+      const r = await fetch(`${API_URL}/models`, { credentials: 'include' })
       const j = await r.json()
       setModels(Array.isArray(j.models) ? j.models : [])
     } catch (e) {
@@ -47,7 +47,7 @@ export default function TrainingPortal() {
       const fd = new FormData()
       fd.append('file', file)
 
-      const up = await fetch(`${API_URL}/upload-dataset`, { method: 'POST', body: fd })
+      const up = await fetch(`${API_URL}/upload-dataset`, { method: 'POST', body: fd, credentials: 'include' })
       const upj = await up.json()
       if (!up.ok) {
         throw new Error(upj.error || 'Could not upload dataset')
@@ -56,6 +56,7 @@ export default function TrainingPortal() {
       const resp = await fetch(`${API_URL}/train`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ dataset_path: upj.dataset_path, target, model_type: modelType }),
       })
       const job = await resp.json()
@@ -79,7 +80,7 @@ export default function TrainingPortal() {
   async function pollStatus(id) {
     setStatus({ status: 'queued' })
     const iv = setInterval(async () => {
-      const r = await fetch(`${API_URL}/train/status/${id}`)
+      const r = await fetch(`${API_URL}/train/status/${id}`, { credentials: 'include' })
       const j = await r.json()
       setStatus(j)
       if (j.status === 'completed' || j.status === 'failed') {
@@ -102,6 +103,7 @@ export default function TrainingPortal() {
       const resp = await fetch(`${API_URL}/models/activate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ id }),
       })
       const data = await resp.json()
@@ -127,7 +129,7 @@ export default function TrainingPortal() {
             <p className="text-[30px] font-semibold uppercase leading-tight text-sky-700">Model Management</p>
             <h1 className="mt-2 text-[30px] font-extrabold leading-tight text-[#1f2942]">Training Portal</h1>
           </div>
-          <Link to="/" className="justify-self-center rounded-full border border-[#c3d4e8] px-5 py-3 text-sm font-semibold text-[#445875] md:justify-self-end">
+          <Link to="/dashboard" className="justify-self-center rounded-full border border-[#c3d4e8] px-5 py-3 text-sm font-semibold text-[#445875] md:justify-self-end">
             Back to dashboard
           </Link>
         </div>

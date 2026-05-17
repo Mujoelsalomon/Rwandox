@@ -1,5 +1,6 @@
 import React from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { isSessionActive } from './authSession.js'
 import AppLayout from './components/AppLayout.jsx'
 import NewPredictionContent from './components/NewPredictionContent.jsx'
 import PatientRecordsContent from './components/PatientRecordsContent.jsx'
@@ -15,52 +16,84 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PostoperativeOxygenMLUIMockup />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login_Form />} />
         <Route path="/signup" element={<Sign_Up_Form />} />
-        <Route path="/signup" element={<Sign_Up_Form />} />
+        <Route
+          path="/dashboard"
+          element={(
+            <ProtectedRoute>
+              <PostoperativeOxygenMLUIMockup />
+            </ProtectedRoute>
+          )}
+        />
         <Route
           path="/new-prediction"
           element={(
-            <AppLayout>
-              <NewPredictionContent />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout>
+                <NewPredictionContent />
+              </AppLayout>
+            </ProtectedRoute>
           )}
         />
         <Route
           path="/patients"
           element={(
-            <AppLayout>
-              <PatientRecordsContent />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout>
+                <PatientRecordsContent />
+              </AppLayout>
+            </ProtectedRoute>
           )}
         />
         <Route
           path="/prediction-history"
           element={(
-            <AppLayout>
-              <PredictionHistoryContent />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout>
+                <PredictionHistoryContent />
+              </AppLayout>
+            </ProtectedRoute>
           )}
         />
         <Route
           path="/settings"
           element={(
-            <AppLayout>
-              <SettingsContent />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout>
+                <SettingsContent />
+              </AppLayout>
+            </ProtectedRoute>
           )}
         />
         <Route
           path="/system-administration"
           element={(
-            <AppLayout>
-              <SystemAdministrationContent />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout>
+                <SystemAdministrationContent />
+              </AppLayout>
+            </ProtectedRoute>
           )}
         />
-        <Route path="/train" element={<TrainingPortal />} />
+        <Route
+          path="/train"
+          element={(
+            <ProtectedRoute>
+              <TrainingPortal />
+            </ProtectedRoute>
+          )}
+        />
       </Routes>
     </BrowserRouter>
   )
+}
+
+function ProtectedRoute({ children }) {
+  if (!isSessionActive()) {
+    return <Navigate to="/login" replace />
+  }
+
+  return children
 }

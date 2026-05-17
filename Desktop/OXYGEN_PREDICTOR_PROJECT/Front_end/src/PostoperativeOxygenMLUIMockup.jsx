@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { isSessionActive, SESSION_EVENT, SESSION_KEY, SESSION_REVOKED_AT_KEY } from './authSession.js'
 import DashboardContent from './components/DashboardContent.jsx'
 import Footer from './components/Footer.jsx'
 import SidebarMenu from './components/SidebarMenu.jsx'
@@ -27,6 +29,7 @@ function normalizePredictionResponse(res) {
 }
 
 export default function PostoperativeOxygenMLUIMockup() {
+  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === 'undefined') return true
     return window.innerWidth >= 1024
@@ -50,6 +53,28 @@ export default function PostoperativeOxygenMLUIMockup() {
   const [activeModel, setActiveModel] = useState(null)
 
   useEffect(() => {
+    function enforceActiveSession() {
+      if (!isSessionActive()) {
+        navigate('/login', { replace: true })
+      }
+    }
+
+    function handleStorage(event) {
+      if (event.key === SESSION_KEY || event.key === SESSION_REVOKED_AT_KEY) {
+        enforceActiveSession()
+      }
+    }
+
+    enforceActiveSession()
+    window.addEventListener(SESSION_EVENT, enforceActiveSession)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener(SESSION_EVENT, enforceActiveSession)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [navigate])
+
+  useEffect(() => {
     fetchActiveModel()
   }, [])
 
@@ -64,7 +89,7 @@ export default function PostoperativeOxygenMLUIMockup() {
 
   async function fetchActiveModel() {
     try {
-      const resp = await fetch(`${API_URL}/models`)
+      const resp = await fetch(`${API_URL}/models`, { credentials: 'include' })
       if (!resp.ok) return
       const data = await resp.json()
       const active = Array.isArray(data.models) ? data.models.find((model) => model.is_active) : null
@@ -79,6 +104,7 @@ export default function PostoperativeOxygenMLUIMockup() {
       const resp = await fetch(`${API_URL}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           features: {
             age: 62,

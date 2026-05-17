@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { clearCurrentSession } from '../authSession.js'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
@@ -55,7 +56,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
   }, [])
 
   function handleLogout() {
-    window.localStorage.removeItem('postop_o2_session')
+    clearCurrentSession()
     setProfileMenuOpen(false)
     navigate('/login')
   }
