@@ -3,30 +3,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const pageSizes = [10, 25, 50, 100]
 
-const fallbackPredictions = Array.from({ length: 42 }, (_, index) => {
-  const riskLevels = ['High', 'Moderate', 'Low']
-  const dispositions = ['OPD', 'Ward', 'HDU', 'ICU']
-  const risk = riskLevels[index % riskLevels.length]
-  return {
-    id: index + 1,
-    patient_id: `KBH-2026-${String(index + 91).padStart(5, '0')}`,
-    age: 32 + (index % 44),
-    sex: index % 2 === 0 ? 'Female' : 'Male',
-    surgery_type: ['Abdominal', 'Orthopedic', 'Gynecologic', 'Urologic'][index % 4],
-    patient_disposition: dispositions[index % dispositions.length],
-    predicted_probability: risk === 'High' ? 78 + (index % 17) : risk === 'Moderate' ? 44 + (index % 18) : 12 + (index % 20),
-    risk_level: risk,
-    model_version: index % 3 === 0 ? 'xgboost-active' : 'v1.0',
-    generated_at: `2026-05-${String(12 - (index % 7)).padStart(2, '0')}T${String(8 + (index % 9)).padStart(2, '0')}:30:00`,
-    recommendations: risk === 'High'
-      ? ['Immediate oxygen review', 'Close postoperative monitoring']
-      : risk === 'Moderate'
-        ? ['Repeat SpO2 assessment']
-        : ['Routine recovery monitoring'],
-    contributing_factors: ['Baseline SpO2', 'Duration', 'Blood loss'].slice(0, 1 + (index % 3)),
-  }
-})
-
 export default function PredictionHistoryContent() {
   const [predictions, setPredictions] = useState([])
   const [search, setSearch] = useState('')
@@ -52,8 +28,8 @@ export default function PredictionHistoryContent() {
       } catch (error) {
         console.error(error)
         if (active) {
-          setPredictions(fallbackPredictions)
-          setStatus('Showing sample history until backend data is available.')
+          setPredictions([])
+          setStatus('Could not load prediction history from the backend.')
         }
       } finally {
         if (active) setLoading(false)

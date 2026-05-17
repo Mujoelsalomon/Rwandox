@@ -12,6 +12,7 @@ from .views import (
     models_list_view,
     models_activate_view,
     models_download_view,
+    patients_list_view,
     patients_search_view,
     prediction_history_view,
 )
@@ -24,6 +25,7 @@ urlpatterns = [
     path("auth/me", current_user_view, name="api_current_user"),
     path("predict", predict_view, name="api_predict"),
     path("prediction-history", prediction_history_view, name="api_prediction_history"),
+    path("patients", patients_list_view, name="api_patients"),
     path("patients/search", patients_search_view, name="api_patients_search"),
     path("upload-dataset", upload_dataset_view, name="api_upload_dataset"),
     path("train", train_view, name="api_train"),
