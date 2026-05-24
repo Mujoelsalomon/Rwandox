@@ -35,7 +35,8 @@ def env_int(name, default=0):
 
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me-for-prod")
-DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
+IS_RENDER = env_bool("RENDER", False) or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
+DEBUG = env_bool("DJANGO_DEBUG", not IS_RENDER)
 ALLOWED_HOSTS = env_list(
     "DJANGO_ALLOWED_HOSTS",
     ["localhost", "127.0.0.1", "testserver", "rwandoxy.com", "www.rwandoxy.com"],
@@ -96,7 +97,7 @@ WSGI_APPLICATION = "backend_project.wsgi.application"
 # Render provides DATABASE_URL for PostgreSQL. In production, require it so
 # Django never silently falls back to localhost or a docker-only host.
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL and DEBUG:
+if not DATABASE_URL and DEBUG and not IS_RENDER:
     DATABASE_URL = os.getenv(
         "LOCAL_DATABASE_URL",
         "postgres://{user}:{password}@{host}:{port}/{name}".format(
@@ -109,7 +110,7 @@ if not DATABASE_URL and DEBUG:
     )
 
 if not DATABASE_URL:
-    raise ImproperlyConfigured("DATABASE_URL must be set when DJANGO_DEBUG=0.")
+    raise ImproperlyConfigured("DATABASE_URL must be set on Render or when DJANGO_DEBUG=0.")
 
 DATABASES = {
     "default": dj_database_url.parse(
