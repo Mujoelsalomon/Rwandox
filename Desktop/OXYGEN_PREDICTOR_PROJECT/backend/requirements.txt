@@ -2,6 +2,8 @@ Django>=4.2
 psycopg2-binary
 python-dotenv
 django-cors-headers>=4.0
+gunicorn>=21.2
+whitenoise>=6.6
 pandas>=1.5
 openpyxl>=3.1
 scikit-learn>=1.0
