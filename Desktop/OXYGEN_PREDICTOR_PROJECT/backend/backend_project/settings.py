@@ -34,6 +34,19 @@ def env_int(name, default=0):
         return default
 
 
+def postgres_env_url():
+    host = os.getenv("POSTGRES_HOST", "").strip()
+    if not host or host in {"localhost", "127.0.0.1", "db"}:
+        return ""
+    return "postgres://{user}:{password}@{host}:{port}/{name}".format(
+        user=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", ""),
+        host=host,
+        port=os.getenv("POSTGRES_PORT", "5432"),
+        name=os.getenv("POSTGRES_DB", "postop"),
+    )
+
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me-for-prod")
 IS_RENDER = env_bool("RENDER", False) or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
 DEBUG = env_bool("DJANGO_DEBUG", not IS_RENDER)
@@ -94,9 +107,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backend_project.wsgi.application"
 
-# Render provides DATABASE_URL for PostgreSQL. In production, require it so
-# Django never silently falls back to localhost or a docker-only host.
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Render should provide DATABASE_URL. If a deployment platform exposes separate
+# PostgreSQL variables instead, accept them only when the host is not local.
+DATABASE_URL = os.getenv("DATABASE_URL") or postgres_env_url()
 if not DATABASE_URL and DEBUG and not IS_RENDER:
     DATABASE_URL = os.getenv(
         "LOCAL_DATABASE_URL",
@@ -110,7 +123,10 @@ if not DATABASE_URL and DEBUG and not IS_RENDER:
     )
 
 if not DATABASE_URL:
-    raise ImproperlyConfigured("DATABASE_URL must be set on Render or when DJANGO_DEBUG=0.")
+    raise ImproperlyConfigured(
+        "Set DATABASE_URL to the Render PostgreSQL Internal Database URL. "
+        "Production will not use localhost or db as the database host."
+    )
 
 DATABASES = {
     "default": dj_database_url.parse(
