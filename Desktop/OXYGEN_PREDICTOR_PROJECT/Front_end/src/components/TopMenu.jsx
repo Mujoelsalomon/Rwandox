@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { clearCurrentSession } from '../authSession.js'
+import { clearCurrentSession, getSession, SESSION_EVENT } from '../authSession.js'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
@@ -9,6 +9,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false)
   const [notificationBellRinging, setNotificationBellRinging] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [session, setSession] = useState(() => getSession())
   const profileMenuRef = useRef(null)
   const notificationMenuRef = useRef(null)
 
@@ -47,13 +48,19 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
     window.addEventListener('app-notification', handleAppNotification)
+    window.addEventListener(SESSION_EVENT, handleSessionChange)
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleEscape)
       window.removeEventListener('app-notification', handleAppNotification)
+      window.removeEventListener(SESSION_EVENT, handleSessionChange)
     }
   }, [])
+
+  function handleSessionChange() {
+    setSession(getSession())
+  }
 
   function handleLogout() {
     clearCurrentSession()
@@ -63,7 +70,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
 
   function handleViewProfile() {
     setProfileMenuOpen(false)
-    window.dispatchEvent(new CustomEvent('app-notification', { detail: { message: 'Profile view opened.', type: 'info' } }))
+    navigate('/profile')
   }
 
   function handleAccountSettings() {
@@ -72,10 +79,10 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
   }
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-2 py-2 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur sm:px-4 sm:py-3 md:px-5">
-      <div className="flex h-12 items-center justify-between gap-2 md:h-14 md:gap-4">
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-white/70 sm:h-11 sm:w-11 md:h-12 md:w-12">
+    <header className="navbar navbar-expand fixed left-0 right-0 top-0 z-50 flex h-[88px] items-center border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-6 py-0 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur">
+      <div className="container-fluid flex h-full items-center justify-between gap-4 px-0">
+        <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-white/70 md:h-14 md:w-14">
             <img
               src={postopO2Logo}
               alt="PostOp O2 AI"
@@ -83,25 +90,25 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
             />
           </div>
           <div className="min-w-0">
-            <span className="block truncate text-[17px] font-extrabold leading-5 text-[#123000] sm:text-[20px] md:text-[22px]">
+            <span className="block truncate text-[20px] font-extrabold leading-6 text-[#123000]">
               Clinical ML
             </span>
-            <span className="hidden max-w-[230px] truncate text-[11px] font-extrabold text-[#225000] sm:block md:max-w-none md:text-[12px]">
+            <span className="block max-w-[320px] truncate text-[20px] font-extrabold leading-6 text-[#225000] md:max-w-none">
              Post-op Oxygen Requirement Prediction 
             </span>
           </div>
+        </div>
+
+        <div className="flex min-w-0 shrink-0 items-center gap-3 md:gap-5">
           <button
             type="button"
             aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
             aria-expanded={isSidebarOpen}
             onClick={onToggleSidebar}
-            className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f2f6fc] text-[#172a53] transition hover:bg-[#e7eef8] sm:ml-2 sm:h-10 sm:w-10 lg:ml-10"
+            className="btn btn-light flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f6fc] text-[#172a53] transition hover:bg-[#e7eef8]"
           >
-            <Icon name="menu" className="h-5 w-5 sm:h-6 sm:w-6" />
+            <Icon name="menu" className="h-6 w-6" />
           </button>
-        </div>
-
-        <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-3 md:gap-5">
           <div ref={notificationMenuRef} className="relative">
             <button
               type="button"
@@ -113,11 +120,11 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 window.setTimeout(() => setNotificationBellRinging(false), 650)
                 setNotificationMenuOpen((open) => !open)
               }}
-              className="relative flex h-9 w-9 items-center justify-center rounded-full text-[#172a53] transition hover:bg-[#f2f6fc] sm:h-10 sm:w-10"
+              className="btn btn-light position-relative flex h-10 w-10 items-center justify-center rounded-full text-[#172a53] transition hover:bg-[#f2f6fc]"
             >
               <Icon
                 name="bell"
-                className={`h-5 w-5 sm:h-6 sm:w-6 ${notificationBellRinging ? 'animate-[bell-ring_0.65s_ease-in-out]' : ''}`}
+                className={`h-6 w-6 ${notificationBellRinging ? 'animate-[bell-ring_0.65s_ease-in-out]' : ''}`}
               />
               {notifications.length > 0 && (
                 <span className="absolute right-0.5 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1768f2] px-1 text-[11px] font-bold text-white sm:right-1">
@@ -129,7 +136,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
             {notificationMenuOpen && (
               <div
                 role="menu"
-                className="fixed left-2 right-2 top-[66px] max-h-[calc(100vh-84px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-2 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-auto sm:right-24 sm:top-[74px] sm:w-[360px] md:absolute md:left-auto md:right-0 md:top-[54px]"
+                className="dropdown-menu show fixed left-2 right-2 top-[96px] max-h-[calc(100vh-112px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-2 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-auto sm:right-24 sm:w-[360px] md:absolute md:left-auto md:right-0 md:top-[58px]"
               >
                 <div className="flex items-center justify-between border-b border-[#edf2f8] px-4 pb-2">
                   <p className="text-[14px] font-extrabold text-[#14234a]">Notifications</p>
@@ -168,16 +175,16 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
               aria-expanded={profileMenuOpen}
               aria-haspopup="menu"
               onClick={() => setProfileMenuOpen((open) => !open)}
-              className="flex min-w-0 items-center gap-1 rounded-2xl px-1 py-1 transition hover:bg-[#f6f9fd] sm:gap-2 sm:px-2 md:gap-3"
+              className="btn btn-link text-decoration-none flex min-w-0 items-center gap-2 rounded-2xl px-1 py-1 transition hover:bg-[#f6f9fd] md:gap-3"
             >
-              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#dbe6f5] sm:h-10 sm:w-10 md:h-11 md:w-11">
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#dbe6f5] md:h-11 md:w-11">
                 <div className="flex h-full w-full items-end justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">
                   <div className="mb-1 h-6 w-6 rounded-full bg-[#24334f] md:h-7 md:w-7" />
                 </div>
               </div>
               <div className="hidden max-w-[120px] text-left md:block lg:max-w-[170px]">
-                <p className="truncate text-[15px] font-extrabold text-[#0d1c3d] lg:text-[16px]">Anesthetist</p>
-                <p className="truncate text-[13px] text-[#526383] lg:text-[14px]">Clinician</p>
+                <p className="truncate text-[15px] font-extrabold text-[#0d1c3d] lg:text-[16px]">{session?.name || 'Anesthetist'}</p>
+                <p className="truncate text-[13px] text-[#526383] lg:text-[14px]">{session?.role || 'Clinician'}</p>
               </div>
               <Icon name="chevronDown" className="hidden h-5 w-5 shrink-0 text-[#526383] sm:block" />
             </button>
@@ -185,7 +192,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
             {profileMenuOpen && (
               <div
                 role="menu"
-                className="fixed left-2 right-2 top-[66px] max-h-[calc(100vh-84px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-1 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-4 sm:right-4 sm:top-[74px] md:absolute md:left-auto md:right-0 md:top-[54px] md:w-[260px]"
+                className="dropdown-menu show fixed left-2 right-2 top-[96px] max-h-[calc(100vh-112px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-1 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-4 sm:right-4 md:absolute md:left-auto md:right-0 md:top-[58px] md:w-[260px]"
               >
                 <MenuAction icon="user" title="View Profile" onClick={handleViewProfile} />
                 <MenuAction icon="settings" title="Account Settings" bordered onClick={handleAccountSettings} />
@@ -214,7 +221,7 @@ function MenuAction({ icon, title, detail, bordered = false, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-h-[54px] w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#f6f9fd] focus:bg-[#f6f9fd] focus:outline-none ${bordered ? 'border-t border-[#edf2f8]' : ''}`}
+      className={`dropdown-item flex min-h-[54px] w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#f6f9fd] focus:bg-[#f6f9fd] focus:outline-none ${bordered ? 'border-t border-[#edf2f8]' : ''}`}
     >
       <Icon name={icon} className="h-5 w-5 shrink-0 text-[#172a53]" />
       <div className="min-w-0">

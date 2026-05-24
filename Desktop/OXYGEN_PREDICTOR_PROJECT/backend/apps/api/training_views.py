@@ -33,7 +33,18 @@ def upload_dataset_view(request):
         for chunk in uploaded_file.chunks():
             wf.write(chunk)
 
-    return cors(JsonResponse({"dataset_path": str(dest)}))
+    columns = []
+    column_error = ""
+    try:
+        columns = trainer.dataset_columns(str(dest))
+    except Exception as exc:
+        column_error = str(exc)
+
+    return cors(JsonResponse({
+        "dataset_path": str(dest),
+        "columns": columns,
+        "column_error": column_error,
+    }))
 
 
 @csrf_exempt
