@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from corsheaders.defaults import default_headers
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 load_dotenv()
 
@@ -92,28 +93,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backend_project.wsgi.application"
 
-# Prefer Render's DATABASE_URL in production. Fall back to individual
-# PostgreSQL env vars for local development and docker-compose.
+# Render provides DATABASE_URL for PostgreSQL. In production, require it so
+# Django never silently falls back to localhost or a docker-only host.
 DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=not DEBUG,
-        )
-    }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB", "postop"),
-            "USER": os.getenv("POSTGRES_USER", "postgres"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD", "postgres"),
-            "HOST": os.getenv("POSTGRES_HOST", "localhost"),
-            "PORT": os.getenv("POSTGRES_PORT", "5432"),
-        }
-    }
+if not DATABASE_URL and DEBUG:
+    DATABASE_URL = os.getenv(
+        "LOCAL_DATABASE_URL",
+        "postgres://{user}:{password}@{host}:{port}/{name}".format(
+            user=os.getenv("POSTGRES_USER", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=os.getenv("POSTGRES_PORT", "5432"),
+            name=os.getenv("POSTGRES_DB", "postop"),
+        ),
+    )
+
+if not DATABASE_URL:
+    raise ImproperlyConfigured("DATABASE_URL must be set when DJANGO_DEBUG=0.")
+
+DATABASES = {
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=env_bool("DATABASE_SSL_REQUIRE", not DEBUG),
+    )
+}
 
 AUTH_PASSWORD_VALIDATORS = []
 FAST_LOGIN_PBKDF2_ITERATIONS = int(os.getenv("FAST_LOGIN_PBKDF2_ITERATIONS", "120000"))
