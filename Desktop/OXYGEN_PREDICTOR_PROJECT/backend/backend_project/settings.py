@@ -40,7 +40,7 @@ def postgres_env_url():
         return ""
     return "postgres://{user}:{password}@{host}:{port}/{name}".format(
         user=os.getenv("POSTGRES_USER", "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD", ""),
+        password=os.getenv("POSTGRES_PASSWORD", "postgres"),
         host=host,
         port=os.getenv("POSTGRES_PORT", "5432"),
         name=os.getenv("POSTGRES_DB", "postop"),
@@ -123,10 +123,17 @@ if not DATABASE_URL and DEBUG and not IS_RENDER:
     )
 
 if not DATABASE_URL:
-    raise ImproperlyConfigured(
-        "Set DATABASE_URL to the Render PostgreSQL Internal Database URL. "
-        "Production will not use localhost or db as the database host."
-    )
+    # In production we require an explicit DATABASE_URL. In local
+    # development (DEBUG=True) fall back to a local SQLite DB so the
+    # project is easier to run without configuring Postgres.
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            "Set DATABASE_URL to the Render PostgreSQL Internal Database URL. "
+            "Production will not use localhost or db as the database host."
+        )
+
+    # local dev fallback to SQLite
+    DATABASE_URL = f"sqlite:///{(BASE_DIR / 'db.sqlite3').as_posix()}"
 
 DATABASES = {
     "default": dj_database_url.parse(
