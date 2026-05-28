@@ -2,12 +2,15 @@ from .common import float_value
 
 
 def user_payload(user):
+    role = "Superuser" if user.is_superuser else "Administrator" if user.is_staff else "Clinician"
     return {
         "id": user.id,
         "username": user.username,
         "email": user.email,
         "name": user.get_full_name() or user.first_name or user.username,
-        "role": "Administrator" if user.is_staff else "Clinician",
+        "role": role,
+        "is_staff": user.is_staff,
+        "is_superuser": user.is_superuser,
     }
 
 

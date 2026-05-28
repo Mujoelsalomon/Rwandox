@@ -17,3 +17,37 @@ body {
 .settings-content-18 * {
   font-size: 18px !important;
 }
+
+.sidebar-resize-handle {
+  position: relative;
+  z-index: 30;
+  width: 12px;
+  flex: 0 0 12px;
+  cursor: col-resize;
+  touch-action: none;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.08), rgba(255, 255, 255, 0.7));
+}
+
+.sidebar-resize-handle::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  content: '';
+  background: rgba(30, 64, 175, 0.42);
+  border-radius: 999px;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.sidebar-resize-handle:hover::after,
+.sidebar-resize-handle:focus-visible::after {
+  background: #1265dc;
+  box-shadow: 0 0 0 3px rgba(18, 101, 220, 0.16);
+}
+
+.sidebar-resizing,
+.sidebar-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}

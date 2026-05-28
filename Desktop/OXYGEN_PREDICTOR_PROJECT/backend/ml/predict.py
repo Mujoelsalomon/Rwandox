@@ -40,17 +40,9 @@ def _positive_class_index(classes, probabilities):
 def _normalize_value(feature, value):
     if value in {"", None}:
         return _default_value(feature)
-    if feature in {"smoking_history", "residual_effects", "opioid_use", "oxygen_before_prediction"}:
+    if feature in _BOOLEAN_FEATURES:
         return bool(value)
-    if feature in {
-        "age",
-        "bmi",
-        "baseline_spo2",
-        "surgery_duration",
-        "postop_spo2",
-        "respiratory_rate",
-        "time_since_surgery",
-    }:
+    if feature in _NUMERIC_FEATURES:
         try:
             return float(value)
         except (TypeError, ValueError):
@@ -58,17 +50,55 @@ def _normalize_value(feature, value):
     return value
 
 
+_BOOLEAN_FEATURES = {"smoking_history", "residual_effects", "opioid_use", "oxygen_before_prediction"}
+
+
+_NUMERIC_FEATURES = {
+    "age",
+    "age_years",
+    "weight_kg",
+    "height_cm",
+    "bmi",
+    "body_mass_index",
+    "baseline_spo2",
+    "baseline_room_air_spo2_percent",
+    "baseline_respiratory_rate_bpm",
+    "baseline_heart_rate_bpm",
+    "baseline_systolic_bp_mmhg",
+    "baseline_diastolic_bp_mmhg",
+    "preoperative_hemoglobin_gdl",
+    "surgery_duration",
+    "duration_of_surgery_minutes",
+    "estimated_blood_loss_ml",
+    "postop_spo2",
+    "respiratory_rate",
+    "time_since_surgery",
+}
+
+
 def _default_value(feature):
     defaults = {
         "age": 50,
+        "age_years": 50,
         "sex": "Female",
+        "weight_kg": 70,
+        "height_cm": 165,
         "bmi": 25,
+        "body_mass_index": 25,
         "smoking_history": False,
         "comorbidities": "None",
         "baseline_spo2": 97,
+        "baseline_room_air_spo2_percent": 97,
+        "baseline_respiratory_rate_bpm": 18,
+        "baseline_heart_rate_bpm": 80,
+        "baseline_systolic_bp_mmhg": 120,
+        "baseline_diastolic_bp_mmhg": 80,
+        "preoperative_hemoglobin_gdl": 13,
         "surgery_type": "Abdominal",
         "urgency": "elective",
         "surgery_duration": 90,
+        "duration_of_surgery_minutes": 90,
+        "estimated_blood_loss_ml": 0,
         "blood_loss": "Minimal",
         "ward": "Surgical Ward",
         "anesthesia_type": "General",

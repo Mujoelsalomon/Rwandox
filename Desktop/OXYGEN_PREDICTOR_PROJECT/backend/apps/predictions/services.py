@@ -1,8 +1,5 @@
-from ml.predict import make_prediction
 from ml.model_loader import load_model_assets
-
-
-model, preprocessor, feature_order = load_model_assets()
+from ml.predict import make_prediction
 
 
 def classify_risk(probability: float) -> str:
@@ -18,13 +15,13 @@ def build_recommendations(risk_level: str) -> list[str]:
         return [
             "Start close oxygen monitoring immediately.",
             "Prepare supplemental oxygen in PACU or ward.",
-            "Repeat SpO₂ and respiratory rate within 15 minutes.",
+            "Repeat SpO2 and respiratory rate within 15 minutes.",
             "Escalate clinical review if saturation remains below target.",
         ]
     if risk_level == "Moderate":
         return [
             "Continue close monitoring.",
-            "Repeat SpO₂ assessment.",
+            "Repeat SpO2 assessment.",
             "Prepare oxygen if clinical condition worsens.",
         ]
     return [
@@ -34,6 +31,7 @@ def build_recommendations(risk_level: str) -> list[str]:
 
 
 def run_prediction(payload: dict) -> dict:
+    model, preprocessor, feature_order = load_model_assets()
     probability, contributing_factors = make_prediction(
         payload=payload,
         model=model,

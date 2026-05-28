@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { getSession } from '../authSession.js'
+import { getSession, isAdminSession } from '../authSession.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -169,6 +169,7 @@ export default function NewPredictionContent() {
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState('')
   const lastSyncedPayloadRef = useRef('')
+  const canManageModels = isAdminSession(getSession())
 
   const bmi = useMemo(() => {
     const heightM = Number(form.height) / 100
@@ -180,6 +181,10 @@ export default function NewPredictionContent() {
   function updateField(name, value) {
     setForm((current) => ({ ...current, [name]: value }))
   }
+
+  useEffect(() => {
+    if (!canManageModels && mode === 'dataset') setMode('new')
+  }, [canManageModels, mode])
 
   useEffect(() => {
     if (!hasGeneratedPrediction || mode === 'dataset' || actionLoading === 'prediction') return undefined
@@ -468,10 +473,10 @@ export default function NewPredictionContent() {
             </p>
           </div>
 
-          <div className="btn-group flex-wrap grid gap-2 rounded-[14px] bg-[#eef4fb] p-1 sm:grid-cols-3" role="group" aria-label="Prediction mode">
+          <div className={`btn-group flex-wrap grid gap-2 rounded-[14px] bg-[#eef4fb] p-1 ${canManageModels ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`} role="group" aria-label="Prediction mode">
             <ModeButton active={mode === 'new'} onClick={() => setMode('new')}>Prediction form</ModeButton>
             <ModeButton active={mode === 'existing'} onClick={() => setMode('existing')}>Existing patient</ModeButton>
-            <ModeButton active={mode === 'dataset'} onClick={() => setMode('dataset')}>Add dataset</ModeButton>
+            {canManageModels && <ModeButton active={mode === 'dataset'} onClick={() => setMode('dataset')}>Add dataset</ModeButton>}
           </div>
         </div>
       </section>
@@ -541,7 +546,9 @@ export default function NewPredictionContent() {
           </section>
 
           <PredictionResultPanel
+            bmi={bmi}
             error={error}
+            form={form}
             loading={actionLoading === 'prediction' && loading}
             prediction={predictionResult}
             syncing={syncingPrediction}
@@ -663,7 +670,7 @@ function ModeButton({ active, children, onClick }) {
   )
 }
 
-function PredictionResultPanel({ error, loading, prediction, syncing }) {
+function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing }) {
   if (loading) {
     return (
       <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#d7e4f4] bg-white px-5 py-5 md:px-6" aria-live="polite">
@@ -694,12 +701,13 @@ function PredictionResultPanel({ error, loading, prediction, syncing }) {
   const probability = normalizeProbability(prediction.predicted_probability ?? prediction.probability)
   const riskLevel = classifyRisk(probability)
   const recommendation = clinicalRecommendation(riskLevel)
+  const keyPredictors = getKeyPredictors(prediction, form, bmi)
   const tone = riskTone(riskLevel)
 
   return (
     <section className={`card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border ${tone.border} ${tone.bg} px-5 py-5 md:px-6`} aria-live="polite">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className={`badge rounded-pill px-3 py-2 text-[12px] font-black uppercase tracking-[0.14em] ${tone.badge}`}>
             Prediction Result
           </p>
@@ -709,9 +717,10 @@ function PredictionResultPanel({ error, loading, prediction, syncing }) {
             </p>
           )}
           <h2 className="mt-3 text-[25px] font-black text-[#071b49]">Postoperative oxygen requirement assessment</h2>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:max-w-[620px]">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(260px,1fr)]">
             <OutcomeMetric label="Probability of Postoperative Oxygen Requirement" value={`${probability}%`} />
             <OutcomeMetric label="Risk Classification" value={riskLevel} valueClass={tone.text} />
+            <KeyPredictors predictors={keyPredictors} />
           </div>
           <div className="mt-4 rounded-[12px] border border-white/80 bg-white px-4 py-4 shadow-sm">
             <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#53668a]">Recommendation</p>
@@ -733,6 +742,24 @@ function PredictionResultPanel({ error, loading, prediction, syncing }) {
   )
 }
 
+function KeyPredictors({ predictors }) {
+  return (
+    <div className="rounded-[12px] border border-[#d7e4f4] bg-white px-4 py-3 shadow-sm">
+      <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#53668a]">Key Predictors</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {predictors.map((predictor, index) => (
+          <span
+            key={`${predictor}-${index}`}
+            className="rounded-full border border-[#c7d8eb] bg-[#f8fbff] px-3 py-1 text-[13px] font-extrabold text-[#20365f]"
+          >
+            {index + 1}. {predictor}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function OutcomeMetric({ label, value, valueClass = 'text-[#071b49]' }) {
   return (
     <div className="card border-0 shadow-sm rounded-4 rounded-[12px] border border-[#d7e4f4] bg-white px-4 py-3">
@@ -740,6 +767,68 @@ function OutcomeMetric({ label, value, valueClass = 'text-[#071b49]' }) {
       <p className={`mt-1 text-[22px] font-black ${valueClass}`}>{value}</p>
     </div>
   )
+}
+
+function getKeyPredictors(prediction, form, bmi) {
+  const backendPredictors = normalizePredictorList(prediction?.contributing_factors || prediction?.factors)
+  if (backendPredictors.length > 0) return backendPredictors.slice(0, 5)
+
+  const baselineSpo2 = Number(form?.baselineSpo2)
+  const duration = Number(form?.durationOfSurgery)
+  const bmiValue = Number(bmi)
+  const age = Number(form?.age || form?.screeningAge)
+
+  const predictors = [
+    {
+      present: Number.isFinite(baselineSpo2) && baselineSpo2 <= 94,
+      label: `Baseline SpO2 ${baselineSpo2}%`,
+    },
+    {
+      present: ['III', 'IV', 'V'].includes(String(form?.asaClass || '').toUpperCase()),
+      label: `ASA ${form?.asaClass}`,
+    },
+    {
+      present: String(form?.surgeryStatus || '').toLowerCase() === 'emergency',
+      label: 'Emergency surgery',
+    },
+    {
+      present: Number.isFinite(duration) && duration >= 180,
+      label: `Duration ${duration} min`,
+    },
+    {
+      present: Number.isFinite(bmiValue) && bmiValue >= 30,
+      label: `BMI ${bmiValue.toFixed(1)}`,
+    },
+    {
+      present: form?.typeOfAnesthesia === 'General',
+      label: 'General anesthesia',
+    },
+    {
+      present: form?.surgicalApproach === 'Open',
+      label: 'Open surgical approach',
+    },
+    {
+      present: Number.isFinite(age) && age >= 65,
+      label: `Age ${age} years`,
+    },
+  ]
+    .filter((item) => item.present)
+    .map((item) => item.label)
+
+  return predictors.length > 0 ? predictors.slice(0, 5) : ['Clinical form variables', 'Surgery profile', 'Anesthesia profile']
+}
+
+function normalizePredictorList(items) {
+  if (!Array.isArray(items)) return []
+
+  return items
+    .map((item) => {
+      if (!item) return ''
+      if (typeof item === 'string') return item
+      return item.display || item.label || item.feature || ''
+    })
+    .map((item) => String(item).trim())
+    .filter(Boolean)
 }
 
 function DatasetPanel({

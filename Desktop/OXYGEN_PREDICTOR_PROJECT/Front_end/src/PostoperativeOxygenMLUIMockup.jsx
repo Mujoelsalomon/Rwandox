@@ -5,6 +5,7 @@ import DashboardContent from './components/DashboardContent.jsx'
 import Footer from './components/Footer.jsx'
 import SidebarMenu from './components/SidebarMenu.jsx'
 import TopMenu from './components/TopMenu.jsx'
+import { useResizableSidebar } from './components/useResizableSidebar.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -34,6 +35,14 @@ export default function PostoperativeOxygenMLUIMockup() {
     if (typeof window === 'undefined') return true
     return window.innerWidth >= 1024
   })
+  const {
+    maxSidebarWidth,
+    minSidebarWidth,
+    onSidebarResizeKeyDown,
+    onSidebarResizeStart,
+    sidebarWidth,
+    sidebarWidthStyle,
+  } = useResizableSidebar(setSidebarOpen)
   const [probability, setProbability] = useState(0.82)
   const [riskLabel, setRiskLabel] = useState('High')
   const [factorChips, setFactorChips] = useState([
@@ -170,7 +179,7 @@ export default function PostoperativeOxygenMLUIMockup() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-[#f6f9fd] pb-[57px] pt-[73px] text-slate-900">
+    <div className="container-fluid h-screen overflow-hidden bg-[#f6f9fd] pb-[57px] pt-[73px] text-slate-900 px-0">
       <TopMenu
         isSidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((open) => !open)}
@@ -180,10 +189,23 @@ export default function PostoperativeOxygenMLUIMockup() {
           if (window.innerWidth < 1024) {
             setSidebarOpen(false)
           }
-        }} />
+        }} widthStyle={sidebarWidthStyle} />
+        <div
+          aria-label="Resize sidebar"
+          aria-orientation="vertical"
+          aria-valuemax={maxSidebarWidth}
+          aria-valuemin={minSidebarWidth}
+          aria-valuenow={sidebarWidth}
+          className="sidebar-resize-handle hidden lg:block"
+          onKeyDown={onSidebarResizeKeyDown}
+          onPointerDown={onSidebarResizeStart}
+          role="separator"
+          tabIndex={0}
+          title="Drag to resize sidebar"
+        />
 
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 md:px-5">
-          <div className="mx-auto min-w-0 max-w-[1540px]">
+          <div className="container-fluid mx-auto min-w-0 max-w-[1540px] px-0">
             <DashboardContent
               activeModel={activeModel}
               factorChips={factorChips}

@@ -91,7 +91,7 @@ export default function Sign_Up_Form() {
   }
 
   return (
-    <main className="relative flex h-screen overflow-hidden bg-[#f8fbff] text-[#071b49]">
+    <main className="container-fluid position-relative d-flex h-screen overflow-hidden bg-[#f8fbff] text-[#071b49]">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-180px] top-[210px] h-[360px] w-[560px] opacity-30 sm:left-[-120px] sm:h-[430px] sm:w-[620px] sm:opacity-40">
           <MoleculePattern />
@@ -110,11 +110,11 @@ export default function Sign_Up_Form() {
       <section className="relative z-10 flex h-full w-full items-center justify-center px-3 py-3 sm:px-4">
         <form
           onSubmit={handleSubmit}
-          className="flex max-h-[calc(100vh-24px)] w-full max-w-[665px] flex-col overflow-y-auto rounded-[18px] border border-[#dce6f2] bg-white/94 px-4 py-4 shadow-[0_20px_70px_rgba(15,35,70,0.13)] backdrop-blur sm:rounded-[22px] sm:px-8 sm:py-5 lg:px-10"
+          className="card border-0 shadow-lg rounded-4 flex max-h-[calc(100vh-24px)] w-full max-w-[665px] flex-col overflow-y-auto rounded-[18px] border border-[#dce6f2] bg-white/94 px-4 py-4 backdrop-blur sm:rounded-[22px] sm:px-8 sm:py-5 lg:px-10"
         >
           <div className="text-center">
             <img src={postopO2Logo} alt="PostOp O2 AI logo" className="mx-auto h-20 w-20 object-contain sm:h-24 sm:w-24 lg:h-28 lg:w-28" />
-            <h1 className="mx-auto mt-2 max-w-[560px] text-[22px] font-black leading-tight text-[#071b49] sm:text-[29px] lg:text-[31px]">
+            <h1 className="card-title fw-black mx-auto mt-2 max-w-[560px] text-[22px] font-black leading-tight text-[#071b49] sm:text-[29px] lg:text-[31px]">
               Create Your Account
             </h1>
             <p className="mt-2 text-[14px] font-semibold text-[#64799e] sm:text-[16px]">
@@ -124,22 +124,22 @@ export default function Sign_Up_Form() {
 
           <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4">
             <label className="block">
-              <span className="mb-2 block text-[14px] font-black text-[#071b49]">Full Name</span>
-              <span className="flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Full Name</span>
+              <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
                 <Icon name="user" className="h-5 w-5 shrink-0 text-[#64799e]" />
                 <input
                   type="text"
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
                   placeholder="Enter your full name"
-                  className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
+                  className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
                 />
               </span>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[14px] font-black text-[#071b49]">Email</span>
-              <span className="flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Email</span>
+              <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
                 <Icon name="mail" className="h-5 w-5 shrink-0 text-[#64799e]" />
                 <input
                   type="email"
@@ -147,14 +147,14 @@ export default function Sign_Up_Form() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Enter your email address"
-                  className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
+                  className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
                 />
               </span>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[14px] font-black text-[#071b49]">Password</span>
-              <span className="flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Password</span>
+              <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
                 <Icon name="lock" className="h-5 w-5 shrink-0 text-[#64799e]" />
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -162,13 +162,13 @@ export default function Sign_Up_Form() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Create a password (min 8 characters)"
-                  className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
+                  className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
                 />
                 <button
                   type="button"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPassword((current) => !current)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64799e] transition hover:bg-[#eef5fb] hover:text-[#1768f2] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe]"
+                  className="btn btn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64799e]"
                 >
                   <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
                 </button>
@@ -176,8 +176,8 @@ export default function Sign_Up_Form() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-[14px] font-black text-[#071b49]">Confirm Password</span>
-              <span className="flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Confirm Password</span>
+              <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
                 <Icon name="lock" className="h-5 w-5 shrink-0 text-[#64799e]" />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -185,13 +185,13 @@ export default function Sign_Up_Form() {
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Confirm your password"
-                  className="min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
+                  className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
                 />
                 <button
                   type="button"
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowConfirmPassword((current) => !current)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64799e] transition hover:bg-[#eef5fb] hover:text-[#1768f2] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe]"
+                  className="btn btn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64799e]"
                 >
                   <Icon name={showConfirmPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
                 </button>
@@ -200,13 +200,13 @@ export default function Sign_Up_Form() {
           </div>
 
           {error && (
-            <div className="mt-4 rounded-[10px] border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-[14px] font-bold text-[#b91c1c]" role="alert">
+            <div className="alert alert-danger rounded-4 mt-4 px-4 py-3 text-[14px] font-bold" role="alert">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mt-4 rounded-[10px] border border-[#bbf7d0] bg-[#f0fdf4] px-4 py-3 text-[14px] font-bold text-[#166534]" role="status">
+            <div className="alert alert-success rounded-4 mt-4 px-4 py-3 text-[14px] font-bold" role="status">
               {success}
             </div>
           )}
@@ -225,7 +225,7 @@ export default function Sign_Up_Form() {
 
           <button
             type="submit"
-            className="mt-5 min-h-12 w-full rounded-[10px] bg-gradient-to-r from-[#1877e8] to-[#20c3ae] px-6 py-3 text-center text-[17px] font-black text-white shadow-[0_14px_30px_rgba(24,119,232,0.22)] transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[#1768f2] focus:ring-offset-2 sm:min-h-14 sm:text-[18px]"
+            className="btn btn-primary fw-bold mt-5 min-h-12 w-full rounded-[10px] px-6 py-3 text-center text-[17px] font-black text-white sm:min-h-14 sm:text-[18px]"
           >
             Create Account
           </button>

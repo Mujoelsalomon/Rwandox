@@ -3,20 +3,36 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse, JsonResponse
+from django.utils.text import get_valid_filename
 from django.views.decorators.csrf import csrf_exempt
 
 import trainer
 
-from .common import cors, json_body, require_login
+from .common import cors, json_body, require_admin
 from .models import ModelArtifact, TrainingJob
+
+
+SUPPORTED_DATASET_EXTENSIONS = {".csv", ".tsv", ".tab", ".txt", ".json", ".jsonl", ".xlsx", ".xls"}
+SUPPORTED_MODEL_TYPES = {
+    "logistic_regression",
+    "random_forest",
+    "xgboost",
+    "lightgbm",
+    "knn",
+    "svm",
+    "mlp",
+    "tab_transformer",
+    "naive_bayes",
+}
 
 
 @csrf_exempt
 def upload_dataset_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_login(request)
+    auth_error = require_admin(request)
     if auth_error:
         return auth_error
     if request.method != "POST":
@@ -25,13 +41,17 @@ def upload_dataset_view(request):
     uploaded_file = request.FILES.get("file")
     if not uploaded_file:
         return cors(JsonResponse({"error": "no file provided"}, status=400))
+    extension = Path(uploaded_file.name).suffix.lower()
+    if extension not in SUPPORTED_DATASET_EXTENSIONS:
+        return cors(JsonResponse({"error": f"unsupported dataset format: {extension or 'unknown'}"}, status=400))
 
     uploads = Path(settings.MEDIA_ROOT) / "uploads"
     uploads.mkdir(parents=True, exist_ok=True)
-    dest = uploads / uploaded_file.name
-    with open(dest, "wb") as wf:
-        for chunk in uploaded_file.chunks():
-            wf.write(chunk)
+    safe_name = get_valid_filename(uploaded_file.name) or f"dataset{extension}"
+    dest_name = f"{uuid.uuid4().hex}_{safe_name}"
+    storage = FileSystemStorage(location=str(uploads))
+    saved_name = storage.save(dest_name, uploaded_file)
+    dest = uploads / saved_name
 
     columns = []
     column_error = ""
@@ -42,6 +62,7 @@ def upload_dataset_view(request):
 
     return cors(JsonResponse({
         "dataset_path": str(dest),
+        "filename": saved_name,
         "columns": columns,
         "column_error": column_error,
     }))
@@ -51,7 +72,7 @@ def upload_dataset_view(request):
 def train_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_login(request)
+    auth_error = require_admin(request)
     if auth_error:
         return auth_error
     if request.method != "POST":
@@ -59,26 +80,32 @@ def train_view(request):
 
     payload = json_body(request)
     dataset_path = payload.get("dataset_path")
-    model_type = payload.get("model_type")
-    target_column = payload.get("target") or payload.get("target_column") or None
+    model_type = normalize_model_type(payload.get("model_type"))
+    target_column = str(payload.get("target") or payload.get("target_column") or "").strip() or None
     if not dataset_path:
         return cors(JsonResponse({"error": "dataset_path required"}, status=400))
+    if model_type not in SUPPORTED_MODEL_TYPES:
+        return cors(JsonResponse({"error": f"unsupported model_type: {model_type}"}, status=400))
+
+    dataset_error = validate_uploaded_dataset_path(dataset_path)
+    if dataset_error:
+        return cors(JsonResponse({"error": dataset_error}, status=400))
 
     job = TrainingJob.objects.create(
         job_id=uuid.uuid4().hex,
         dataset_path=dataset_path,
-        model_type=model_type or "",
+        model_type=model_type,
         status="queued",
     )
     thread = threading.Thread(target=run_training, args=(job.job_id, dataset_path, model_type, target_column), daemon=True)
     thread.start()
-    return cors(JsonResponse({"job_id": job.job_id}))
+    return cors(JsonResponse({"job_id": job.job_id, "status": job.status, "model_type": model_type}))
 
 
 def train_status_view(request, job_id):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_login(request)
+    auth_error = require_admin(request)
     if auth_error:
         return auth_error
     try:
@@ -90,11 +117,38 @@ def train_status_view(request, job_id):
         "job_id": job.job_id,
         "status": job.status,
         "dataset": job.dataset_path,
+        "model_type": job.model_type,
         "result": job.result,
         "error": job.error,
-        "created_at": job.created_at,
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "updated_at": job.updated_at.isoformat() if job.updated_at else None,
     }
     return cors(JsonResponse(data))
+
+
+def training_jobs_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_admin(request)
+    if auth_error:
+        return auth_error
+
+    jobs = TrainingJob.objects.all().order_by("-created_at")[:50]
+    return cors(JsonResponse({
+        "jobs": [
+            {
+                "job_id": job.job_id,
+                "status": job.status,
+                "dataset": job.dataset_path,
+                "model_type": job.model_type,
+                "result": job.result,
+                "error": job.error,
+                "created_at": job.created_at.isoformat() if job.created_at else None,
+                "updated_at": job.updated_at.isoformat() if job.updated_at else None,
+            }
+            for job in jobs
+        ]
+    }))
 
 
 def run_training(job_id, dataset_path, model_type, target_column):
@@ -109,7 +163,7 @@ def run_training(job_id, dataset_path, model_type, target_column):
         result = trainer.train_model(
             dataset_path,
             target_column=target_column,
-            model_type=model_type or "random_forest",
+            model_type=model_type,
         )
         model_path = Path(result["model_path"])
         model_name = model_path.name
@@ -126,7 +180,10 @@ def run_training(job_id, dataset_path, model_type, target_column):
         job.status = "completed"
         job.result = {
             "model_name": model_name,
+            "model_type": artifact.model_type,
             "metrics": result.get("metrics"),
+            "target_column": result.get("metadata", {}).get("target"),
+            "feature_count": len(result.get("metadata", {}).get("columns") or []),
             "artifact_id": artifact.id,
         }
         job.error = ""
@@ -135,3 +192,23 @@ def run_training(job_id, dataset_path, model_type, target_column):
         job.status = "failed"
         job.error = str(exc)
         job.save()
+
+
+def normalize_model_type(value):
+    return str(value or "random_forest").strip().lower() or "random_forest"
+
+
+def validate_uploaded_dataset_path(dataset_path):
+    try:
+        candidate = Path(dataset_path).resolve()
+        uploads = (Path(settings.MEDIA_ROOT) / "uploads").resolve()
+    except (OSError, RuntimeError):
+        return "invalid dataset_path"
+
+    if uploads not in candidate.parents:
+        return "dataset_path must reference an uploaded dataset"
+    if not candidate.exists() or not candidate.is_file():
+        return "uploaded dataset not found"
+    if candidate.suffix.lower() not in SUPPORTED_DATASET_EXTENSIONS:
+        return "uploaded dataset format is not supported"
+    return ""

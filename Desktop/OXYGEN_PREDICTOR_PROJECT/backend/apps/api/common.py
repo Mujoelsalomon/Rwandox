@@ -5,7 +5,14 @@ from django.http import JsonResponse
 
 
 def cors(resp):
-    origin = getattr(settings, "FRONTEND_ORIGIN", "http://localhost:5173")
+    allowed_origins = getattr(settings, "CORS_ALLOWED_ORIGINS", [])
+    fallback_origin = getattr(settings, "FRONTEND_ORIGIN", "http://localhost:5173")
+    request_origin = getattr(resp, "wsgi_request", None)
+    origin = fallback_origin
+    if request_origin:
+        request_origin = request_origin.headers.get("Origin")
+        if request_origin in allowed_origins:
+            origin = request_origin
     resp["Access-Control-Allow-Origin"] = origin
     resp["Access-Control-Allow-Credentials"] = "true"
     resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
@@ -23,6 +30,15 @@ def json_body(request):
 def require_login(request):
     if not request.user.is_authenticated:
         return cors(JsonResponse({"error": "Authentication required."}, status=401))
+    return None
+
+
+def require_admin(request):
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+    if not (request.user.is_staff or request.user.is_superuser):
+        return cors(JsonResponse({"error": "Administrator or superuser access required."}, status=403))
     return None
 
 

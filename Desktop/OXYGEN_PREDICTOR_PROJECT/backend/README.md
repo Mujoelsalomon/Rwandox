@@ -35,4 +35,5 @@ Notes:
 
 - The React frontend defaults to `VITE_API_URL=http://localhost:8000`.
 - `FRONTEND_ORIGIN` defaults to `http://localhost:5173` for CORS with Django session cookies.
+- For deployment on `rwandoxy.com`, set `FRONTEND_ORIGIN=https://rwandoxy.com` and include `https://rwandoxy.com,https://www.rwandoxy.com` in `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`.
 - The development login bootstrap user is `anesthetist` / `munyanezajoel3@gmail.com` with password `Munyaneza@123`.

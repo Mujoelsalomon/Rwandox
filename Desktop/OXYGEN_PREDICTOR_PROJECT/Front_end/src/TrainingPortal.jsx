@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -121,24 +120,21 @@ export default function TrainingPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-[#dff1ff] p-6">
-      <div className="mx-auto max-w-5xl rounded-[28px] border border-[#cfe0f2] bg-white p-6 shadow-sm">
-        <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
-          <div className="hidden md:block" />
-          <div className="text-center">
-            <p className="text-[30px] font-semibold uppercase leading-tight text-sky-700">Model Management</p>
-            <h1 className="mt-2 text-[30px] font-extrabold leading-tight text-[#1f2942]">Training Portal</h1>
-          </div>
-          <Link to="/dashboard" className="justify-self-center rounded-full border border-[#c3d4e8] px-5 py-3 text-sm font-semibold text-[#445875] md:justify-self-end">
-            Back to dashboard
-          </Link>
+    <div className="container-fluid min-w-0 px-0">
+      <div className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#cfe0f2] bg-white p-6">
+        <div className="mb-5">
+          <p className="text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#1768f2]">Model Management</p>
+          <h1 className="mt-2 text-[30px] font-black leading-tight text-[#071b49] md:text-[38px]">Training Portal</h1>
+          <p className="mt-2 max-w-[720px] text-[16px] leading-7 text-[#53668a]">
+            Upload a labeled dataset, train a prediction model, and choose the active model used by new predictions.
+          </p>
         </div>
         
 
         <section className="mb-6 min-w-0">
-          <label className="mb-2 block">Dataset file</label>
+          <label className="form-label mb-2 block">Dataset file</label>
           <input
-            className="max-w-full text-[15px]"
+            className="form-control max-w-full text-[15px]"
             type="file"
             accept=".csv,.tsv,.tab,.txt,.json,.jsonl,.xlsx,.xls"
             onChange={(e) => setFile(e.target.files[0])}
@@ -149,9 +145,9 @@ export default function TrainingPortal() {
         </section>
 
         <section className="mb-6 min-w-0">
-          <label className="mb-2 block">Target column (optional, defaults to trainer behavior)</label>
+          <label className="form-label mb-2 block">Target column (optional, defaults to trainer behavior)</label>
           <input
-            className="w-full min-w-0 border p-2"
+            className="form-control w-full min-w-0 border p-2"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="target_column"
@@ -159,8 +155,8 @@ export default function TrainingPortal() {
         </section>
 
         <section className="mb-6 min-w-0">
-          <label className="mb-2 block">Model type</label>
-          <select value={modelType} onChange={(e) => setModelType(e.target.value)} className="w-full max-w-[410px] border p-2">
+          <label className="form-label mb-2 block">Model type</label>
+          <select value={modelType} onChange={(e) => setModelType(e.target.value)} className="form-select w-full max-w-[410px] border p-2">
             <option value="logistic_regression">Logistic Regression</option>
             <option value="random_forest">Random Forest</option>
             <option value="xgboost">XGBoost</option>
@@ -177,23 +173,23 @@ export default function TrainingPortal() {
           <button
             onClick={uploadAndStart}
             disabled={trainingLoading}
-            className="w-full rounded bg-slate-900 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+            className="btn btn-dark w-full rounded px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
             {trainingLoading ? 'Training...' : 'Upload and Train'}
           </button>
-          <button onClick={fetchModels} disabled={trainingLoading} className="w-full rounded border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
+          <button onClick={fetchModels} disabled={trainingLoading} className="btn btn-outline-secondary w-full rounded border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
             Refresh models
           </button>
         </div>
 
         {trainingNotice && (
           <div
-            className={`mb-4 rounded p-4 font-semibold ${
+            className={`alert rounded-4 mb-4 p-4 font-semibold ${
               trainingNotice.includes('done')
-                ? 'bg-emerald-100 text-emerald-800'
+                ? 'alert-success bg-emerald-100 text-emerald-800'
                 : trainingNotice.includes('failed') || trainingNotice.includes('Could not')
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-sky-100 text-sky-800'
+                  ? 'alert-danger bg-red-100 text-red-800'
+                  : 'alert-info bg-sky-100 text-sky-800'
             }`}
             role="alert"
           >
@@ -204,7 +200,7 @@ export default function TrainingPortal() {
         {jobId && <div className="mb-3 text-sm text-slate-600">Active job: {jobId}</div>}
 
         {status && (
-          <div className="mb-4 rounded bg-amber-50 p-4">
+          <div className="alert alert-warning rounded-4 mb-4 bg-amber-50 p-4">
             <div>Job status: {status.status}</div>
             {status.result && status.result.metrics && <div>Val accuracy: {status.result.metrics.val_accuracy}</div>}
             {status.error && <div className="text-red-600">Error: {status.error}</div>}
@@ -213,18 +209,18 @@ export default function TrainingPortal() {
 
         <section>
           <h2 className="mb-2 text-lg font-semibold">Available models</h2>
-          <ul className="list-disc pl-6">
+          <ul className="list-group">
             {models.map((model) => (
-              <li key={model.id ?? model.path ?? model.name} className="mb-2">
+              <li key={model.id ?? model.path ?? model.name} className="list-group-item mb-2">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="inline-block truncate font-medium" style={{ maxWidth: 420 }}>
                     {model.name || model.path || `Model ${model.id}`}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                  <span className="badge rounded-pill bg-secondary rounded-full px-2 py-1 text-xs text-slate-700">
                     {model.model_type || 'unknown'}
                   </span>
                   {model.is_active && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+                    <span className="badge rounded-pill bg-success rounded-full px-2 py-1 text-xs font-medium text-emerald-700">
                       Active
                     </span>
                   )}
@@ -233,7 +229,7 @@ export default function TrainingPortal() {
                       <button
                         onClick={() => activateModel(model.id)}
                         disabled={model.is_active || activatingId === model.id}
-                        className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+                        className="btn btn-outline-primary btn-sm rounded border px-3 py-1 text-sm disabled:opacity-50"
                       >
                         {model.is_active ? 'Active' : activatingId === model.id ? 'Activating...' : 'Make active'}
                       </button>

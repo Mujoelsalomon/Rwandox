@@ -26,6 +26,9 @@ def predict_view(request):
     payload = json_body(request)
     features = payload.get("features") or payload
     result = run_prediction(features)
+    if not bool_value(payload.get("persist", True)):
+        return cors(JsonResponse(result))
+
     result = persist_prediction(features, payload, result)
     return cors(JsonResponse(result))
 

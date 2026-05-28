@@ -37,8 +37,10 @@ def read_dataset(dataset_path: str, **kwargs) -> pd.DataFrame:
             return pd.read_excel(dataset_path, **kwargs)
         except ImportError as exc:
             raise RuntimeError("Excel datasets require the openpyxl package. Install backend requirements and try again.") from exc
-    if extension == ".tsv":
+    if extension in {".tsv", ".tab"}:
         return pd.read_csv(dataset_path, sep="\t", **kwargs)
+    if extension == ".jsonl":
+        return pd.read_json(dataset_path, lines=True, **kwargs)
     if extension == ".json":
         return pd.read_json(dataset_path, **kwargs)
     return pd.read_csv(dataset_path, **kwargs)

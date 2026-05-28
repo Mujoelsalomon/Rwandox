@@ -47,15 +47,15 @@ export default function SystemAdministrationContent() {
   }
 
   return (
-    <div className="settings-content-18 min-w-0 space-y-5">
-      <section className="min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
+    <div className="settings-content-18 container-fluid min-w-0 px-0">
+      <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
         <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-[13px] font-black uppercase tracking-[0.22em] text-[#1768f2]">System administration</p>
-            <h1 className="mt-2 break-words text-[24px] font-black leading-8 text-[#071b49]">
+            <p className="text-primary fw-bold text-uppercase small mb-2 text-[13px] font-black tracking-[0.22em]">System administration</p>
+            <h1 className="fw-black mt-2 break-words text-[24px] font-black leading-8 text-[#071b49]">
               Administrative controls
             </h1>
-            <p className="mt-2 max-w-[760px] text-[15px] font-semibold leading-6 text-[#64799e]">
+            <p className="text-secondary mt-2 max-w-[760px] text-[15px] font-semibold leading-6">
               Manage access, audit visibility, model registry operations, and maintenance settings for the clinical prediction workspace.
             </p>
           </div>
@@ -135,19 +135,19 @@ export default function SystemAdministrationContent() {
     }
 
     return (
-      <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
+      <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-[20px] font-black text-[#071b49]">Model registry</h2>
             <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Manage active and archived model artifacts.</p>
           </div>
           <div>
-            <button onClick={exportCsv} className="rounded bg-[#1768f2] px-3 py-2 text-white font-bold">Export CSV</button>
+            <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Export CSV</button>
           </div>
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-left">
+          <table className="table table-hover align-middle mb-0 w-full min-w-[720px] text-left">
             <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
               <tr>
                 <th className="px-4 py-3">Model ID</th>
@@ -183,27 +183,27 @@ export default function SystemAdministrationContent() {
     }
 
     return (
-      <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
+      <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-[20px] font-black text-[#071b49]">Maintenance</h2>
             <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Check API, database, and sync status.</p>
           </div>
           <div>
-            <button onClick={refresh} className="rounded bg-[#1768f2] px-3 py-2 text-white font-bold">Refresh</button>
+            <button onClick={refresh} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Refresh</button>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded border p-3">
+          <div className="card rounded border p-3">
             <p className="text-sm font-black text-[#64799e]">API</p>
             <p className="mt-1 font-extrabold">{status.api}</p>
           </div>
-          <div className="rounded border p-3">
+          <div className="card rounded border p-3">
             <p className="text-sm font-black text-[#64799e]">Database</p>
             <p className="mt-1 font-extrabold">{status.db}</p>
           </div>
-          <div className="rounded border p-3">
+          <div className="card rounded border p-3">
             <p className="text-sm font-black text-[#64799e]">Sync</p>
             <p className="mt-1 font-extrabold">{status.sync}</p>
           </div>
@@ -237,19 +237,19 @@ export default function SystemAdministrationContent() {
     }
 
     return (
-      <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
+      <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-[20px] font-black text-[#071b49]">Audit logs</h2>
             <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Recent user activity and system events.</p>
           </div>
           <div>
-            <button onClick={exportCsv} className="rounded bg-[#1768f2] px-3 py-2 text-white font-bold">Export CSV</button>
+            <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Export CSV</button>
           </div>
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-left">
+          <table className="table table-hover align-middle mb-0 w-full min-w-[720px] text-left">
             <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
               <tr>
                 <th className="px-4 py-3">Name</th>
@@ -278,7 +278,7 @@ function AdminAction({ title, detail, isActive = false, onClick }) {
   return (
     <button
       type="button"
-      className={`min-h-[112px] min-w-0 rounded-[12px] border px-4 py-4 text-left transition hover:border-[#b8cce6] hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#1768f2] ${
+      className={`card btn min-h-[112px] min-w-0 rounded-[12px] border px-4 py-4 text-left transition hover:border-[#b8cce6] hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#1768f2] ${
         isActive
           ? 'border-[#1768f2] bg-white shadow-[0_12px_28px_rgba(23,104,242,0.14)]'
           : 'border-[#d9e5f3] bg-[#f8fbff]'
@@ -293,7 +293,7 @@ function AdminAction({ title, detail, isActive = false, onClick }) {
 
 function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
   return (
-    <div className="mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
+    <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
       <div className="flex min-w-0 flex-col gap-2 border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h2 className="text-[20px] font-black text-[#071b49]">User management</h2>
@@ -302,7 +302,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
       </div>
 
       <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[760px] border-collapse text-left">
+        <table className="table table-hover align-middle mb-0 w-full min-w-[760px] text-left">
           <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
             <tr>
               <th className="px-4 py-3">Names</th>
@@ -322,7 +322,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
                   {editingUserId === user.id ? (
                     <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
                   ) : (
-                    <span className="inline-flex rounded-full bg-[#eef5ff] px-3 py-1 text-[13px] font-extrabold text-[#1768f2]">
+                    <span className="badge rounded-pill bg-[#eef5ff] px-3 py-2 text-[13px] font-extrabold text-[#1768f2]">
                       {user.role}
                     </span>
                   )}
@@ -332,7 +332,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
                     type="button"
                     aria-label={`Edit ${user.name} role`}
                     onClick={() => onEdit(editingUserId === user.id ? null : user.id)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f6fd] text-[#172a53] transition hover:bg-[#dbeafe] hover:text-[#1768f2] focus:outline-none focus:ring-2 focus:ring-[#1768f2]"
+                    className="btn btn-light inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f6fd] text-[#172a53]"
                   >
                     <Icon name="edit" className="h-5 w-5" />
                   </button>
@@ -345,7 +345,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
 
       <div className="grid gap-3 p-3 lg:hidden">
         {users.map((user) => (
-          <div key={user.id} className="rounded-[12px] border border-[#e5edf7] bg-[#f8fbff] p-4">
+          <div key={user.id} className="card rounded-4 rounded-[12px] border border-[#e5edf7] bg-[#f8fbff] p-4">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="break-words text-[15px] font-extrabold text-[#071b49]">{user.name}</p>
@@ -356,7 +356,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
                 type="button"
                 aria-label={`Edit ${user.name} role`}
                 onClick={() => onEdit(editingUserId === user.id ? null : user.id)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#172a53] shadow-sm transition hover:bg-[#dbeafe] hover:text-[#1768f2] focus:outline-none focus:ring-2 focus:ring-[#1768f2]"
+                className="btn btn-light flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#172a53]"
               >
                 <Icon name="edit" className="h-5 w-5" />
               </button>
@@ -367,7 +367,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
               {editingUserId === user.id ? (
                 <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
               ) : (
-                <span className="inline-flex rounded-full bg-[#eef5ff] px-3 py-1 text-[13px] font-extrabold text-[#1768f2]">
+                <span className="badge rounded-pill bg-[#eef5ff] px-3 py-2 text-[13px] font-extrabold text-[#1768f2]">
                   {user.role}
                 </span>
               )}
@@ -384,7 +384,7 @@ function RoleSelect({ value, onChange }) {
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full min-w-[150px] rounded-[10px] border border-[#c9d8eb] bg-white px-3 text-[14px] font-extrabold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#b8d3ff] lg:w-auto"
+      className="form-select h-10 w-full min-w-[150px] rounded-[10px] border border-[#c9d8eb] bg-white px-3 text-[14px] font-extrabold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#b8d3ff] lg:w-auto"
     >
       {roleOptions.map((role) => (
         <option key={role} value={role}>{role}</option>

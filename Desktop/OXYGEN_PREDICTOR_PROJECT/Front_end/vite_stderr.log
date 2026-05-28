@@ -1,5 +1,5 @@
-[2m16:49:57[22m [31m[1m[vite][22m[39m Pre-transform error: spawn EPERM
-[2m16:49:57[22m [31m[1m[vite][22m[39m [31mInternal server error: spawn EPERM[39m
+[2m14:40:34[22m [31m[1m[vite][22m[39m Pre-transform error: spawn EPERM
+[2m14:40:34[22m [31m[1m[vite][22m[39m [31mInternal server error: spawn EPERM[39m
       at ChildProcess.spawn (node:internal/child_process:420:11)
       at spawn (node:child_process:796:9)
       at Object.execFile (node:child_process:349:17)

@@ -1,42 +1,55 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { clearCurrentSession } from '../authSession.js'
+import { clearCurrentSession, getSession, isAdminSession, SESSION_EVENT } from '../authSession.js'
 
 const sidebarItems = [
   { label: 'Dashboard', to: '/dashboard', icon: 'grid' },
   { label: 'New Prediction', to: '/new-prediction', icon: 'plus' },
-  { label: 'Patient Records', to: '/patients', icon: 'user' },
   { label: 'Prediction History', to: '/prediction-history', icon: 'history' },
+  { label: 'Model Training', to: '/train', icon: 'barChart', adminOnly: true },
   { label: 'System Administration', to: '/system-administration', icon: 'shield' },
   { label: 'Settings', to: '/settings', icon: 'settings' },
 ]
 
-export default function SidebarMenu({ isOpen, onNavigate }) {
+export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [session, setSession] = useState(() => getSession())
+
+  useEffect(() => {
+    function handleSessionChange() {
+      setSession(getSession())
+    }
+
+    window.addEventListener(SESSION_EVENT, handleSessionChange)
+    return () => window.removeEventListener(SESSION_EVENT, handleSessionChange)
+  }, [])
 
   function toggleProfile() {
     setProfileOpen((s) => !s)
   }
 
+  const visibleSidebarItems = sidebarItems.filter((item) => !item.adminOnly || isAdminSession(session))
+
   return (
     <aside
-      className={`shrink-0 transition-all duration-300 ${
+      style={isOpen ? widthStyle : { '--sidebar-width': '92px' }}
+      className={`sidebar nav flex-column shrink-0 transition-all duration-300 ${
         isOpen
-          ? 'fixed bottom-[57px] left-0 right-0 top-[73px] z-40 w-full overflow-y-auto bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)] sm:p-4 lg:static lg:h-full lg:w-[292px] lg:overflow-hidden lg:p-3'
-          : 'hidden w-full bg-gradient-to-b from-[#06295e] to-[#001b42] p-0 shadow-[0_18px_38px_rgba(4,23,58,0.22)] lg:block lg:h-full lg:w-[92px] lg:overflow-hidden lg:p-3'
+          ? 'fixed bottom-[57px] left-0 right-0 top-[73px] z-40 w-full overflow-y-auto bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)] sm:p-4 lg:static lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-hidden lg:p-3'
+          : 'hidden w-full bg-gradient-to-b from-[#06295e] to-[#001b42] p-0 shadow-[0_18px_38px_rgba(4,23,58,0.22)] lg:block lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-hidden lg:p-3'
       }`}
     >
       <div className="flex h-full min-h-0 flex-col">
         <nav className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-col lg:space-y-2 lg:overflow-y-auto">
-          {sidebarItems.map((item) => (
+          {visibleSidebarItems.map((item) => (
             item.to ? (
               <Link
                 key={item.label}
                 to={item.to}
                 title={item.label}
                 onClick={onNavigate}
-                className={`flex h-12 items-center rounded-[8px] px-3 text-[20px] font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
+                className={`nav-link flex h-12 items-center rounded-[8px] px-3 text-[20px] font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
                 } ${
                   location.pathname === item.to
@@ -65,7 +78,7 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
           ))}
         </nav>
 
-        <div className={`mt-3 shrink-0 rounded-[8px] bg-[#0c438c] p-0 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
+        <div className={`card mt-3 shrink-0 rounded-[8px] bg-[#0c438c] p-0 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
           <button
             type="button"
             aria-expanded={profileOpen}
@@ -79,8 +92,8 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
                 </div>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[20px] font-extrabold">Anesthetist</p>
-                <p className="text-[20px] text-[#d7e8ff]">Clinician</p>
+                <p className="truncate text-[20px] font-extrabold">{session?.name || 'Anesthetist'}</p>
+                <p className="truncate text-[20px] text-[#d7e8ff]">{session?.role || 'Clinician'}</p>
               </div>
               <Icon name={profileOpen ? 'chevronRight' : 'chevronRight'} className="h-5 w-5" />
             </div>
@@ -88,8 +101,11 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
 
           {profileOpen && (
             <div className="border-t border-white/10 bg-[#083a85] p-3">
-              <Link to="/settings" onClick={onNavigate} className="block py-2 text-sm text-white hover:underline">
+            <Link to="/settings" onClick={onNavigate} className="btn btn-link text-start block py-2 text-sm text-white hover:underline">
                 Account settings
+              </Link>
+              <Link to="/profile" onClick={onNavigate} className="btn btn-link text-start block py-2 text-sm text-white hover:underline">
+                View profile
               </Link>
               <button
                 type="button"
@@ -97,7 +113,7 @@ export default function SidebarMenu({ isOpen, onNavigate }) {
                   clearCurrentSession()
                   window.location.href = '/login'
                 }}
-                className="mt-2 w-full rounded bg-[#155fbf] px-3 py-2 text-left text-sm font-semibold text-white"
+                className="btn btn-primary mt-2 w-full rounded bg-[#155fbf] px-3 py-2 text-left text-sm font-semibold text-white"
               >
                 Sign out
               </button>

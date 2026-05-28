@@ -4,6 +4,7 @@ import { isSessionActive, SESSION_EVENT, SESSION_KEY, SESSION_REVOKED_AT_KEY } f
 import Footer from './Footer.jsx'
 import SidebarMenu from './SidebarMenu.jsx'
 import TopMenu from './TopMenu.jsx'
+import { useResizableSidebar } from './useResizableSidebar.js'
 
 export default function AppLayout({ children }) {
   const navigate = useNavigate()
@@ -11,6 +12,14 @@ export default function AppLayout({ children }) {
     if (typeof window === 'undefined') return true
     return window.innerWidth >= 1024
   })
+  const {
+    maxSidebarWidth,
+    minSidebarWidth,
+    onSidebarResizeKeyDown,
+    onSidebarResizeStart,
+    sidebarWidth,
+    sidebarWidthStyle,
+  } = useResizableSidebar(setSidebarOpen)
 
   useEffect(() => {
     function enforceActiveSession() {
@@ -56,7 +65,20 @@ export default function AppLayout({ children }) {
         onToggleSidebar={() => setSidebarOpen((open) => !open)}
       />
       <div className="flex h-[calc(100vh-145px)] min-h-0 flex-col overflow-hidden lg:flex-row">
-        <SidebarMenu isOpen={sidebarOpen} onNavigate={handleNavigate} />
+        <SidebarMenu isOpen={sidebarOpen} onNavigate={handleNavigate} widthStyle={sidebarWidthStyle} />
+        <div
+          aria-label="Resize sidebar"
+          aria-orientation="vertical"
+          aria-valuemax={maxSidebarWidth}
+          aria-valuemin={minSidebarWidth}
+          aria-valuenow={sidebarWidth}
+          className="sidebar-resize-handle hidden lg:block"
+          onKeyDown={onSidebarResizeKeyDown}
+          onPointerDown={onSidebarResizeStart}
+          role="separator"
+          tabIndex={0}
+          title="Drag to resize sidebar"
+        />
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 md:px-5">
           <div className="container-fluid mx-auto min-w-0 max-w-[1540px] px-0">{children}</div>
         </main>

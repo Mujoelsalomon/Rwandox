@@ -107,11 +107,11 @@ def _dataset_probability(row, oxygen_required):
 
 
 def _risk_level(probability):
-    if probability >= 70:
-        return "High"
-    if probability >= 40:
+    if probability < 30:
+        return "Low"
+    if probability < 70:
         return "Moderate"
-    return "Low"
+    return "High"
 
 
 def _dataset_recommendations(risk_level, oxygen_required):

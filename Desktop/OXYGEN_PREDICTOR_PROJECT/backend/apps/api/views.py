@@ -3,6 +3,7 @@ from .auth_views import (
     login_view,
     logout_all_view,
     logout_view,
+    profile_update_view,
     register_view,
 )
 from .model_views import (
@@ -21,6 +22,7 @@ from .prediction_views import (
 from .training_views import (
     train_status_view,
     train_view,
+    training_jobs_view,
     upload_dataset_view,
 )
 
@@ -37,8 +39,10 @@ __all__ = [
     "patients_search_view",
     "predict_view",
     "prediction_history_view",
+    "profile_update_view",
     "register_view",
     "train_status_view",
     "train_view",
+    "training_jobs_view",
     "upload_dataset_view",
 ]

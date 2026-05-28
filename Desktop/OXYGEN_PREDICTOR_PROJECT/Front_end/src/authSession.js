@@ -25,6 +25,20 @@ export function createSession(user) {
   return session
 }
 
+export function updateSession(updates) {
+  const current = getSession()
+  if (!current) return null
+
+  const session = {
+    ...current,
+    ...updates,
+  }
+
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  notifySessionChanged()
+  return session
+}
+
 export function clearCurrentSession() {
   fetch(`${API_URL}/auth/logout`, {
     method: 'POST',
@@ -53,6 +67,10 @@ export function isSessionActive(session = getSession()) {
   if (!revokedAt) return true
 
   return Date.parse(session.loggedInAt) > Date.parse(revokedAt)
+}
+
+export function isAdminSession(session = getSession()) {
+  return Boolean(session?.is_staff || session?.is_superuser || ['Administrator', 'Superuser'].includes(session?.role))
 }
 
 export function notifySessionChanged() {

@@ -3,7 +3,7 @@ from pathlib import Path
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .common import cors, json_body, require_login
+from .common import cors, json_body, require_admin, require_login
 from .models import ModelArtifact
 
 
@@ -34,7 +34,7 @@ def models_list_view(request):
 def models_activate_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_login(request)
+    auth_error = require_admin(request)
     if auth_error:
         return auth_error
     if request.method != "POST":
@@ -55,7 +55,7 @@ def models_activate_view(request):
 def models_download_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_login(request)
+    auth_error = require_admin(request)
     if auth_error:
         return auth_error
 

@@ -1,9 +1,9 @@
 import React from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { isSessionActive } from './authSession.js'
+import { getSession, isAdminSession, isSessionActive } from './authSession.js'
 import AppLayout from './components/AppLayout.jsx'
 import NewPredictionContent from './components/NewPredictionContent.jsx'
-import PatientRecordsContent from './components/PatientRecordsContent.jsx'
+import ProfileContent from './components/ProfileContent.jsx'
 import PredictionHistoryContent from './components/PredictionHistoryContent.jsx'
 import SettingsContent from './components/SettingsContent.jsx'
 import SystemAdministrationContent from './components/SystemAdministrationContent.jsx'
@@ -38,11 +38,11 @@ export default function App() {
           )}
         />
         <Route
-          path="/patients"
+          path="/profile"
           element={(
             <ProtectedRoute>
               <AppLayout>
-                <PatientRecordsContent />
+                <ProfileContent />
               </AppLayout>
             </ProtectedRoute>
           )}
@@ -80,8 +80,10 @@ export default function App() {
         <Route
           path="/train"
           element={(
-            <ProtectedRoute>
-              <TrainingPortal />
+            <ProtectedRoute adminOnly>
+              <AppLayout>
+                <TrainingPortal />
+              </AppLayout>
             </ProtectedRoute>
           )}
         />
@@ -90,9 +92,13 @@ export default function App() {
   )
 }
 
-function ProtectedRoute({ children }) {
-  if (!isSessionActive()) {
+function ProtectedRoute({ adminOnly = false, children }) {
+  const session = getSession()
+  if (!isSessionActive(session)) {
     return <Navigate to="/login" replace />
+  }
+  if (adminOnly && !isAdminSession(session)) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return children

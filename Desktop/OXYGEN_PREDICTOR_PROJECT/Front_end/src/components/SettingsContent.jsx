@@ -106,14 +106,14 @@ export default function SettingsContent() {
   }
 
   return (
-    <div className="settings-content-18 min-w-0 space-y-5">
-      <section className="rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
-        <p className="text-[13px] font-black uppercase tracking-[0.22em] text-[#1768f2]">Account settings</p>
+    <div className="settings-content-18 container-fluid min-w-0 px-0">
+      <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
+        <p className="text-primary fw-bold text-uppercase small mb-2 text-[13px] font-black tracking-[0.22em]">Account settings</p>
         <div className="mt-2">
-          <h1 className="break-words text-[30px] font-black leading-[34px] text-[#071b49]">
+          <h1 className="fw-black break-words text-[30px] font-black leading-[34px] text-[#071b49]">
             User account and security
           </h1>
-          <p className="mt-2 max-w-[760px] text-[16px] leading-7 text-[#53668a]">
+          <p className="text-secondary mt-2 max-w-[760px] text-[16px] leading-7">
             View personal information, role access, login security, and account notification preferences.
           </p>
         </div>
@@ -162,9 +162,9 @@ export default function SettingsContent() {
         </AccountPanel>
       </section>
 
-      <section className="min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
-        <h2 className="text-[22px] font-black text-[#071b49]">Risk thresholds</h2>
-        <p className="mt-1 text-[14px] font-semibold leading-5 text-[#64799e]">
+      <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
+        <h2 className="h4 fw-bold text-[22px] font-black text-[#071b49]">Risk thresholds</h2>
+        <p className="text-secondary mt-1 text-[14px] font-semibold leading-5">
           Adjust probability bands used across prediction views.
         </p>
         <ThresholdGraph selectedRisk={selectedRisk} thresholds={thresholds} />
@@ -212,14 +212,14 @@ export default function SettingsContent() {
         <button
           type="button"
           onClick={discardChanges}
-          className="min-h-12 w-full rounded-full bg-[#111b3b] px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white shadow-[0_10px_24px_rgba(17,27,59,0.22)] transition hover:bg-[#172653] focus:outline-none focus:ring-2 focus:ring-[#1768f2] sm:w-auto sm:min-w-[180px]"
+          className="btn btn-dark fw-bold min-h-12 w-full rounded-full px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white sm:w-auto sm:min-w-[180px]"
         >
           Discard changes
         </button>
         <button
           type="button"
           onClick={saveChanges}
-          className="min-h-12 w-full rounded-full bg-[#16894f] px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white shadow-[0_10px_24px_rgba(22,137,79,0.22)] transition hover:bg-[#126f41] focus:outline-none focus:ring-2 focus:ring-[#22c55e] sm:w-auto sm:min-w-[170px]"
+          className="btn btn-success fw-bold min-h-12 w-full rounded-full px-6 py-3 text-center text-[15px] font-extrabold leading-5 text-white sm:w-auto sm:min-w-[170px]"
         >
           Save changes
         </button>
@@ -230,8 +230,8 @@ export default function SettingsContent() {
 
 function AccountPanel({ children, title }) {
   return (
-    <div className="min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 shadow-[0_10px_28px_rgba(13,28,61,0.07)] md:px-6">
-      <h2 className="text-[22px] font-black text-[#071b49]">{title}</h2>
+    <div className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
+      <h2 className="h4 fw-bold text-[22px] font-black text-[#071b49]">{title}</h2>
       <div className="mt-4 grid gap-3">{children}</div>
     </div>
   )
@@ -239,8 +239,8 @@ function AccountPanel({ children, title }) {
 
 function ReadOnlyField({ label, value }) {
   return (
-    <div className="min-w-0 rounded-[12px] border border-[#d9e5f3] bg-[#f8fbff] px-4 py-3">
-      <p className="text-[13px] font-bold text-[#6c7f9f]">{label}</p>
+    <div className="card bg-light border-0 rounded-4 min-w-0 rounded-[12px] border border-[#d9e5f3] px-4 py-3">
+      <p className="card-text text-secondary text-[13px] font-bold">{label}</p>
       <p className="mt-1 break-words text-[15px] font-extrabold text-[#071b49]">{value}</p>
     </div>
   )
@@ -253,7 +253,7 @@ function SecurityField({ action = false, danger = false, label, onAction, value 
     <button
       type="button"
       onClick={() => onAction(label)}
-      className={`min-w-0 rounded-[12px] border px-4 py-3 text-left transition hover:bg-white focus:outline-none focus:ring-2 ${
+      className={`card btn min-w-0 rounded-[12px] border px-4 py-3 text-left transition hover:bg-white focus:outline-none focus:ring-2 ${
         danger
           ? 'border-[#fecaca] bg-[#fff5f5] hover:border-[#ef4444] focus:ring-[#ef4444]'
           : 'border-[#d9e5f3] bg-[#f8fbff] hover:border-[#b8cce6] focus:ring-[#1768f2]'
@@ -271,7 +271,7 @@ function ThresholdGraph({ selectedRisk, thresholds }) {
   const highWidth = 100 - thresholds.highMin
 
   return (
-    <div className="mt-5 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] px-4 py-4">
+    <div className="card bg-light rounded-4 mt-5 rounded-[14px] border border-[#d9e5f3] px-4 py-4">
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <RiskLegend isSelected={selectedRisk === 'green'} label={`Low 0-${thresholds.lowMax}%`} tone="green" />
         <RiskLegend isSelected={selectedRisk === 'amber'} label={`Moderate ${thresholds.lowMax + 1}-${thresholds.highMin - 1}%`} tone="amber" />
@@ -294,7 +294,7 @@ function ThresholdGraph({ selectedRisk, thresholds }) {
 
 function RiskLegend({ isSelected, label, tone }) {
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-extrabold ${
+    <span className={`badge rounded-pill inline-flex items-center gap-2 px-3 py-2 text-[13px] font-extrabold ${
       isSelected ? `${riskSoftClass(tone)} ring-2 ring-offset-1 ${riskRingClass(tone)}` : 'bg-white text-[#53668a]'
     }`}>
       <span className={`h-3 w-3 rounded-full ${dotClass(tone)}`} />
@@ -314,7 +314,7 @@ function ThresholdCard({ isSelected = false, label, rangeText, tone, value, min,
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') onSelect?.()
       }}
-      className={`min-w-0 cursor-pointer rounded-[12px] border px-4 py-4 transition hover:bg-white focus:outline-none focus:ring-2 ${riskBorderClass(tone)} ${
+      className={`card min-w-0 cursor-pointer rounded-[12px] border px-4 py-4 transition hover:bg-white focus:outline-none focus:ring-2 ${riskBorderClass(tone)} ${
         isSelected ? `${riskSoftClass(tone)} ${riskRingClass(tone)} ring-2 ring-offset-1` : 'bg-[#f8fbff]'
       }`}
     >
@@ -334,7 +334,7 @@ function ThresholdCard({ isSelected = false, label, rangeText, tone, value, min,
               value={value}
               onClick={(event) => event.stopPropagation()}
               onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-full min-w-0 rounded-[10px] border border-[#c9d8eb] bg-white px-3 text-center text-[15px] font-extrabold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#b8d3ff] sm:w-[78px]"
+              className="form-control h-10 w-full min-w-0 rounded-[10px] border border-[#c9d8eb] bg-white px-3 text-center text-[15px] font-extrabold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#b8d3ff] sm:w-[78px]"
             />
             <span className="shrink-0 text-[15px] font-black text-[#53668a]">%</span>
           </label>
