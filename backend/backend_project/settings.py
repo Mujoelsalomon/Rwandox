@@ -52,7 +52,7 @@ IS_RENDER = env_bool("RENDER", False) or bool(os.getenv("RENDER_EXTERNAL_HOSTNAM
 DEBUG = env_bool("DJANGO_DEBUG", not IS_RENDER)
 ALLOWED_HOSTS = env_list(
     "DJANGO_ALLOWED_HOSTS",
-    ["localhost", "127.0.0.1", "testserver", "rwandoxy.com", "www.rwandoxy.com"],
+    ["localhost", "127.0.0.1", "rwandox-1.onrender.com", "testserver", "rwandoxy.com", "www.rwandoxy.com"],
 )
 
 INSTALLED_APPS = [
