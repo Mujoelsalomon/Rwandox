@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Oxygen Risk System{% endblock %}</title>
+    <style>
+      :root {
+        --bg: #f1f5f9;
+        --card: #ffffff;
+        --border: #e2e8f0;
+        --text: #0f172a;
+        --muted: #64748b;
+        --primary: #0284c7;
+        --dark: #020617;
+        --light: #f8fafc;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      .sidebar {
+        width: 270px;
+        background: var(--dark);
+        color: #fff;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+      }
+      .sidebar a {
+        color: #cbd5e1;
+        text-decoration: none;
+        padding: 12px 14px;
+        border-radius: 14px;
+        display: block;
+        margin-bottom: 10px;
+        background: #0f172a;
+      }
+      .sidebar a.active {
+        background: var(--primary);
+        color: #fff;
+        font-weight: bold;
+      }
+      .main {
+        flex: 1;
+        padding: 20px;
+      }
+      .header,
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+      }
+      .header {
+        padding: 18px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .card {
+        padding: 20px;
+      }
+      .grid {
+        display: grid;
+        gap: 18px;
+      }
+      .grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .metrics .card h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+        color: var(--muted);
+      }
+      .metrics .card .value {
+        font-size: 34px;
+        font-weight: bold;
+      }
+      .btn {
+        display: inline-block;
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-dark {
+        background: var(--text);
+        color: #fff;
+      }
+      .btn-light {
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+      }
+      .section {
+        background: var(--light);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 16px;
+      }
+      .field label {
+        display: block;
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+      }
+      .field textarea {
+        resize: vertical;
+      }
+      .badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .high {
+        background: #fff1f2;
+        color: #be123c;
+      }
+      .moderate {
+        background: #fffbeb;
+        color: #b45309;
+      }
+      .low {
+        background: #ecfdf5;
+        color: #047857;
+      }
+      .prediction {
+        background: linear-gradient(135deg, #0369a1, #06b6d4);
+        color: #fff;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        font-size: 14px;
+      }
+      th {
+        background: #f8fafc;
+        color: #475569;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      @media (max-width: 1200px) {
+        .grid-4 {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 900px) {
+        .layout {
+          display: block;
+        }
+        .sidebar {
+          width: 100%;
+        }
+        .grid-2,
+        .grid-4 {
+          grid-template-columns: 1fr;
+        }
+        .header {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div>
+          <div
+            style="
+              font-size: 12px;
+              color: #38bdf8;
+              font-weight: bold;
+              letter-spacing: 0.15em;
+              text-transform: uppercase;
+            "
+          >
+            Clinical ML
+          </div>
+          <h2 style="margin: 8px 0 6px">Oxygen Risk System</h2>
+          <div style="color: #94a3b8; font-size: 14px">
+            Postoperative oxygen prediction support
+          </div>
+        </div>
+        <nav style="margin-top: 26px">
+          <a href="{% url 'dashboard' %}" class="active">Dashboard</a>
+          <a href="{% url 'prediction_create' %}">New Prediction</a>
+          <a href="{% url 'patient_list' %}">Patient Records</a>
+        </nav>
+        <div
+          style="
+            margin-top: auto;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 16px;
+            padding: 16px;
+          "
+        >
+          <div style="font-size: 12px; color: #94a3b8">Active model</div>
+          <div style="font-size: 20px; font-weight: bold; margin-top: 6px">
+            XGBoost v1.0
+          </div>
+          <div style="font-size: 13px; color: #94a3b8; margin-top: 8px">
+            Binary outcome: oxygen required / not required
+          </div>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="header">
+          <div>
+            <div style="font-size: 15px; color: #0369a1; font-weight: bold">
+              Kibagabaga Level Two Teaching Hospital
+            </div>
+            <div style="font-size: 28px; font-weight: bold; margin-top: 4px">
+              Postoperative Oxygen Requirement Prediction
+            </div>
+          </div>
+          <div>
+            {% if request.user.is_authenticated %}
+            <span class="btn btn-light">User: {{ request.user.username }}</span>
+            {% endif %}
+            <span class="btn btn-light">Database: PostgreSQL</span>
+          </div>
+        </div>
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </body>
+</html>

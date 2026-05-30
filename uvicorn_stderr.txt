@@ -1,0 +1,4 @@
+Usage: python -m uvicorn [OPTIONS] APP
+Try 'python -m uvicorn --help' for help.
+
+Error: Invalid value for '--env-file': Path 'backend/.env' does not exist.

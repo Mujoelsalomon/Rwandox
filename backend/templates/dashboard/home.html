@@ -1,0 +1,34 @@
+{% extends 'base.html' %} {% block title %}Dashboard{% endblock %} {% block
+content %}
+<div class="metrics grid grid-4">
+  <div class="card">
+    <h3>Predictions Today</h3>
+    <div class="value">{{ predictions_today }}</div>
+    <div class="muted">{{ high_risk_today }} high-risk cases</div>
+  </div>
+  <div class="card">
+    <h3>Average Risk Score</h3>
+    <div class="value">{{ avg_probability }}%</div>
+    <div class="muted">Across all assessed patients</div>
+  </div>
+  <div class="card">
+    <h3>High-Risk Alerts</h3>
+    <div class="value">{{ high_risk_today }}</div>
+    <div class="muted">Require close oxygen review</div>
+  </div>
+  <div class="card">
+    <h3>Model AUC</h3>
+    <div class="value">{{ model_auc }}</div>
+    <div class="muted">Latest validated version</div>
+  </div>
+</div>
+
+<div style="margin-top: 18px" class="card">
+  <h3>System workflow</h3>
+  <div style="margin-top: 8px">
+    Designed to support rapid postoperative oxygen risk review in PACU and
+    surgical wards.
+  </div>
+</div>
+
+{% endblock %}
