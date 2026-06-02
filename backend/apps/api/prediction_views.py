@@ -27,10 +27,10 @@ def predict_view(request):
     features = payload.get("features") or payload
     result = run_prediction(features)
     if not bool_value(payload.get("persist", True)):
-        return cors(JsonResponse(result))
+        return cors(JsonResponse(prediction_response_payload(result)))
 
     result = persist_prediction(features, payload, result)
-    return cors(JsonResponse(result))
+    return cors(JsonResponse(prediction_response_payload(result)))
 
 
 def prediction_history_view(request):
@@ -45,6 +45,12 @@ def prediction_history_view(request):
     if not predictions:
         predictions = dataset_prediction_history_payloads()
     return cors(JsonResponse({"predictions": predictions}))
+
+
+def prediction_response_payload(result):
+    payload = dict(result)
+    payload.pop("risk_level", None)
+    return payload
 
 
 def persist_prediction(features, payload, result):

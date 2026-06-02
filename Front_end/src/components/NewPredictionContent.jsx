@@ -770,9 +770,8 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
             </p>
           )}
           <h2 className="mt-3 text-[27px] font-black text-[#06163d]">Postoperative oxygen requirement assessment</h2>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(260px,1fr)]">
+          <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(260px,1fr)]">
             <OutcomeMetric label="Probability of Postoperative Oxygen Requirement" value={`${probability}%`} valueClass={tone.text} />
-            <OutcomeMetric label="Risk Classification" value={riskLevel} valueClass={tone.text} />
             <KeyPredictors predictors={keyPredictors} />
           </div>
           <div className={`mt-4 rounded-[12px] border-2 ${tone.border} bg-white px-4 py-4 shadow-sm`}>

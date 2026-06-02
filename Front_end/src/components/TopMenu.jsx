@@ -177,10 +177,8 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
               onClick={() => setProfileMenuOpen((open) => !open)}
               className="btn btn-link text-decoration-none flex min-w-0 items-center gap-2 rounded-2xl px-1 py-1 transition hover:bg-[#f6f9fd] md:gap-3"
             >
-              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#dbe6f5] md:h-11 md:w-11">
-                <div className="flex h-full w-full items-end justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">
-                  <div className="mb-1 h-6 w-6 rounded-full bg-[#24334f] md:h-7 md:w-7" />
-                </div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8] p-2 ring-2 ring-white shadow-sm md:h-12 md:w-12">
+                <Icon name="user" className="h-full w-full text-[#24334f]" />
               </div>
               <div className="hidden max-w-[120px] text-left md:block lg:max-w-[170px]">
                 <p className="truncate text-[15px] font-extrabold text-[#0d1c3d] lg:text-[16px]">{session?.name || 'Anesthetist'}</p>

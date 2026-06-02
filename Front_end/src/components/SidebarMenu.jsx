@@ -34,14 +34,14 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
   return (
     <aside
       style={isOpen ? widthStyle : { '--sidebar-width': '92px' }}
-      className={`sidebar nav flex-column shrink-0 transition-all duration-300 ${
+      className={`sidebar sidebar-scrollbar sidebar-scrollbar-visible nav flex-column shrink-0 transition-all duration-300 ${
         isOpen
-          ? 'fixed bottom-[57px] left-0 right-0 top-[88px] z-40 w-full overflow-y-auto bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)] sm:p-4 lg:static lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-hidden lg:p-3'
-          : 'hidden w-full bg-gradient-to-b from-[#06295e] to-[#001b42] p-0 shadow-[0_18px_38px_rgba(4,23,58,0.22)] lg:block lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-hidden lg:p-3'
+          ? 'fixed bottom-[57px] left-0 right-0 top-[88px] z-40 w-full overflow-y-scroll bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)] sm:p-4 lg:static lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-y-scroll lg:p-3'
+          : 'hidden w-full overflow-y-scroll bg-gradient-to-b from-[#06295e] to-[#001b42] p-0 shadow-[0_18px_38px_rgba(4,23,58,0.22)] lg:block lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-y-scroll lg:p-3'
       }`}
     >
       <div className="flex h-full min-h-0 flex-col">
-        <nav className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-col lg:space-y-2 lg:overflow-y-auto">
+        <nav className="grid min-h-0 grid-cols-2 gap-2 pr-1 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-col lg:space-y-2">
           {visibleSidebarItems.map((item) => (
             item.to ? (
               <Link
@@ -78,7 +78,7 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
           ))}
         </nav>
 
-        <div className={`card mt-3 shrink-0 rounded-[8px] bg-[#0c438c] p-0 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
+        <div className={`mt-3 shrink-0 rounded-[8px] border border-white/10 bg-[#0c438c] p-0 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
           <button
             type="button"
             aria-expanded={profileOpen}
@@ -92,8 +92,8 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
                 </div>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[20px] font-extrabold">{session?.name || 'Anesthetist'}</p>
-                <p className="truncate text-[20px] text-[#d7e8ff]">{session?.role || 'Clinician'}</p>
+                <p className="truncate text-[18px] font-extrabold leading-6 text-white">{session?.name || 'Anesthetist'}</p>
+                <p className="truncate text-[15px] font-bold leading-5 text-[#d7e8ff]">{session?.role || 'Clinician'}</p>
               </div>
               <Icon name={profileOpen ? 'chevronRight' : 'chevronRight'} className="h-5 w-5" />
             </div>

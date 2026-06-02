@@ -72,6 +72,7 @@ class EndpointsTest(TestCase):
         data = resp.json()
         self.assertIn('predicted_probability', data)
         self.assertIn('predicted_class', data)
+        self.assertNotIn('risk_level', data)
 
     def test_post_predict_preview_does_not_persist(self):
         payload = {'persist': False, 'features': {'patient_coded_id': 'KBH-PREVIEW-001', 'age': 45, 'sex': 'Female', 'postop_spo2': 90}}
@@ -79,6 +80,7 @@ class EndpointsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn('predicted_probability', data)
+        self.assertNotIn('risk_level', data)
         self.assertNotIn('id', data)
 
         search_resp = self.client.get('/patients/search?q=KBH-PREVIEW-001')
