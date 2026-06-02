@@ -2,7 +2,12 @@ import React, { useEffect, useState } from 'react'
 
 import { API_URL } from '../authSession'
 
-const metrics = [
+function dashboardMetrics(activeModel) {
+  const modelMetrics = activeModel?.metrics || {}
+  const aucValue = formatModelMetric(modelMetrics.val_auc ?? modelMetrics.auc, '0.84')
+  const f1Value = formatModelMetric(modelMetrics.val_f1_score ?? modelMetrics.f1_score, '0.81')
+
+  return [
   {
     label: 'Predictions Today',
     value: '24',
@@ -32,7 +37,7 @@ const metrics = [
   },
   {
     label: 'Model AUC',
-    value: '0.84',
+    value: aucValue,
     sub: 'Latest validated version',
     chip: 'Excellent',
     chipTone: 'purple',
@@ -41,14 +46,15 @@ const metrics = [
   },
   {
     label: 'Model F1-score',
-    value: '0.81',
+    value: f1Value,
     sub: 'Balance of precision and recall',
     chip: 'Strong',
     chipTone: 'teal',
     icon: 'checkCircle',
     iconTone: 'teal',
   },
-]
+  ]
+}
 
 const workflowSteps = [
   { title: 'Patient Assessment', sub: 'Enter patient clinical data', tone: 'blue', icon: 'user' },
@@ -64,6 +70,7 @@ const riskRows = [
 ]
 
 export default function DashboardContent({
+  activeModel,
   factorChips = [],
   handleGenerate,
   loading,
@@ -71,6 +78,7 @@ export default function DashboardContent({
   riskLabel = 'High',
 }) {
   const riskScore = Math.round(probability * 100)
+  const metrics = dashboardMetrics(activeModel)
 
   return (
     <div className="container-fluid min-w-0 space-y-4 px-0 pb-4">
@@ -455,6 +463,13 @@ function formatDate(value) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function formatModelMetric(value, fallback) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  const normalized = numeric > 1 ? numeric / 100 : numeric
+  return normalized.toFixed(2)
 }
 
 function toneClass(tone, kind) {

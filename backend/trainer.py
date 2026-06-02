@@ -5,7 +5,7 @@ import json
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.impute import SimpleImputer
@@ -181,6 +181,7 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         preds = (pipeline.predict_proba(X_val)[:, 1] > 0.5).astype(int)
 
     acc = float(accuracy_score(y_val, preds))
+    f1 = float(f1_score(y_val, preds, average="weighted", zero_division=0))
 
     os.makedirs(os.path.join(os.path.dirname(__file__), "models"), exist_ok=True)
     ts = int(time.time())
@@ -202,4 +203,4 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
     with open(meta_path, 'w') as mf:
         json.dump(metadata, mf)
 
-    return {"model_path": model_path, "metrics": {"val_accuracy": acc}, "metadata": metadata}
+    return {"model_path": model_path, "metrics": {"val_accuracy": acc, "val_f1_score": f1, "f1_score": f1}, "metadata": metadata}

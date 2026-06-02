@@ -202,7 +202,12 @@ export default function TrainingPortal() {
         {status && (
           <div className="alert alert-warning rounded-4 mb-4 bg-amber-50 p-4">
             <div>Job status: {status.status}</div>
-            {status.result && status.result.metrics && <div>Val accuracy: {status.result.metrics.val_accuracy}</div>}
+            {status.result && status.result.metrics && (
+              <>
+                <div>Val accuracy: {status.result.metrics.val_accuracy}</div>
+                <div>F1-score: {status.result.metrics.val_f1_score ?? status.result.metrics.f1_score ?? 'Pending'}</div>
+              </>
+            )}
             {status.error && <div className="text-red-600">Error: {status.error}</div>}
           </div>
         )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { getSession, isAdminSession } from '../authSession.js'
+import { clearCurrentSession, getSession, isAdminSession } from '../authSession.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -197,6 +197,11 @@ export default function NewPredictionContent() {
   const lastSyncedPayloadRef = useRef('')
   const canManageModels = isAdminSession(getSession())
 
+  function handleExpiredBackendSession() {
+    clearCurrentSession()
+    window.location.href = '/login'
+  }
+
   const bmi = useMemo(() => {
     const heightM = Number(form.height) / 100
     const weightKg = Number(form.weight)
@@ -245,7 +250,11 @@ export default function NewPredictionContent() {
         })
         const data = await resp.json()
         if (!resp.ok) {
-          throw new Error(resp.status === 401 ? 'Your login session has expired. Please sign in again before updating the prediction.' : data.error || 'Could not update prediction.')
+          if (resp.status === 401) {
+            handleExpiredBackendSession()
+            return
+          }
+          throw new Error(data.error || 'Could not update prediction.')
         }
 
         lastSyncedPayloadRef.current = payloadSignature
@@ -350,7 +359,11 @@ export default function NewPredictionContent() {
       })
       const data = await resp.json()
       if (!resp.ok) {
-        setError(resp.status === 401 ? 'Your login session has expired. Please sign in again before generating a prediction.' : data.error || 'Could not generate prediction.')
+        if (resp.status === 401) {
+          handleExpiredBackendSession()
+          return
+        }
+        setError(data.error || 'Could not generate prediction.')
         return
       }
       lastSyncedPayloadRef.current = payloadSignature
@@ -460,6 +473,7 @@ export default function NewPredictionContent() {
           trainingStatus: 'Completed',
           activeModel: completedJob.result?.model_name || modelType,
           validationAccuracy: completedJob.result?.metrics?.val_accuracy,
+          f1Score: completedJob.result?.metrics?.val_f1_score ?? completedJob.result?.metrics?.f1_score,
           predictionStatus: predictionResult ? 'Prediction generated' : 'Ready for prediction',
           probability: predictionResult?.predicted_probability ?? predictionResult?.probability,
           riskLevel: predictionResult?.risk_level,
@@ -744,10 +758,10 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
   const tone = riskTone(riskLevel)
 
   return (
-    <section className={`card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border ${tone.border} ${tone.bg} px-5 py-5 md:px-6`} aria-live="polite">
+    <section className={`card border-0 shadow-lg rounded-4 mb-3 rounded-[16px] border-2 ${tone.border} ${tone.bg} px-5 py-5 md:px-6`} aria-live="polite">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
-          <p className={`badge rounded-pill px-3 py-2 text-[12px] font-black uppercase tracking-[0.14em] ${tone.badge}`}>
+          <p className={`badge rounded-pill px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] shadow-sm ${tone.badge}`}>
             Prediction Result
           </p>
           {syncing && (
@@ -755,24 +769,25 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
               Updating from backend...
             </p>
           )}
-          <h2 className="mt-3 text-[25px] font-black text-[#071b49]">Postoperative oxygen requirement assessment</h2>
+          <h2 className="mt-3 text-[27px] font-black text-[#06163d]">Postoperative oxygen requirement assessment</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(260px,1fr)]">
-            <OutcomeMetric label="Probability of Postoperative Oxygen Requirement" value={`${probability}%`} />
+            <OutcomeMetric label="Probability of Postoperative Oxygen Requirement" value={`${probability}%`} valueClass={tone.text} />
             <OutcomeMetric label="Risk Classification" value={riskLevel} valueClass={tone.text} />
             <KeyPredictors predictors={keyPredictors} />
           </div>
-          <div className="mt-4 rounded-[12px] border border-white/80 bg-white px-4 py-4 shadow-sm">
-            <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#53668a]">Recommendation</p>
-            <p className="mt-2 text-[15px] font-semibold leading-6 text-[#20365f]">{recommendation}</p>
+          <div className={`mt-4 rounded-[12px] border-2 ${tone.border} bg-white px-4 py-4 shadow-sm`}>
+            <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#071b49]">Recommendation</p>
+            <p className="mt-2 text-[16px] font-bold leading-7 text-[#20365f]">{recommendation}</p>
           </div>
         </div>
 
-        <div className="w-full rounded-[14px] border border-white/80 bg-white px-5 py-5 shadow-sm xl:max-w-[310px]">
-          <div className={`mx-auto flex h-32 w-32 items-center justify-center rounded-full border-[10px] ${tone.ring}`}>
-            <span className={`text-[32px] font-black ${tone.text}`}>{probability}%</span>
+        <div className={`w-full rounded-[14px] border-2 ${tone.border} bg-white px-5 py-5 shadow-md xl:max-w-[320px]`}>
+          <p className="text-center text-[13px] font-black uppercase tracking-[0.14em] text-[#071b49]">Current prediction</p>
+          <div className={`mx-auto mt-3 flex h-36 w-36 items-center justify-center rounded-full border-[12px] ${tone.ring}`}>
+            <span className={`text-[36px] font-black ${tone.text}`}>{probability}%</span>
           </div>
-          <p className={`mt-4 text-center text-[18px] font-black ${tone.text}`}>{riskLevel}</p>
-          <p className="mt-2 text-center text-[13px] font-semibold leading-5 text-[#64799e]">
+          <p className={`mx-auto mt-4 w-fit rounded-full px-4 py-2 text-center text-[16px] font-black uppercase ${tone.badge}`}>{riskLevel}</p>
+          <p className="mt-3 text-center text-[14px] font-bold leading-6 text-[#20365f]">
             Classification uses Low &lt;30%, Moderate 30-69%, High 70% and above.
           </p>
         </div>
@@ -783,13 +798,13 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
 
 function KeyPredictors({ predictors }) {
   return (
-    <div className="rounded-[12px] border border-[#d7e4f4] bg-white px-4 py-3 shadow-sm">
-      <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#53668a]">Key Predictors</p>
+    <div className="rounded-[12px] border-2 border-[#1768f2] bg-white px-4 py-3 shadow-sm">
+      <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#071b49]">Key Predictors</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {predictors.map((predictor, index) => (
           <span
             key={`${predictor}-${index}`}
-            className="rounded-full border border-[#c7d8eb] bg-[#f8fbff] px-3 py-1 text-[13px] font-extrabold text-[#20365f]"
+            className="rounded-full border border-[#1768f2] bg-[#eaf2ff] px-3 py-1 text-[13px] font-black text-[#071b49]"
           >
             {index + 1}. {predictor}
           </span>
@@ -801,9 +816,9 @@ function KeyPredictors({ predictors }) {
 
 function OutcomeMetric({ label, value, valueClass = 'text-[#071b49]' }) {
   return (
-    <div className="card border-0 shadow-sm rounded-4 rounded-[12px] border border-[#d7e4f4] bg-white px-4 py-3">
-      <p className="card-text text-secondary text-[13px] font-bold">{label}</p>
-      <p className={`mt-1 text-[22px] font-black ${valueClass}`}>{value}</p>
+    <div className="card border-0 shadow-sm rounded-4 rounded-[12px] border-2 border-[#1768f2] bg-white px-4 py-3">
+      <p className="card-text text-[13px] font-black uppercase tracking-[0.08em] text-[#071b49]">{label}</p>
+      <p className={`mt-2 text-[28px] font-black ${valueClass}`}>{value}</p>
     </div>
   )
 }
@@ -948,6 +963,7 @@ function DatasetPanel({
 
 function TrainPredictionReport({ report }) {
   const accuracy = formatAccuracy(report.validationAccuracy)
+  const f1Score = formatAccuracy(report.f1Score)
   const probability = report.probability === undefined || report.probability === null
     ? 'Not generated'
     : `${normalizeProbability(report.probability)}%`
@@ -969,6 +985,7 @@ function TrainPredictionReport({ report }) {
         <ReportMetric label="Target column" value={report.targetColumn || 'Not selected'} />
         <ReportMetric label="Model type" value={report.modelType || 'Not selected'} />
         <ReportMetric label="Validation accuracy" value={accuracy} />
+        <ReportMetric label="F1-score" value={f1Score} />
         <ReportMetric label="Active model" value={report.activeModel || 'Pending'} />
         <ReportMetric label="Prediction status" value={report.predictionStatus || 'Ready for prediction'} />
         <ReportMetric label="Predicted probability" value={probability} />
@@ -1285,9 +1302,9 @@ function riskTone(riskLevel) {
   if (riskLevel === 'High Risk') {
     return {
       bg: 'bg-[#fff1f2]',
-      border: 'border-[#fecaca]',
-      badge: 'bg-[#fee2e2] text-[#991b1b]',
-      ring: 'border-[#fecaca] bg-[#fff5f5]',
+      border: 'border-[#dc2626]',
+      badge: 'bg-[#dc2626] text-white',
+      ring: 'border-[#dc2626] bg-[#fff5f5]',
       text: 'text-[#b91c1c]',
     }
   }
@@ -1295,18 +1312,18 @@ function riskTone(riskLevel) {
   if (riskLevel === 'Moderate Risk') {
     return {
       bg: 'bg-[#fffbeb]',
-      border: 'border-[#fde68a]',
-      badge: 'bg-[#fef3c7] text-[#92400e]',
-      ring: 'border-[#fde68a] bg-[#fff7ed]',
+      border: 'border-[#d97706]',
+      badge: 'bg-[#d97706] text-white',
+      ring: 'border-[#d97706] bg-[#fff7ed]',
       text: 'text-[#b45309]',
     }
   }
 
   return {
     bg: 'bg-[#f0fdf4]',
-    border: 'border-[#bbf7d0]',
-    badge: 'bg-[#dcfce7] text-[#166534]',
-    ring: 'border-[#bbf7d0] bg-[#f0fdf4]',
+    border: 'border-[#16a34a]',
+    badge: 'bg-[#16a34a] text-white',
+    ring: 'border-[#16a34a] bg-[#f0fdf4]',
     text: 'text-[#15803d]',
   }
 }
