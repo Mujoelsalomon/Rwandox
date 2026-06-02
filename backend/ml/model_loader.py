@@ -65,7 +65,7 @@ def _train_default_model():
 
     return train_model(
         str(DEFAULT_DATASET_PATH),
-        target_column="oxygen_required",
+        target_column="postoperative_oxygen_required",
         model_type="random_forest",
         output_path=str(DEFAULT_MODEL_PATH),
     )

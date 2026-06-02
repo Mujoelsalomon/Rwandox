@@ -70,6 +70,7 @@ _NUMERIC_FEATURES = {
     "surgery_duration",
     "duration_of_surgery_minutes",
     "estimated_blood_loss_ml",
+    "expected_intraoperative_fluid_volume_ml",
     "postop_spo2",
     "respiratory_rate",
     "time_since_surgery",

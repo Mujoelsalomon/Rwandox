@@ -79,7 +79,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
   }
 
   return (
-    <header className="navbar navbar-expand fixed left-0 right-0 top-0 z-50 flex h-[88px] items-center border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-6 py-0 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur">
+    <header className="navbar navbar-expand !fixed left-0 right-0 !top-0 z-50 flex h-[88px] items-center border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-6 py-0 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur">
       <div className="container-fluid flex h-full items-center justify-between gap-4 px-0">
         <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-5">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-white/70 md:h-14 md:w-14">

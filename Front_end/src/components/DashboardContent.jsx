@@ -39,6 +39,15 @@ const metrics = [
     icon: 'shield',
     iconTone: 'purple',
   },
+  {
+    label: 'Model F1-score',
+    value: '0.81',
+    sub: 'Balance of precision and recall',
+    chip: 'Strong',
+    chipTone: 'teal',
+    icon: 'checkCircle',
+    iconTone: 'teal',
+  },
 ]
 
 const workflowSteps = [
@@ -64,10 +73,10 @@ export default function DashboardContent({
   const riskScore = Math.round(probability * 100)
 
   return (
-    <div className="container-fluid min-w-0 px-0">
+    <div className="container-fluid min-w-0 space-y-4 px-0 pb-4">
       <HeroCard />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}
@@ -93,7 +102,7 @@ export default function DashboardContent({
 
 function HeroCard() {
   return (
-    <section className="card border-0 shadow-sm rounded-4 mb-3 mx-auto max-w-[720px] rounded-[14px] border border-[#e2eaf5] bg-white px-4 py-3 text-center md:px-5 md:py-4">
+    <section className="card shadow-sm rounded-4 mb-3 mx-auto max-w-[720px] rounded-[14px] border border-[#bfdbfe] bg-white px-4 py-3 text-center md:px-5 md:py-4">
       <h1 className="card-title fw-black mb-0 text-[20px] font-black leading-tight text-[#071b49] sm:text-[24px] md:text-[28px]">
         Postoperative Oxygen Requirement Prediction
       </h1>
@@ -103,7 +112,7 @@ function HeroCard() {
 
 function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
   return (
-    <article className="card border-0 shadow-sm rounded-4 min-w-0 rounded-[14px] border border-[#e2eaf5] bg-white px-4 py-4">
+    <article className="card shadow-sm rounded-4 min-w-0 rounded-[14px] border border-[#cbd8e8] bg-white px-4 py-4">
       <div className="flex gap-4">
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] ${toneClass(iconTone, 'iconSoft')}`}>
           <Icon name={icon} className={`h-6 w-6 ${toneClass(iconTone, 'text')}`} />
@@ -111,7 +120,7 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
         <div className="min-w-0 flex-1">
           <h2 className="text-[15px] font-extrabold leading-5 text-[#071b49]">{label}</h2>
           <p className="mt-2 text-[32px] font-black leading-none text-[#071b49]">{value}</p>
-          <p className="mt-2 text-[14px] leading-5 text-[#53668a]">{sub}</p>
+          <p className="mt-2 text-[14px] font-semibold leading-5 text-[#334766]">{sub}</p>
         </div>
       </div>
       <div className="mt-3 flex items-center gap-3 pl-16">
@@ -121,7 +130,7 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
           {chip}
         </span>
         {(chipTone === 'blue' || chipTone === 'green') && (
-          <span className="text-[12px] font-semibold text-[#7b8ca8]">vs yesterday</span>
+          <span className="text-[12px] font-black text-[#334766]">vs yesterday</span>
         )}
       </div>
     </article>
@@ -130,7 +139,7 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
 
 function RiskDistribution() {
   return (
-    <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
+    <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-5 md:px-6">
       <h2 className="h4 fw-bold text-[20px] font-black text-[#071b49]">Risk Distribution</h2>
       <div className="mt-3 flex flex-col items-center gap-8 md:flex-row md:justify-center">
         <div className="relative flex h-[170px] w-[170px] shrink-0 items-center justify-center rounded-full bg-[conic-gradient(#fb2d2d_0_25%,#ff9f12_25%_67%,#31b966_67%_100%)]">
@@ -144,7 +153,7 @@ function RiskDistribution() {
           {riskRows.map((row) => (
             <div key={row.label} className="grid grid-cols-[16px_1fr_auto] items-center gap-3 text-[16px]">
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
-              <span className="text-[#53668a]">{row.label}</span>
+              <span className="font-semibold text-[#334766]">{row.label}</span>
               <span className="font-medium text-[#20365f]">{row.value}</span>
             </div>
           ))}
@@ -166,14 +175,14 @@ function RiskTrend({ riskScore }) {
   ]
 
   return (
-    <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
+    <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-5 md:px-6">
       <h2 className="h4 fw-bold text-[20px] font-black text-[#071b49]">Risk Trend (Last 7 Days)</h2>
       <div className="relative mt-3 h-[175px]">
         <div className="absolute inset-x-0 top-2 h-px bg-[#dfe7f2]" />
         <div className="absolute inset-x-0 top-[46px] h-px bg-[#dfe7f2]" />
         <div className="absolute inset-x-0 top-[90px] h-px bg-[#dfe7f2]" />
         <div className="absolute inset-x-0 top-[132px] h-px bg-[#dfe7f2]" />
-        <div className="absolute left-0 top-0 flex h-[150px] flex-col justify-between text-[14px] text-[#53668a]">
+        <div className="absolute left-0 top-0 flex h-[150px] flex-col justify-between text-[14px] font-semibold text-[#334766]">
           <span>80%</span>
           <span>60%</span>
           <span>40%</span>
@@ -197,7 +206,7 @@ function RiskTrend({ riskScore }) {
         <div className="absolute right-0 top-[32px] rounded-[6px] bg-[#1768f2] px-3 py-2 text-[14px] font-extrabold text-white">
           {riskScore}%
         </div>
-        <div className="absolute bottom-0 left-12 right-3 grid grid-cols-7 text-center text-[11px] text-[#53668a] sm:text-[14px]">
+        <div className="absolute bottom-0 left-12 right-3 grid grid-cols-7 text-center text-[11px] font-semibold text-[#334766] sm:text-[14px]">
           <span>May 6</span>
           <span>May 7</span>
           <span>May 8</span>
@@ -213,11 +222,11 @@ function RiskTrend({ riskScore }) {
 
 function WorkflowPanel() {
   return (
-    <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-4 md:px-6">
+    <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-4 md:px-6">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-[20px] font-black text-[#071b49]">System workflow</h2>
-          <p className="text-[14px] text-[#53668a]">Assess and manage patient risk</p>
+          <p className="text-[14px] font-semibold text-[#334766]">Assess and manage patient risk</p>
         </div>
       </div>
       <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -240,7 +249,7 @@ function WorkflowStep({ index, title, sub, tone, icon }) {
       <Icon name={icon} className={`h-6 w-6 shrink-0 ${toneClass(tone, 'text')}`} />
       <div className="min-w-0">
         <p className="truncate text-[14px] font-extrabold text-[#071b49]">{title}</p>
-        <p className="truncate text-[12px] text-[#53668a]">{sub}</p>
+        <p className="truncate text-[12px] font-semibold text-[#334766]">{sub}</p>
       </div>
     </div>
   )
@@ -254,7 +263,7 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
       <RecentPredictionsTable />
 
       <div className="min-w-0 space-y-5">
-        <section className="card border-0 shadow rounded-4 rounded-[28px] bg-[#238bcc] px-6 py-6 text-white">
+        <section className="card shadow rounded-4 rounded-[20px] border border-[#cbd8e8] bg-white px-6 py-6 text-[#071b49]">
           <div className="flex items-start justify-between gap-4">
             <h2 className="max-w-[170px] text-[24px] font-black leading-tight tracking-wide">
               Current prediction
@@ -263,13 +272,13 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
               {riskTone.label.toLowerCase()}<br />risk
             </span>
           </div>
-          <p className="mt-7 text-[64px] font-black leading-none">{riskScore}%</p>
-          <p className="mt-5 max-w-[300px] text-[18px] leading-8 text-sky-50">
+          <p className={`mt-7 text-[64px] font-black leading-none ${riskTone.text}`}>{riskScore}%</p>
+          <p className="mt-5 max-w-[340px] text-[18px] font-extrabold leading-8 text-[#20365f]">
             Probability of postoperative oxygen requirement. This patient is likely to require supplemental oxygen during the immediate postoperative period.
           </p>
         </section>
 
-        <section className="card border-0 shadow-sm rounded-4 rounded-[20px] border border-[#e2eaf5] bg-white px-5 py-5">
+        <section className="card shadow-sm rounded-4 rounded-[20px] border border-[#cbd8e8] bg-white px-5 py-5">
           <h2 className="text-[24px] font-black leading-tight text-[#071b49]">
             Key contributing factors
           </h2>
@@ -277,7 +286,7 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
             {factorChips.map((chip) => (
               <span
                 key={chip}
-                className="badge rounded-pill border border-[#ffd0dd] bg-[#fff5f8] px-3 py-2 text-[13px] font-extrabold text-[#d52951]"
+                className="badge rounded-pill border border-[#fecaca] bg-[#dc2626] px-3 py-2 text-[13px] font-extrabold text-white shadow-sm"
               >
                 {chip}
               </span>
@@ -323,23 +332,23 @@ function RecentPredictionsTable() {
   }, [])
 
   return (
-    <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#e2eaf5] bg-white">
-      <div className="flex flex-col gap-2 border-b border-[#e2eaf5] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
+    <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white">
+      <div className="flex flex-col gap-2 border-b border-[#cbd8e8] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
           <h2 className="text-[24px] font-black leading-tight text-[#071b49] md:text-[30px]">
             Recent predictions
           </h2>
-          <p className="mt-1 text-[15px] leading-6 text-[#53668a]">
+          <p className="mt-1 text-[15px] font-semibold leading-6 text-[#334766]">
             Latest generated postoperative oxygen risk results.
           </p>
         </div>
-        <span className="badge rounded-pill w-fit bg-[#eaf2ff] px-3 py-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-[#1768f2]">
+        <span className="badge rounded-pill w-fit bg-[#1768f2] px-3 py-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-white">
           Last {predictions.length || 0}
         </span>
       </div>
 
       {status && (
-        <div className="alert alert-warning rounded-4 mx-5 mt-4 px-4 py-3 text-[13px] font-semibold md:mx-6">
+        <div className="alert alert-warning rounded-4 mx-5 mt-4 border border-[#f59e0b] bg-[#fffbeb] px-4 py-3 text-[13px] font-bold text-[#713f12] md:mx-6">
           {status}
         </div>
       )}
@@ -347,7 +356,7 @@ function RecentPredictionsTable() {
       <div className="overflow-x-auto">
         <table className="table table-hover align-middle mb-0 min-w-[760px] w-full text-left">
           <thead>
-            <tr className="border-b border-[#e2eaf5] bg-[#f8fbff] text-[12px] font-black uppercase tracking-[0.08em] text-[#6c7f9f]">
+            <tr className="border-b border-[#cbd8e8] bg-[#eaf2ff] text-[12px] font-black uppercase tracking-[0.08em] text-[#071b49]">
               <th className="px-5 py-3">Generated</th>
               <th className="px-5 py-3">Patient ID</th>
               <th className="px-5 py-3">Surgery</th>
@@ -360,7 +369,7 @@ function RecentPredictionsTable() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-5 py-5 text-[15px] font-semibold text-[#53668a]" colSpan="7">
+                <td className="px-5 py-5 text-[15px] font-bold text-[#334766]" colSpan="7">
                   Loading recent predictions...
                 </td>
               </tr>
@@ -369,16 +378,16 @@ function RecentPredictionsTable() {
                 <tr key={prediction.id || `${prediction.patient_id}-${prediction.generated_at}`} className="border-b border-[#eef3fa] last:border-0">
                   <td className="whitespace-nowrap px-5 py-4 text-[14px] font-semibold text-[#20365f]">{formatDate(prediction.generated_at)}</td>
                   <td className="whitespace-nowrap px-5 py-4 text-[14px] font-black text-[#071b49]">{prediction.patient_id || 'Not recorded'}</td>
-                  <td className="px-5 py-4 text-[14px] font-semibold text-[#53668a]">{prediction.surgery_type || 'Not recorded'}</td>
-                  <td className="px-5 py-4 text-[14px] font-semibold text-[#53668a]">{prediction.patient_disposition || 'Not recorded'}</td>
+                  <td className="px-5 py-4 text-[14px] font-semibold text-[#334766]">{prediction.surgery_type || 'Not recorded'}</td>
+                  <td className="px-5 py-4 text-[14px] font-semibold text-[#334766]">{prediction.patient_disposition || 'Not recorded'}</td>
                   <td className="px-5 py-4"><RiskBadge risk={prediction.risk_level} /></td>
                   <td className="px-5 py-4 text-[14px] font-black text-[#071b49]">{Math.round(Number(prediction.predicted_probability || 0))}%</td>
-                  <td className="whitespace-nowrap px-5 py-4 text-[14px] font-semibold text-[#53668a]">{prediction.model_version || 'v1.0'}</td>
+                  <td className="whitespace-nowrap px-5 py-4 text-[14px] font-semibold text-[#334766]">{prediction.model_version || 'v1.0'}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td className="px-5 py-5 text-[15px] font-semibold text-[#53668a]" colSpan="7">
+                <td className="px-5 py-5 text-[15px] font-bold text-[#334766]" colSpan="7">
                   No recent predictions found.
                 </td>
               </tr>
@@ -406,7 +415,7 @@ function getRiskTone(risk) {
   if (normalized.includes('high')) {
     return {
       label: 'High',
-      currentBadge: 'bg-[#fee2e2] text-[#991b1b]',
+      currentBadge: 'bg-[#dc2626] text-white shadow-sm',
       badge: 'border-[#ffd0d0] bg-[#fff1f1] text-[#d92d2d]',
     }
   }
@@ -414,7 +423,7 @@ function getRiskTone(risk) {
   if (normalized.includes('moderate') || normalized.includes('medium')) {
     return {
       label: 'Moderate',
-      currentBadge: 'bg-[#fef3c7] text-[#92400e]',
+      currentBadge: 'bg-[#f59e0b] text-white shadow-sm',
       badge: 'border-[#fde68a] bg-[#fffbeb] text-[#b45309]',
     }
   }
@@ -422,14 +431,14 @@ function getRiskTone(risk) {
   if (normalized.includes('low')) {
     return {
       label: 'Low',
-      currentBadge: 'bg-[#dcfce7] text-[#166534]',
+      currentBadge: 'bg-[#16a34a] text-white shadow-sm',
       badge: 'border-[#cdeed9] bg-[#f1fbf5] text-[#168246]',
     }
   }
 
   return {
     label: 'Unknown',
-    currentBadge: 'bg-[#dbeafe] text-[#1e3a8a]',
+    currentBadge: 'bg-[#2563eb] text-white shadow-sm',
     badge: 'border-[#d9e2ef] bg-[#f8fbff] text-[#53668a]',
   }
 }
@@ -453,7 +462,7 @@ function toneClass(tone, kind) {
     blue: {
       icon: 'bg-[#1768f2]',
       iconSoft: 'bg-[#eaf2ff]',
-      chip: 'bg-[#eaf2ff] text-[#1768f2]',
+      chip: 'bg-[#1768f2] text-white shadow-sm',
       panel: 'border-[#c7dafb] bg-[#f7fbff]',
       stepNumber: 'bg-[#dbeafe] text-[#1768f2]',
       text: 'text-[#1768f2]',
@@ -461,7 +470,7 @@ function toneClass(tone, kind) {
     green: {
       icon: 'bg-[#31b966]',
       iconSoft: 'bg-[#eaf8ef]',
-      chip: 'bg-[#eaf8ef] text-[#15984d]',
+      chip: 'bg-[#16a34a] text-white shadow-sm',
       panel: 'border-[#ccebd8] bg-[#f4fbf7]',
       stepNumber: 'bg-[#dcf5e6] text-[#31b966]',
       text: 'text-[#31b966]',
@@ -469,7 +478,7 @@ function toneClass(tone, kind) {
     orange: {
       icon: 'bg-[#ff9f12]',
       iconSoft: 'bg-[#fff0e6]',
-      chip: 'bg-[#fff0e6] text-[#f06b00]',
+      chip: 'bg-[#f97316] text-white shadow-sm',
       panel: 'border-[#ffd7b2] bg-[#fff8f1]',
       stepNumber: 'bg-[#ffead6] text-[#ff9f12]',
       text: 'text-[#ff8a00]',
@@ -477,10 +486,18 @@ function toneClass(tone, kind) {
     purple: {
       icon: 'bg-[#8b5cf6]',
       iconSoft: 'bg-[#f0ebff]',
-      chip: 'bg-[#f0ebff] text-[#7c3aed]',
+      chip: 'bg-[#7c3aed] text-white shadow-sm',
       panel: 'border-[#d8ccff] bg-[#fbf9ff]',
       stepNumber: 'bg-[#eee7ff] text-[#8b5cf6]',
       text: 'text-[#8b5cf6]',
+    },
+    teal: {
+      icon: 'bg-[#0f766e]',
+      iconSoft: 'bg-[#ccfbf1]',
+      chip: 'bg-[#0f766e] text-white shadow-sm',
+      panel: 'border-[#99f6e4] bg-[#f0fdfa]',
+      stepNumber: 'bg-[#ccfbf1] text-[#0f766e]',
+      text: 'text-[#0f766e]',
     },
   }
 
@@ -534,6 +551,12 @@ function Icon({ name, className = '' }) {
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
         <path d="M12 8v7" />
         <path d="M9 11l3-3 3 3" />
+      </>
+    ),
+    checkCircle: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M8 12l2.5 2.5L16 9" />
       </>
     ),
     user: (

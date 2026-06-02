@@ -36,7 +36,7 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
       style={isOpen ? widthStyle : { '--sidebar-width': '92px' }}
       className={`sidebar nav flex-column shrink-0 transition-all duration-300 ${
         isOpen
-          ? 'fixed bottom-[57px] left-0 right-0 top-[73px] z-40 w-full overflow-y-auto bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)] sm:p-4 lg:static lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-hidden lg:p-3'
+          ? 'fixed bottom-[57px] left-0 right-0 top-[88px] z-40 w-full overflow-y-auto bg-gradient-to-b from-[#06295e] to-[#001b42] p-3 shadow-[0_18px_38px_rgba(4,23,58,0.22)] sm:p-4 lg:static lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-hidden lg:p-3'
           : 'hidden w-full bg-gradient-to-b from-[#06295e] to-[#001b42] p-0 shadow-[0_18px_38px_rgba(4,23,58,0.22)] lg:block lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-hidden lg:p-3'
       }`}
     >

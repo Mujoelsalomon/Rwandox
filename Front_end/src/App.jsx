@@ -1,6 +1,6 @@
-import React from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { getSession, isAdminSession, isSessionActive } from './authSession.js'
+import React, { useEffect, useRef } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { clearCurrentSession, getSession, isAdminSession, isSessionActive } from './authSession.js'
 import AppLayout from './components/AppLayout.jsx'
 import NewPredictionContent from './components/NewPredictionContent.jsx'
 import ProfileContent from './components/ProfileContent.jsx'
@@ -15,6 +15,7 @@ import TrainingPortal from './TrainingPortal.jsx'
 export default function App() {
   return (
     <BrowserRouter>
+      <IdleSessionTimeout />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login_Form />} />
@@ -90,6 +91,50 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   )
+}
+
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000
+
+function IdleSessionTimeout() {
+  const navigate = useNavigate()
+  const timeoutRef = useRef(null)
+
+  useEffect(() => {
+    const activityEvents = ['click', 'keydown', 'pointerdown', 'touchstart', 'scroll']
+
+    function clearIdleTimer() {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+    }
+
+    function logoutInactiveUser() {
+      if (!isSessionActive()) return
+      clearCurrentSession()
+      navigate('/login', { replace: true })
+    }
+
+    function resetIdleTimer() {
+      clearIdleTimer()
+      if (!isSessionActive()) return
+      timeoutRef.current = window.setTimeout(logoutInactiveUser, IDLE_TIMEOUT_MS)
+    }
+
+    resetIdleTimer()
+    activityEvents.forEach((eventName) => {
+      window.addEventListener(eventName, resetIdleTimer, { passive: true, capture: true })
+    })
+
+    return () => {
+      clearIdleTimer()
+      activityEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, resetIdleTimer, { capture: true })
+      })
+    }
+  }, [navigate])
+
+  return null
 }
 
 function ProtectedRoute({ adminOnly = false, children }) {

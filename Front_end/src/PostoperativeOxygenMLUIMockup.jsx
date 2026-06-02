@@ -179,12 +179,12 @@ export default function PostoperativeOxygenMLUIMockup() {
   }
 
   return (
-    <div className="container-fluid h-screen overflow-hidden bg-[#f6f9fd] pb-[57px] pt-[73px] text-slate-900 px-0">
+    <div className="container-fluid flex h-screen flex-col overflow-hidden bg-[#f6f9fd] pb-[72px] pt-[88px] text-slate-900 px-0">
       <TopMenu
         isSidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen((open) => !open)}
       />
-      <div className="flex h-[calc(100vh-130px)] min-h-0 flex-col overflow-hidden lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
         <SidebarMenu isOpen={sidebarOpen} onNavigate={() => {
           if (window.innerWidth < 1024) {
             setSidebarOpen(false)
@@ -204,7 +204,7 @@ export default function PostoperativeOxygenMLUIMockup() {
           title="Drag to resize sidebar"
         />
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 md:px-5">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8 pt-4 md:px-5">
           <div className="container-fluid mx-auto min-w-0 max-w-[1540px] px-0">
             <DashboardContent
               activeModel={activeModel}
