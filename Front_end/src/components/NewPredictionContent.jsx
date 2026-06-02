@@ -11,12 +11,40 @@ const requiredPredictionFields = [
   ['sex', 'Sex'],
   ['weight', 'Weight'],
   ['height', 'Height'],
-  ['baselineSpo2', 'Baseline room-air SpO2'],
-  ['surgeryStatus', 'Surgery status'],
-  ['durationOfSurgery', 'Duration of surgery'],
-  ['typeOfAnesthesia', 'Type of anesthesia'],
+  ['smokingHistory', 'Smoking history'],
   ['asaClass', 'ASA class'],
+  ['preExistingRespiratoryDisease', 'Pre-existing respiratory disease'],
+  ['copdAsthma', 'COPD / asthma'],
+  ['cardiovascularDisease', 'Cardiovascular disease'],
+  ['hypertension', 'Hypertension'],
+  ['diabetesMellitus', 'Diabetes mellitus'],
+  ['renalDisease', 'Renal disease'],
+  ['hivStatus', 'HIV status'],
+  ['anemia', 'Anemia'],
+  ['obesity', 'Obesity'],
+  ['sleepApnea', 'Sleep apnea'],
+  ['baselineSpo2', 'Baseline room-air SpO2'],
+  ['baselineRespiratoryRate', 'Baseline respiratory rate'],
+  ['surgicalSpecialty', 'Expected surgical specialty'],
+  ['typeOfSurgery', 'Expected type of surgery'],
+  ['surgeryStatus', 'Expected surgery status'],
+  ['surgeryMagnitude', 'Expected major or minor surgery'],
+  ['surgicalApproach', 'Expected surgical approach'],
+  ['durationOfSurgery', 'Expected duration of surgery'],
+  ['estimatedBloodLoss', 'Expected estimated blood loss'],
+  ['typeOfAnesthesia', 'Expected type of anesthesia'],
+  ['airwayType', 'Expected airway type'],
+  ['intraoperativeOpioidUse', 'Expected intraoperative opioid use'],
+  ['sedativeUse', 'Expected sedative use'],
+  ['muscleRelaxantUsed', 'Expected muscle relaxant use'],
+  ['reversalAgentUsed', 'Expected reversal agent use'],
+  ['intraoperativeHypotension', 'Expected intraoperative hypotension risk'],
+  ['intraoperativeBronchospasm', 'Expected intraoperative wheezing / bronchospasm risk'],
+  ['intraoperativeDesaturation', 'Expected intraoperative desaturation risk'],
+  ['intraoperativeFluidVolume', 'Expected intraoperative fluid volume'],
+  ['vasopressorUsed', 'Expected vasopressor use'],
 ]
+const requiredPredictionFieldMap = new Map(requiredPredictionFields)
 
 const initialForm = {
   wardService: 'Surgery',
@@ -114,39 +142,37 @@ const sections = [
     ],
   },
   {
-    title: 'B2. Surgery-related variables',
+    title: 'B2. Expected surgery-related variables',
     columns: 3,
     fields: [
-      field('surgicalSpecialty', 'Surgical specialty', 'select', ['General surgery', 'Orthopedics', 'Obstetrics-gynecology', 'ENT', 'Other'], 'Theatre register / file', null, 'General surgery=1, Orthopedics=2, Obstetrics-gynecology=3, ENT=4, Other=5'),
-      field('typeOfSurgery', 'Type of surgery', 'text', null, 'Theatre register / file', null, 'Numeric code'),
-      field('procedurePerformed', 'Procedure performed', 'textarea', null, 'Operation notes', null, 'Numeric code or free text'),
-      field('surgeryStatus', 'Surgery status', 'select', ['Elective', 'Emergency'], 'Theatre register / file', null, 'Elective=1, Emergency=2'),
-      field('surgeryMagnitude', 'Major or minor surgery', 'select', ['Major', 'Minor'], 'Operation notes', null, 'Major=1, Minor=2'),
-      field('surgicalApproach', 'Surgical approach', 'select', ['Open', 'Minimally invasive', 'Other'], 'Operation notes', null, 'Open=1, Minimally invasive=2, Other=3'),
-      field('incisionType', 'Incision type, if relevant', 'text', null, 'Operation notes', null, 'Numerical coding'),
-      field('durationOfSurgery', 'Duration of surgery', 'number', null, 'Theatre register / anesthesia chart', 'min', 'Continuous'),
-      field('estimatedBloodLoss', 'Estimated blood loss', 'number', null, 'Operation note / anesthesia chart', 'mL', 'Continuous'),
-      field('bloodTransfusionGiven', 'Blood transfusion given', 'select', yesNo, 'Anesthesia chart / file', null, 'Yes=1, No=0'),
-      field('patientPosition', 'Patient position during surgery', 'select', ['Supine', 'Prone', 'Lateral', 'Lithotomy', 'Other'], 'Anesthesia chart', null, 'Supine=1, Prone=2, Lateral=3, Lithotomy=4, Other=5'),
+      field('surgicalSpecialty', 'Expected surgical specialty', 'select', ['General surgery', 'Orthopedics', 'Obstetrics-gynecology', 'ENT', 'Other'], 'Planned theatre register / file', null, 'General surgery=1, Orthopedics=2, Obstetrics-gynecology=3, ENT=4, Other=5'),
+      field('typeOfSurgery', 'Expected type of surgery', 'text', null, 'Planned theatre register / file', null, 'Numeric code'),
+      field('procedurePerformed', 'Expected procedure to be performed', 'textarea', null, 'Surgical plan / theatre booking', null, 'Numeric code or free text'),
+      field('surgeryStatus', 'Expected surgery status', 'select', ['Elective', 'Emergency'], 'Planned theatre register / file', null, 'Elective=1, Emergency=2'),
+      field('surgeryMagnitude', 'Expected major or minor surgery', 'select', ['Major', 'Minor'], 'Surgical plan / theatre booking', null, 'Major=1, Minor=2'),
+      field('surgicalApproach', 'Expected surgical approach', 'select', ['Open', 'Minimally invasive', 'Other'], 'Surgical plan / theatre booking', null, 'Open=1, Minimally invasive=2, Other=3'),
+      field('incisionType', 'Expected incision type, if relevant', 'text', null, 'Surgical plan / theatre booking', null, 'Numerical coding'),
+      field('durationOfSurgery', 'Expected duration of surgery', 'number', null, 'Planned theatre register / anesthesia plan', 'min', 'Continuous'),
+      field('estimatedBloodLoss', 'Expected estimated blood loss', 'number', null, 'Surgical plan / anesthesia plan', 'mL', 'Continuous'),
+      field('bloodTransfusionGiven', 'Expected blood transfusion', 'select', yesNo, 'Anesthesia plan / file', null, 'Yes=1, No=0'),
+      field('patientPosition', 'Expected patient position during surgery', 'select', ['Supine', 'Prone', 'Lateral', 'Lithotomy', 'Other'], 'Anesthesia plan', null, 'Supine=1, Prone=2, Lateral=3, Lithotomy=4, Other=5'),
     ],
   },
   {
-    title: 'B3. Anesthesia-related variables',
+    title: 'B3. Expected anesthesia and intraoperative variables',
     columns: 3,
     fields: [
-      field('typeOfAnesthesia', 'Type of anesthesia', 'select', ['General', 'Spinal', 'Regional', 'Combined', 'Other'], 'Anesthesia chart', null, 'General=1, Spinal=2, Regional=3, Combined=4, Other=5'),
-      field('airwayType', 'Airway type', 'select', ['Endotracheal tube', 'Laryngeal mask airway', 'Face mask', 'Other'], 'Anesthesia chart', null, 'Endotracheal tube=1, Laryngeal mask airway=2, Face mask=3, Other=4'),
-      field('intraoperativeOpioidUse', 'Intraoperative opioid use', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
-      field('totalOpioidDose', 'Total opioid dose', 'text', null, 'Anesthesia chart', null, 'Specify drug and dose'),
-      field('sedativeUse', 'Sedative use', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
-      field('muscleRelaxantUsed', 'Muscle relaxant used', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
-      field('reversalAgentUsed', 'Reversal agent used', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
-      field('intraoperativeHypotension', 'Intraoperative hypotension', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
-      field('intraoperativeBronchospasm', 'Intraoperative wheezing / bronchospasm', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
-      field('intraoperativeDesaturation', 'Intraoperative desaturation episode', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
-      field('intraoperativeSpo2', 'Intraoperative SpO2', 'number', null, 'Anesthesia chart', '%', 'Continuous'),
-      field('intraoperativeFluidVolume', 'Intraoperative fluid volume', 'number', null, 'Anesthesia chart', 'mL', 'Continuous'),
-      field('vasopressorUsed', 'Vasopressor used', 'select', yesNo, 'Anesthesia chart', null, 'Yes=1, No=0'),
+      field('typeOfAnesthesia', 'Expected type of anesthesia', 'select', ['General', 'Spinal', 'Regional', 'Combined', 'Other'], 'Anesthesia plan', null, 'General=1, Spinal=2, Regional=3, Combined=4, Other=5'),
+      field('airwayType', 'Expected airway type', 'select', ['Endotracheal tube', 'Laryngeal mask airway', 'Face mask', 'Other'], 'Anesthesia plan', null, 'Endotracheal tube=1, Laryngeal mask airway=2, Face mask=3, Other=4'),
+      field('intraoperativeOpioidUse', 'Expected intraoperative opioid use', 'select', yesNo, 'Anesthesia plan', null, 'Yes=1, No=0'),
+      field('sedativeUse', 'Expected sedative use', 'select', yesNo, 'Anesthesia plan', null, 'Yes=1, No=0'),
+      field('muscleRelaxantUsed', 'Expected muscle relaxant use', 'select', yesNo, 'Anesthesia plan', null, 'Yes=1, No=0'),
+      field('reversalAgentUsed', 'Expected reversal agent use', 'select', yesNo, 'Anesthesia plan', null, 'Yes=1, No=0'),
+      field('intraoperativeHypotension', 'Expected intraoperative hypotension risk', 'select', yesNo, 'Anesthesia plan / preoperative assessment', null, 'Yes=1, No=0'),
+      field('intraoperativeBronchospasm', 'Expected intraoperative wheezing / bronchospasm risk', 'select', yesNo, 'Anesthesia plan / preoperative assessment', null, 'Yes=1, No=0'),
+      field('intraoperativeDesaturation', 'Expected intraoperative desaturation risk', 'select', yesNo, 'Anesthesia plan / preoperative assessment', null, 'Yes=1, No=0'),
+      field('intraoperativeFluidVolume', 'Expected intraoperative fluid volume', 'number', null, 'Anesthesia plan', 'mL', 'Continuous'),
+      field('vasopressorUsed', 'Expected vasopressor use', 'select', yesNo, 'Anesthesia plan', null, 'Yes=1, No=0'),
     ],
   },
 ]
@@ -589,15 +615,19 @@ function FormSection({ bmi, form, section, updateField }) {
 }
 
 function DataField({ field: item, onChange, value }) {
+  const isRequired = requiredPredictionFieldMap.has(item.key)
+
   if (item.type === 'readonly') {
     return <ReadOnlyField label={item.label} source={item.source} suffix={item.suffix} value={value || 'Enter height and weight'} />
   }
 
   if (item.type === 'select') {
     return (
-      <FieldShell coding={item.coding} label={item.label} source={item.source}>
+      <FieldShell coding={item.coding} isRequired={isRequired} label={item.label} source={item.source}>
         <select
+          aria-required={isRequired}
           className="form-select min-h-[50px] w-full rounded-[10px] border border-[#c7d8eb] bg-white px-4 text-[15px] font-semibold text-[#071b49] outline-none focus:border-[#1768f2]"
+          required={isRequired}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         >
@@ -611,9 +641,11 @@ function DataField({ field: item, onChange, value }) {
 
   if (item.type === 'textarea') {
     return (
-      <FieldShell coding={item.coding} label={item.label} source={item.source}>
+      <FieldShell coding={item.coding} isRequired={isRequired} label={item.label} source={item.source}>
         <textarea
+          aria-required={isRequired}
           className="form-control min-h-[94px] w-full resize-y rounded-[10px] border border-[#c7d8eb] bg-white px-4 py-3 text-[15px] font-semibold text-[#071b49] outline-none focus:border-[#1768f2]"
+          required={isRequired}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -622,10 +654,12 @@ function DataField({ field: item, onChange, value }) {
   }
 
   return (
-    <FieldShell coding={item.coding} label={item.label} source={item.source}>
+    <FieldShell coding={item.coding} isRequired={isRequired} label={item.label} source={item.source}>
       <div className="input-group flex min-h-[50px] items-center rounded-[10px] border border-[#c7d8eb] bg-white px-4 focus-within:border-[#1768f2]">
         <input
+          aria-required={isRequired}
           className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none"
+          required={isRequired}
           type={item.type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -636,10 +670,15 @@ function DataField({ field: item, onChange, value }) {
   )
 }
 
-function FieldShell({ children, coding, label, source }) {
+function FieldShell({ children, coding, isRequired = false, label, source }) {
   return (
     <label className="min-w-0">
-      <span className="form-label mb-2 block text-[14px] font-bold text-[#49617f]">{label}</span>
+      <span className="form-label mb-2 flex items-center gap-2 text-[14px] font-bold text-[#49617f]">
+        <span>{label}</span>
+        {isRequired && (
+          <span aria-label="required" className="text-[18px] font-black leading-none text-[#dc2626]">*</span>
+        )}
+      </span>
       {children}
     </label>
   )
@@ -793,7 +832,7 @@ function getKeyPredictors(prediction, form, bmi) {
     },
     {
       present: Number.isFinite(duration) && duration >= 180,
-      label: `Duration ${duration} min`,
+      label: `Expected duration ${duration} min`,
     },
     {
       present: Number.isFinite(bmiValue) && bmiValue >= 30,
@@ -801,11 +840,11 @@ function getKeyPredictors(prediction, form, bmi) {
     },
     {
       present: form?.typeOfAnesthesia === 'General',
-      label: 'General anesthesia',
+      label: 'Expected general anesthesia',
     },
     {
       present: form?.surgicalApproach === 'Open',
-      label: 'Open surgical approach',
+      label: 'Expected open surgical approach',
     },
     {
       present: Number.isFinite(age) && age >= 65,
@@ -1195,7 +1234,7 @@ function mapAnesthesiaType(value) {
 function validatePredictionFields(form, bmi) {
   const missing = requiredPredictionFields
     .filter(([key]) => !String(form[key] ?? '').trim())
-    .map(([, label]) => label)
+    .map(([key, label]) => requiredPredictionFieldMap.get(key) || label)
 
   if (!bmi) missing.push('Body mass index')
   return missing

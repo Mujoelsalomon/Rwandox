@@ -50,10 +50,14 @@ def postgres_env_url():
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me-for-prod")
 IS_RENDER = env_bool("RENDER", False) or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
 DEBUG = env_bool("DJANGO_DEBUG", not IS_RENDER)
+LOCAL_WIFI_IP = os.getenv("LOCAL_WIFI_IP", "").strip()
 ALLOWED_HOSTS = env_list(
     "DJANGO_ALLOWED_HOSTS",
-    ["localhost", "127.0.0.1", "testserver", "rwandoxy.com", "www.rwandoxy.com"],
+    ["localhost", 
+    "rwandox-1.onrender.com","127.0.0.1", "testserver", "rwandoxy.com", "www.rwandoxy.com"],
 )
+if LOCAL_WIFI_IP and LOCAL_WIFI_IP not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(LOCAL_WIFI_IP)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -184,6 +188,7 @@ if env_bool("DJANGO_USE_X_FORWARDED_PROTO", not DEBUG):
 
 # CORS - allow local development and the deployed RwandOxy domain by default.
 FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+LOCAL_FRONTEND_ORIGIN = f"http://{LOCAL_WIFI_IP}:5173" if LOCAL_WIFI_IP else ""
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS",
@@ -194,10 +199,14 @@ CORS_ALLOWED_ORIGINS = env_list(
         "https://www.rwandoxy.com",
     ],
 )
+if LOCAL_FRONTEND_ORIGIN and LOCAL_FRONTEND_ORIGIN not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(LOCAL_FRONTEND_ORIGIN)
 CSRF_TRUSTED_ORIGINS = env_list(
     "CSRF_TRUSTED_ORIGINS",
     ["https://rwandoxy.com", "https://www.rwandoxy.com"],
 )
+if LOCAL_FRONTEND_ORIGIN and LOCAL_FRONTEND_ORIGIN not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(LOCAL_FRONTEND_ORIGIN)
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "authorization",

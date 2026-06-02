@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import LocalAccessQRCode from './LocalAccessQRCode.jsx'
 
 const defaultUsers = [
   { id: 'USR-001', name: 'Joel Munyaneza', email: 'munyanezajoel3@gmail.com', role: 'Super user' },
@@ -36,6 +37,10 @@ export default function SystemAdministrationContent() {
       setActiveAdminPanel((current) => (current === 'maintenance' ? null : 'maintenance'))
       return
     }
+    if (title === 'QR-code access') {
+      setActiveAdminPanel((current) => (current === 'qr' ? null : 'qr'))
+      return
+    }
 
     notify(`${title} administration opened.`, 'info')
   }
@@ -61,7 +66,7 @@ export default function SystemAdministrationContent() {
           </div>
         </div>
 
-        <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <AdminAction
             title="User access"
             detail="Review roles and account permissions."
@@ -86,6 +91,12 @@ export default function SystemAdministrationContent() {
             isActive={activeAdminPanel === 'maintenance'}
             onClick={() => openAdminPanel('Maintenance')}
           />
+          <AdminAction
+            title="QR-code access"
+            detail="Share local Wi-Fi access for testing."
+            isActive={activeAdminPanel === 'qr'}
+            onClick={() => openAdminPanel('QR-code access')}
+          />
         </div>
 
         {activeAdminPanel === 'users' && (
@@ -104,6 +115,9 @@ export default function SystemAdministrationContent() {
         )}
         {activeAdminPanel === 'maintenance' && (
           <Maintenance />
+        )}
+        {activeAdminPanel === 'qr' && (
+          <LocalAccessQRCode />
         )}
       </section>
     </div>
