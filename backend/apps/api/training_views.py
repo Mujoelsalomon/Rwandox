@@ -5,6 +5,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from django.utils.text import get_valid_filename
 from django.views.decorators.csrf import csrf_exempt
 
@@ -113,17 +114,25 @@ def train_status_view(request, job_id):
     except TrainingJob.DoesNotExist:
         return cors(JsonResponse({"error": "job not found"}, status=404))
 
-    data = {
+    mark_stale_job_failed(job)
+    data = training_job_payload(job)
+    return cors(JsonResponse(data))
+
+
+def training_job_payload(job):
+    duration_seconds = training_duration_seconds(job)
+    return {
         "job_id": job.job_id,
         "status": job.status,
         "dataset": job.dataset_path,
         "model_type": job.model_type,
         "result": job.result,
         "error": job.error,
+        "duration_seconds": duration_seconds,
+        "duration_display": format_duration(duration_seconds),
         "created_at": job.created_at.isoformat() if job.created_at else None,
         "updated_at": job.updated_at.isoformat() if job.updated_at else None,
     }
-    return cors(JsonResponse(data))
 
 
 def training_jobs_view(request):
@@ -133,21 +142,11 @@ def training_jobs_view(request):
     if auth_error:
         return auth_error
 
-    jobs = TrainingJob.objects.all().order_by("-created_at")[:50]
+    jobs = list(TrainingJob.objects.all().order_by("-created_at")[:50])
+    for job in jobs:
+        mark_stale_job_failed(job)
     return cors(JsonResponse({
-        "jobs": [
-            {
-                "job_id": job.job_id,
-                "status": job.status,
-                "dataset": job.dataset_path,
-                "model_type": job.model_type,
-                "result": job.result,
-                "error": job.error,
-                "created_at": job.created_at.isoformat() if job.created_at else None,
-                "updated_at": job.updated_at.isoformat() if job.updated_at else None,
-            }
-            for job in jobs
-        ]
+        "jobs": [training_job_payload(job) for job in jobs]
     }))
 
 
@@ -178,12 +177,27 @@ def run_training(job_id, dataset_path, model_type, target_column):
         )
 
         job.status = "completed"
+        metadata = result.get("metadata", {})
+        duration_seconds = training_duration_seconds(job, ended_at=timezone.now())
         job.result = {
             "model_name": model_name,
             "model_type": artifact.model_type,
             "metrics": result.get("metrics"),
-            "target_column": result.get("metadata", {}).get("target"),
-            "feature_count": len(result.get("metadata", {}).get("columns") or []),
+            "target_column": metadata.get("target"),
+            "feature_count": metadata.get("feature_count") or len(metadata.get("columns") or []),
+            "row_count": metadata.get("row_count"),
+            "training_row_count": metadata.get("training_row_count"),
+            "validation_row_count": metadata.get("validation_row_count"),
+            "validation_size": metadata.get("validation_size"),
+            "numeric_feature_count": metadata.get("numeric_feature_count"),
+            "categorical_feature_count": metadata.get("categorical_feature_count"),
+            "dropped_columns": metadata.get("dropped_columns") or [],
+            "numeric_columns": metadata.get("numeric_columns") or [],
+            "categorical_columns": metadata.get("categorical_columns") or [],
+            "class_labels": metadata.get("class_labels") or [],
+            "model_parameters": metadata.get("model_parameters") or {},
+            "training_duration_seconds": duration_seconds,
+            "training_duration_display": format_duration(duration_seconds),
             "artifact_id": artifact.id,
         }
         job.error = ""
@@ -212,3 +226,39 @@ def validate_uploaded_dataset_path(dataset_path):
     if candidate.suffix.lower() not in SUPPORTED_DATASET_EXTENSIONS:
         return "uploaded dataset format is not supported"
     return ""
+
+
+def mark_stale_job_failed(job):
+    if job.status not in {"queued", "running"} or not job.updated_at:
+        return
+
+    stale_minutes = int(getattr(settings, "TRAINING_STALE_MINUTES", 10))
+    stale_after = timezone.timedelta(minutes=stale_minutes)
+    if timezone.now() - job.updated_at <= stale_after:
+        return
+
+    job.status = "failed"
+    job.error = (
+        "Training stopped before completion. The development server may have restarted. "
+        "Start training again; smaller XGBoost settings are now used for local runs."
+    )
+    job.save(update_fields=["status", "error", "updated_at"])
+
+
+def training_duration_seconds(job, ended_at=None):
+    if not job.created_at:
+        return None
+    end_time = ended_at or job.updated_at or timezone.now()
+    return max(0, int((end_time - job.created_at).total_seconds()))
+
+
+def format_duration(total_seconds):
+    if total_seconds is None:
+        return None
+    minutes, seconds = divmod(int(total_seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"

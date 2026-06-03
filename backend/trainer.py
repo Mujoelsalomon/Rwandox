@@ -2,10 +2,21 @@ import os
 import time
 import joblib
 import json
+import math
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    balanced_accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    log_loss,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.impute import SimpleImputer
@@ -134,7 +145,8 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         remainder="drop",
     )
 
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+    validation_size = 0.2
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=validation_size, random_state=42)
 
     model = None
 
@@ -153,7 +165,16 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
     elif algo == 'xgboost':
         if xgb is None:
             raise RuntimeError('xgboost is not installed')
-        model = xgb.XGBClassifier(eval_metric='logloss')
+        model = xgb.XGBClassifier(
+            eval_metric='logloss',
+            n_estimators=80,
+            max_depth=3,
+            learning_rate=0.08,
+            subsample=0.9,
+            colsample_bytree=0.9,
+            n_jobs=1,
+            random_state=42,
+        )
     elif algo == 'lightgbm' or algo == 'lgbm':
         if lgb is None:
             raise RuntimeError('lightgbm is not installed')
@@ -180,8 +201,14 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         # some models may only provide predict_proba; try thresholding
         preds = (pipeline.predict_proba(X_val)[:, 1] > 0.5).astype(int)
 
-    acc = float(accuracy_score(y_val, preds))
-    f1 = float(f1_score(y_val, preds, average="weighted", zero_division=0))
+    labels = sorted(pd.Series(y).dropna().unique().tolist(), key=lambda item: str(item))
+    metrics = build_training_metrics(
+        pipeline=pipeline,
+        X_val=X_val,
+        y_val=y_val,
+        preds=preds,
+        labels=labels,
+    )
 
     os.makedirs(os.path.join(os.path.dirname(__file__), "models"), exist_ok=True)
     ts = int(time.time())
@@ -198,9 +225,77 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         "numeric_columns": numeric_columns,
         "categorical_columns": categorical_columns,
         "class_labels": class_labels,
+        "row_count": int(len(df)),
+        "training_row_count": int(len(X_train)),
+        "validation_row_count": int(len(X_val)),
+        "validation_size": validation_size,
+        "feature_count": int(len(X.columns)),
+        "numeric_feature_count": int(len(numeric_columns)),
+        "categorical_feature_count": int(len(categorical_columns)),
+        "model_parameters": json_safe(model.get_params()),
     }
     meta_path = model_path + ".meta.json"
     with open(meta_path, 'w') as mf:
         json.dump(metadata, mf)
 
-    return {"model_path": model_path, "metrics": {"val_accuracy": acc, "val_f1_score": f1, "f1_score": f1}, "metadata": metadata}
+    return {"model_path": model_path, "metrics": metrics, "metadata": metadata}
+
+
+def build_training_metrics(pipeline, X_val, y_val, preds, labels) -> dict:
+    metrics = {
+        "val_accuracy": safe_float(accuracy_score(y_val, preds)),
+        "val_balanced_accuracy": safe_float(balanced_accuracy_score(y_val, preds)),
+        "val_precision_weighted": safe_float(precision_score(y_val, preds, average="weighted", zero_division=0)),
+        "val_precision_macro": safe_float(precision_score(y_val, preds, average="macro", zero_division=0)),
+        "val_recall_weighted": safe_float(recall_score(y_val, preds, average="weighted", zero_division=0)),
+        "val_recall_macro": safe_float(recall_score(y_val, preds, average="macro", zero_division=0)),
+        "val_f1_score": safe_float(f1_score(y_val, preds, average="weighted", zero_division=0)),
+        "val_f1_macro": safe_float(f1_score(y_val, preds, average="macro", zero_division=0)),
+        "f1_score": safe_float(f1_score(y_val, preds, average="weighted", zero_division=0)),
+        "confusion_matrix": confusion_matrix(y_val, preds, labels=labels).tolist(),
+        "confusion_matrix_labels": [str(label) for label in labels],
+        "classification_report": json_safe(classification_report(y_val, preds, labels=labels, output_dict=True, zero_division=0)),
+    }
+
+    probabilities = None
+    try:
+        probabilities = pipeline.predict_proba(X_val)
+    except Exception:
+        probabilities = None
+
+    if probabilities is not None:
+        metrics["val_log_loss"] = safe_metric(lambda: log_loss(y_val, probabilities, labels=labels))
+        if len(labels) == 2 and probabilities.shape[1] >= 2:
+            metrics["val_roc_auc"] = safe_metric(lambda: roc_auc_score(y_val, probabilities[:, 1]))
+        elif len(labels) > 2:
+            metrics["val_roc_auc_weighted_ovr"] = safe_metric(
+                lambda: roc_auc_score(y_val, probabilities, labels=labels, multi_class="ovr", average="weighted")
+            )
+
+    return metrics
+
+
+def safe_metric(callback):
+    try:
+        return safe_float(callback())
+    except Exception:
+        return None
+
+
+def safe_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def json_safe(value):
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    if hasattr(value, "item"):
+        return value.item()
+    return value

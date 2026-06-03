@@ -58,6 +58,8 @@ ALLOWED_HOSTS = env_list(
 )
 if LOCAL_WIFI_IP and LOCAL_WIFI_IP not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(LOCAL_WIFI_IP)
+if DEBUG and env_bool("DJANGO_ALLOW_LAN_HOSTS", True) and "*" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("*")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -198,6 +200,16 @@ CORS_ALLOWED_ORIGINS = env_list(
         "https://rwandoxy.com",
         "https://www.rwandoxy.com",
     ],
+)
+CORS_ALLOWED_ORIGIN_REGEXES = env_list(
+    "CORS_ALLOWED_ORIGIN_REGEXES",
+    [
+        r"^http://localhost:5173$",
+        r"^http://127\.0\.0\.1:5173$",
+        r"^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}:5173$",
+        r"^http://192\.168\.\d{1,3}\.\d{1,3}:5173$",
+        r"^http://172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}:5173$",
+    ] if DEBUG else [],
 )
 if LOCAL_FRONTEND_ORIGIN and LOCAL_FRONTEND_ORIGIN not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(LOCAL_FRONTEND_ORIGIN)

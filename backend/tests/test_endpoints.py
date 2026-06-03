@@ -1,7 +1,10 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.contrib.auth.models import User
+from django.utils import timezone
 from io import BytesIO
 import json
+
+from apps.api.models import TrainingJob
 
 class EndpointsTest(TestCase):
     def setUp(self):
@@ -42,6 +45,40 @@ class EndpointsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn('jobs', resp.json())
 
+    def test_training_status_includes_duration_fields(self):
+        job = TrainingJob.objects.create(
+            job_id='completed-duration-job',
+            dataset_path=__file__,
+            model_type='random_forest',
+            status='completed',
+            result={'metrics': {'val_accuracy': 0.8}},
+        )
+        TrainingJob.objects.filter(id=job.id).update(updated_at=job.created_at + timezone.timedelta(seconds=75))
+
+        resp = self.client.get('/train/status/completed-duration-job')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['duration_seconds'], 75)
+        self.assertEqual(data['duration_display'], '1m 15s')
+
+    @override_settings(TRAINING_STALE_MINUTES=1)
+    def test_stale_running_training_job_is_marked_failed(self):
+        job = TrainingJob.objects.create(
+            job_id='stale-running-job',
+            dataset_path=__file__,
+            model_type='xgboost',
+            status='running',
+        )
+        TrainingJob.objects.filter(id=job.id).update(updated_at=timezone.now() - timezone.timedelta(minutes=5))
+
+        resp = self.client.get('/train/status/stale-running-job')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['status'], 'failed')
+        self.assertIn('server may have restarted', data['error'])
+
     def test_clinician_cannot_access_training_endpoints(self):
         clinician = User.objects.create_user(
             username='training-clinician',
@@ -64,6 +101,44 @@ class EndpointsTest(TestCase):
 
         jobs_resp = self.client.get('/train/jobs')
         self.assertEqual(jobs_resp.status_code, 403)
+
+    @override_settings(DEBUG=True)
+    def test_admin_header_session_can_upload_dataset_without_cookie(self):
+        self.client.logout()
+        upload = BytesIO(b'postoperative_oxygen_required,age\nYes,50\nNo,41\n')
+        upload.name = 'dataset.csv'
+
+        resp = self.client.post(
+            '/upload-dataset',
+            {'file': upload},
+            HTTP_X_USER_EMAIL='munyanezajoel3@gmail.com',
+            HTTP_AUTHORIZATION='Bearer local-preview-token',
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('dataset_path', data)
+        self.assertIn('postoperative_oxygen_required', data['columns'])
+
+    @override_settings(DEBUG=True)
+    def test_clinician_header_session_cannot_upload_dataset(self):
+        User.objects.create_user(
+            username='header-clinician',
+            email='header-clinician@example.com',
+            password='pass12345',
+        )
+        self.client.logout()
+        upload = BytesIO(b'postoperative_oxygen_required,age\nYes,50\n')
+        upload.name = 'dataset.csv'
+
+        resp = self.client.post(
+            '/upload-dataset',
+            {'file': upload},
+            HTTP_X_USER_EMAIL='header-clinician@example.com',
+            HTTP_AUTHORIZATION='Bearer local-preview-token',
+        )
+
+        self.assertEqual(resp.status_code, 403)
 
     def test_post_predict(self):
         payload = {'features': {'patient_coded_id': 'KBH-TEST-001', 'age': 45, 'sex': 'Female', 'postop_spo2': 90}}
