@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { clearCurrentSession, getSession, isAdminSession } from '../authSession.js'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { notifyPredictionHistoryUpdated } from '../predictionEvents.js'
+import { API_BASE_URL } from '../config/api.js'
 
 const yesNo = ['No', 'Yes']
 const yesNoUnknown = ['No', 'Yes', 'Not documented']
@@ -237,7 +237,7 @@ export default function NewPredictionContent() {
       setError('')
 
       try {
-        const resp = await fetch(`${API_URL}/predict`, {
+        const resp = await fetch(`${API_BASE_URL}/predict`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -298,7 +298,7 @@ export default function NewPredictionContent() {
     setLoading(true)
     setStatusMessage('')
     try {
-      const resp = await fetch(`${API_URL}/patients/search?q=${encodeURIComponent(existingSearch)}`, { credentials: 'include' })
+      const resp = await fetch(`${API_BASE_URL}/patients/search?q=${encodeURIComponent(existingSearch)}`, { credentials: 'include' })
       const data = await resp.json()
       const patient = data.patients?.[0]
       if (!resp.ok || !patient) {
@@ -347,7 +347,7 @@ export default function NewPredictionContent() {
       const session = getSession()
       const features = buildPredictionPayload(form, bmi)
       const payloadSignature = JSON.stringify({ features, modelType })
-      const resp = await fetch(`${API_URL}/predict`, {
+      const resp = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -369,6 +369,7 @@ export default function NewPredictionContent() {
       lastSyncedPayloadRef.current = payloadSignature
       setPredictionResult(data)
       setHasGeneratedPrediction(true)
+      notifyPredictionHistoryUpdated(data)
       setStatusMessage('')
     } catch (error) {
       console.error(error)
@@ -413,7 +414,7 @@ export default function NewPredictionContent() {
         Authorization: `Bearer ${session?.token || ''}`,
         'X-User-Email': session?.email || '',
       }
-      const uploadResp = await fetch(`${API_URL}/upload-dataset`, {
+      const uploadResp = await fetch(`${API_BASE_URL}/upload-dataset`, {
         method: 'POST',
         body: fd,
         credentials: 'include',
@@ -434,7 +435,7 @@ export default function NewPredictionContent() {
       }
       setTargetColumn(selectedTargetColumn)
 
-      const trainResp = await fetch(`${API_URL}/train`, {
+      const trainResp = await fetch(`${API_BASE_URL}/train`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1215,7 +1216,7 @@ function buildPredictionPayload(form, bmi) {
 async function pollTrainingJob(jobId, headers) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     await new Promise((resolve) => window.setTimeout(resolve, 1000))
-    const resp = await fetch(`${API_URL}/train/status/${jobId}`, {
+    const resp = await fetch(`${API_BASE_URL}/train/status/${jobId}`, {
       credentials: 'include',
       headers,
     })

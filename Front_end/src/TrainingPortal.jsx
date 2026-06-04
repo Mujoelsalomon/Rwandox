@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { getSession } from './authSession.js'
+import { API_BASE_URL } from './config/api.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const LONG_TRAINING_SECONDS = 10 * 60
 const LONG_TRAINING_CHECKS = [
   'Confirm the selected target column is correct and has more than one class.',
@@ -53,7 +53,7 @@ export default function TrainingPortal() {
 
   async function fetchModels() {
     try {
-      const r = await fetch(`${API_URL}/models`, { credentials: 'include', headers: authHeaders() })
+      const r = await fetch(`${API_BASE_URL}/models`, { credentials: 'include', headers: authHeaders() })
       const j = await r.json()
       setModels(Array.isArray(j.models) ? j.models : [])
     } catch (e) {
@@ -78,7 +78,7 @@ export default function TrainingPortal() {
       const fd = new FormData()
       fd.append('file', file)
 
-      const up = await fetch(`${API_URL}/upload-dataset`, {
+      const up = await fetch(`${API_BASE_URL}/upload-dataset`, {
         method: 'POST',
         body: fd,
         credentials: 'include',
@@ -89,7 +89,7 @@ export default function TrainingPortal() {
         throw new Error(upj.error || 'Could not upload dataset')
       }
 
-      const resp = await fetch(`${API_URL}/train`, {
+      const resp = await fetch(`${API_BASE_URL}/train`, {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
@@ -117,7 +117,7 @@ export default function TrainingPortal() {
   async function pollStatus(id) {
     setStatus({ status: 'queued' })
     const iv = setInterval(async () => {
-      const r = await fetch(`${API_URL}/train/status/${id}`, { credentials: 'include', headers: authHeaders() })
+      const r = await fetch(`${API_BASE_URL}/train/status/${id}`, { credentials: 'include', headers: authHeaders() })
       const j = await r.json()
       setStatus(j)
       if (j.status === 'completed' || j.status === 'failed') {
@@ -138,7 +138,7 @@ export default function TrainingPortal() {
   async function activateModel(id) {
     setActivatingId(id)
     try {
-      const resp = await fetch(`${API_URL}/models/activate`, {
+      const resp = await fetch(`${API_BASE_URL}/models/activate`, {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         credentials: 'include',
@@ -271,7 +271,7 @@ export default function TrainingPortal() {
                           >
                             {model.is_active ? 'Active' : activatingId === model.id ? 'Activating...' : 'Make active'}
                           </button>
-                          <a className="text-sky-600 underline" href={`${API_URL}/models/download?id=${encodeURIComponent(model.id)}`}>
+                          <a className="text-sky-600 underline" href={`${API_BASE_URL}/models/download?id=${encodeURIComponent(model.id)}`}>
                             Download
                           </a>
                         </>

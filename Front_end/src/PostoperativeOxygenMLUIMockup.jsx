@@ -6,8 +6,7 @@ import Footer from './components/Footer.jsx'
 import SidebarMenu from './components/SidebarMenu.jsx'
 import TopMenu from './components/TopMenu.jsx'
 import { useResizableSidebar } from './components/useResizableSidebar.js'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { API_BASE_URL } from './config/api.js'
 
 function normalizePredictionResponse(res) {
   const probability = Number(res?.predicted_probability ?? res?.probability ?? 0)
@@ -98,7 +97,7 @@ export default function PostoperativeOxygenMLUIMockup() {
 
   async function fetchActiveModel() {
     try {
-      const resp = await fetch(`${API_URL}/models`, { credentials: 'include' })
+      const resp = await fetch(`${API_BASE_URL}/models`, { credentials: 'include' })
       if (!resp.ok) return
       const data = await resp.json()
       const active = Array.isArray(data.models) ? data.models.find((model) => model.is_active) : null
@@ -110,7 +109,7 @@ export default function PostoperativeOxygenMLUIMockup() {
 
   async function requestPrediction() {
     try {
-      const resp = await fetch(`${API_URL}/predict`, {
+      const resp = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

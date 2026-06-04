@@ -1,5 +1,5 @@
 param(
-    [string]$LocalIp = $env:LOCAL_WIFI_IP,
+    [string]$LocalIp = $env:LOCAL_PC_IP,
     [switch]$StartServers
 )
 
@@ -56,21 +56,7 @@ function Get-PrivateIpv4FromIpconfig {
         $candidates += [pscustomobject]@{ Adapter = $adapterName; IPAddress = $ipAddress }
     }
 
-    $hotspot = $candidates | Where-Object { $_.IPAddress -eq "192.168.137.1" } | Select-Object -First 1
-    if ($hotspot) {
-        return $hotspot.IPAddress
-    }
-
-    $wifi = $candidates | Where-Object { $_.Adapter -match "Wi-Fi|Wireless" } | Select-Object -First 1
-    if ($wifi) {
-        return $wifi.IPAddress
-    }
-
     return ($candidates | Select-Object -First 1).IPAddress
-}
-
-if (-not $LocalIp) {
-    $LocalIp = Get-DefaultRouteIpv4FromRoutePrint
 }
 
 if (-not $LocalIp) {
@@ -78,11 +64,15 @@ if (-not $LocalIp) {
 }
 
 if (-not $LocalIp) {
-    throw "Could not detect a private Wi-Fi IPv4 address. Run this script as: .\scripts\start-local-wifi.ps1 -LocalIp 192.168.1.25"
+    $LocalIp = Get-DefaultRouteIpv4FromRoutePrint
+}
+
+if (-not $LocalIp) {
+    throw "Could not detect a private PC/LAN IPv4 address. Run this script as: .\scripts\start-local-wifi.ps1 -LocalIp 192.168.1.25"
 }
 
 $frontendEnv = @"
-VITE_API_URL=http://$LocalIp`:8000
+VITE_API_URL=auto
 VITE_LOCAL_IP=$LocalIp
 VITE_LOCAL_FRONTEND_URL=http://$LocalIp`:5173
 "@
@@ -90,7 +80,7 @@ VITE_LOCAL_FRONTEND_URL=http://$LocalIp`:5173
 Set-Content -Path (Join-Path $FrontendDir ".env.local") -Value $frontendEnv -Encoding UTF8
 
 Write-Host ""
-Write-Host "Local Wi-Fi IP: $LocalIp"
+Write-Host "Local PC IP: $LocalIp"
 Write-Host "Frontend URL: http://$LocalIp`:5173"
 Write-Host "Backend URL:  http://$LocalIp`:8000"
 Write-Host ""
@@ -101,7 +91,7 @@ if ($StartServers) {
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
         "-Command",
-        "`$env:LOCAL_WIFI_IP='$LocalIp'; Set-Location '$BackendDir'; ..\.venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000 *> '$BackendLog'"
+        "`$env:LOCAL_PC_IP='$LocalIp'; `$env:LOCAL_WIFI_IP='$LocalIp'; Set-Location '$BackendDir'; ..\.venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000 *> '$BackendLog'"
     ) -WindowStyle Hidden
 
     Start-Process -FilePath "npm.cmd" -ArgumentList @(
@@ -123,6 +113,7 @@ if ($StartServers) {
     Write-Host ""
     Write-Host "Terminal 1 - Backend"
     Write-Host "cd `"$BackendDir`""
+    Write-Host "`$env:LOCAL_PC_IP='$LocalIp'"
     Write-Host "`$env:LOCAL_WIFI_IP='$LocalIp'"
     Write-Host "..\.venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000"
     Write-Host ""

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { API_URL, getSession, updateSession } from '../authSession.js'
+import { getSession, updateSession } from '../authSession.js'
+import { API_BASE_URL } from '../config/api.js'
 
 function notify(message, type = 'info') {
   window.dispatchEvent(new CustomEvent('app-notification', { detail: { message, type } }))
@@ -18,7 +19,7 @@ export default function ProfileContent() {
 
     async function loadProfile() {
       try {
-        const response = await fetch(`${API_URL}/auth/me`, { credentials: 'include' })
+        const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
         const data = await response.json()
         if (!active) return
         if (!response.ok) throw new Error(data.error || 'Could not load profile.')
@@ -66,7 +67,7 @@ export default function ProfileContent() {
     setError('')
 
     try {
-      const response = await fetch(`${API_URL}/auth/profile`, {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

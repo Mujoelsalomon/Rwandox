@@ -93,7 +93,7 @@ export default function SystemAdministrationContent() {
           />
           <AdminAction
             title="QR-code access"
-            detail="Share local Wi-Fi access for testing."
+            detail="Share local network access for testing."
             isActive={activeAdminPanel === 'qr'}
             onClick={() => openAdminPanel('QR-code access')}
           />

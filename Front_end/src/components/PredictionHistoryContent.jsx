@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents.js'
+import { API_BASE_URL } from '../config/api.js'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const pageSizes = [10, 25, 50, 100]
 
 export default function PredictionHistoryContent() {
@@ -17,9 +18,10 @@ export default function PredictionHistoryContent() {
   useEffect(() => {
     let active = true
 
-    async function loadHistory() {
+    async function loadHistory({ showLoading = false } = {}) {
+      if (showLoading) setLoading(true)
       try {
-        const resp = await fetch(`${API_URL}/prediction-history`, { credentials: 'include' })
+        const resp = await fetch(`${API_BASE_URL}/prediction-history`, { credentials: 'include' })
         const data = await resp.json()
         if (!active) return
         if (!resp.ok) throw new Error(data.error || 'Could not load prediction history.')
@@ -37,8 +39,15 @@ export default function PredictionHistoryContent() {
     }
 
     loadHistory()
+    function handlePredictionHistoryUpdated() {
+      loadHistory({ showLoading: true })
+      setPage(1)
+    }
+
+    window.addEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
     return () => {
       active = false
+      window.removeEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
     }
   }, [])
 

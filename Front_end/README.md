@@ -12,9 +12,9 @@ npm run dev
 
 2. Open the local dev URL shown by Vite (usually http://localhost:5173)
 
-Local Wi-Fi testing:
+Local network testing:
 
-1. From the project root, detect/write the current Wi-Fi URL:
+1. From the project root, detect/write the current PC/LAN URL:
 
 ```powershell
 .\scripts\start-local-wifi.ps1
@@ -33,7 +33,7 @@ cd Front_end
 npm run dev -- --host 0.0.0.0
 ```
 
-3. Open the frontend from another device on the same Wi-Fi:
+3. Open the frontend from another device on the same local network:
 
 ```text
 http://<LOCAL_IP>:5173
@@ -42,7 +42,7 @@ http://<LOCAL_IP>:5173
 The helper writes `Front_end/.env.local` with:
 
 ```env
-VITE_API_URL=http://<LOCAL_IP>:8000
+VITE_API_URL=auto
 VITE_LOCAL_IP=<LOCAL_IP>
 VITE_LOCAL_FRONTEND_URL=http://<LOCAL_IP>:5173
 ```
@@ -61,7 +61,7 @@ Notes:
 - This is a frontend mockup. Integrate the model API by adding an HTTP call to your prediction endpoint in `src/PostoperativeOxygenMLUIMockup.jsx` and wiring the form inputs.
 - Bootstrap is installed locally and loaded globally from `src/main.jsx`, so Bootstrap classes and JavaScript components work across the React app without the CDN.
 - Tailwind classes are used via CDN in `index.html`.
-- Local Wi-Fi QR access is for local testing only.
-- Users must be connected to the same Wi-Fi as the laptop running Vite.
+- Local network QR access is for local testing only.
+- Users must be connected to the same local network as the PC running Vite.
 - Do not use real patient identifiers or sensitive hospital data during local testing.
 - Use dummy/test data only.

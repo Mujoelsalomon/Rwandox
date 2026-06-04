@@ -24,7 +24,7 @@ export default function LocalAccessQRCode() {
         <p className="text-primary fw-bold text-uppercase small mb-2 text-[12px] font-black tracking-[0.18em]">QR-code access</p>
         <h2 className="text-[22px] font-black leading-7 text-[#071b49]">Local Access QR Code</h2>
         <p className="mt-3 max-w-[680px] text-[15px] font-semibold leading-6 text-[#53668a]">
-          Connect to the same Wi-Fi, scan this QR code, and open the system.
+          Connect to the same local network, scan this QR code, and open the system.
         </p>
 
         <div className="mt-5 rounded-[12px] border border-[#d9e5f3] bg-[#f8fbff] p-4">
@@ -65,11 +65,14 @@ export default function LocalAccessQRCode() {
 }
 
 function getFrontendUrl() {
-  if (configuredFrontendUrl) return configuredFrontendUrl
-  if (configuredLocalIp) return `http://${configuredLocalIp}:5173`
   if (typeof window !== 'undefined') {
     const protocol = window.location.protocol || 'http:'
-    return `${protocol}//${window.location.hostname}:5173`
+    const hostname = window.location.hostname
+    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return `${protocol}//${hostname}:5173`
+    }
   }
+  if (configuredFrontendUrl) return configuredFrontendUrl
+  if (configuredLocalIp) return `http://${configuredLocalIp}:5173`
   return 'http://localhost:5173'
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { API_URL, createSession } from '../authSession.js'
+import { createSession } from '../authSession.js'
+import { API_BASE_URL } from '../config/api.js'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 const SUPER_USER = {
@@ -37,7 +38,7 @@ export default function Login_Form() {
     setError('')
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

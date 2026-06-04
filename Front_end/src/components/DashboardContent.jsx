@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 
-import { API_URL } from '../authSession'
+import { API_BASE_URL } from '../config/api.js'
+import { PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents'
 
 function dashboardMetrics(activeModel) {
   const modelMetrics = activeModel?.metrics || {}
@@ -314,9 +315,10 @@ function RecentPredictionsTable() {
   useEffect(() => {
     let active = true
 
-    async function loadRecentPredictions() {
+    async function loadRecentPredictions({ showLoading = false } = {}) {
+      if (showLoading) setLoading(true)
       try {
-        const resp = await fetch(`${API_URL}/prediction-history`, { credentials: 'include' })
+        const resp = await fetch(`${API_BASE_URL}/prediction-history`, { credentials: 'include' })
         const data = await resp.json()
         if (!active) return
         if (!resp.ok) throw new Error(data.error || 'Could not load recent predictions.')
@@ -334,8 +336,14 @@ function RecentPredictionsTable() {
     }
 
     loadRecentPredictions()
+    function handlePredictionHistoryUpdated() {
+      loadRecentPredictions({ showLoading: true })
+    }
+
+    window.addEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
     return () => {
       active = false
+      window.removeEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
     }
   }, [])
 

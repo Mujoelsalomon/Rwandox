@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
-import { API_URL } from '../authSession.js'
+import { API_BASE_URL } from '../config/api.js'
 
 const pageSizes = [10, 25, 50, 100]
 
@@ -19,7 +19,7 @@ export default function PatientRecordsContent() {
 
     async function loadPatients() {
       try {
-        const resp = await fetch(`${API_URL}/patients`, { credentials: 'include' })
+        const resp = await fetch(`${API_BASE_URL}/patients`, { credentials: 'include' })
         const data = await resp.json()
         if (!active) return
         if (!resp.ok) throw new Error(data.error || 'Could not load patient records.')

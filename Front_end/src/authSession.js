@@ -1,7 +1,9 @@
+import { API_BASE_URL } from './config/api.js'
+
 export const SESSION_KEY = 'postop_o2_session'
 export const SESSION_REVOKED_AT_KEY = 'postop_o2_session_revoked_at'
 export const SESSION_EVENT = 'postop-o2-session-changed'
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+export { API_BASE_URL }
 
 export function getSession() {
   try {
@@ -40,7 +42,7 @@ export function updateSession(updates) {
 }
 
 export function clearCurrentSession() {
-  fetch(`${API_URL}/auth/logout`, {
+  fetch(`${API_BASE_URL}/auth/logout`, {
     method: 'POST',
     credentials: 'include',
   }).catch(() => {})
@@ -50,7 +52,7 @@ export function clearCurrentSession() {
 
 export function logoutFromAllDevices() {
   const revokedAt = new Date().toISOString()
-  fetch(`${API_URL}/auth/logout-all`, {
+  fetch(`${API_BASE_URL}/auth/logout-all`, {
     method: 'POST',
     credentials: 'include',
   }).catch(() => {})

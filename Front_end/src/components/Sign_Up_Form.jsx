@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { API_URL } from '../authSession.js'
+import { API_BASE_URL } from '../config/api.js'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 export default function Sign_Up_Form() {
@@ -67,7 +67,7 @@ export default function Sign_Up_Form() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
