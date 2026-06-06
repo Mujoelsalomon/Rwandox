@@ -14,6 +14,7 @@ def build_recommendations(risk_level: str) -> list[str]:
     if risk_level == "High":
         return [
             "Start close oxygen monitoring immediately.",
+            "Book an ICU or HDU bed for closer postoperative monitoring.",
             "Prepare supplemental oxygen in PACU or ward.",
             "Repeat SpO2 and respiratory rate within 15 minutes.",
             "Escalate clinical review if saturation remains below target.",
@@ -48,4 +49,8 @@ def run_prediction(payload: dict) -> dict:
         "risk_level": risk_level,
         "recommendations": recommendations,
         "contributing_factors": contributing_factors,
+        "active_model": preprocessor.get("_model_name"),
+        "model_type": preprocessor.get("_model_type"),
+        "training_metrics": preprocessor.get("_training_metrics") or {},
+        "used_trained_model": bool(preprocessor.get("_used_trained_model")),
     }

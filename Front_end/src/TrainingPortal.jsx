@@ -88,6 +88,9 @@ export default function TrainingPortal() {
       if (!up.ok) {
         throw new Error(upj.error || 'Could not upload dataset')
       }
+      if (upj.column_error) {
+        throw new Error(upj.column_error)
+      }
 
       const resp = await fetch(`${API_BASE_URL}/train`, {
         method: 'POST',
@@ -163,30 +166,30 @@ export default function TrainingPortal() {
       <div className="grid min-w-0 gap-6 xl:grid-cols-[520px_minmax(0,1fr)]">
         <section className="card border-0 shadow-sm rounded-4 min-w-0 rounded-[16px] border border-[#cfe0f2] bg-white p-6">
           <div className="mb-6">
-            <p className="text-[14px] font-extrabold uppercase tracking-[0.14em] text-[#1768f2]">Model Management</p>
-            <h1 className="mt-2 text-[32px] font-black leading-tight text-[#071b49]">Training Portal</h1>
-            <p className="mt-3 text-[17px] leading-7 text-[#53668a]">
+            <p className="small-text font-extrabold uppercase tracking-[0.14em] text-[#1768f2]">Model Management</p>
+            <h1 className="page-title mt-2 font-black text-[#071b49]">Training Portal</h1>
+            <p className="body-text mt-3 text-[#53668a]">
               Upload a labeled dataset, train a model, and choose the active model used by new predictions.
             </p>
           </div>
 
           <section className="mb-6 min-w-0">
-            <label className="form-label mb-2 block text-[17px] font-bold text-[#1d2d4f]">Dataset file</label>
+            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">Dataset file</label>
             <input
-              className="form-control min-h-12 max-w-full text-[17px]"
+              className="form-control body-text min-h-12 max-w-full"
               type="file"
               accept=".csv,.tsv,.tab,.txt,.json,.jsonl,.xlsx,.xls"
               onChange={(e) => setFile(e.target.files[0])}
             />
-            <p className="mt-3 text-[15px] leading-6 text-slate-600">
+            <p className="small-text mt-3 text-slate-600">
               Accepted formats: CSV, TSV, TXT, JSON, JSONL, XLS, and XLSX.
             </p>
           </section>
 
           <section className="mb-6 min-w-0">
-            <label className="form-label mb-2 block text-[17px] font-bold text-[#1d2d4f]">Target column</label>
+            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">Target column</label>
             <input
-              className="form-control min-h-12 w-full min-w-0 rounded-[8px] border border-[#cbd8e8] px-3 py-3 text-[17px]"
+              className="form-control body-text min-h-12 w-full min-w-0 rounded-[8px] border border-[#cbd8e8] px-3 py-3"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               placeholder="Optional, defaults to trainer behavior"
@@ -194,8 +197,8 @@ export default function TrainingPortal() {
           </section>
 
           <section className="mb-6 min-w-0">
-            <label className="form-label mb-2 block text-[17px] font-bold text-[#1d2d4f]">Model type</label>
-            <select value={modelType} onChange={(e) => setModelType(e.target.value)} className="form-select min-h-12 w-full rounded-[8px] border border-[#cbd8e8] px-3 py-3 text-[17px]">
+            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">Model type</label>
+            <select value={modelType} onChange={(e) => setModelType(e.target.value)} className="form-select body-text min-h-12 w-full rounded-[8px] border border-[#cbd8e8] px-3 py-3">
               <option value="logistic_regression">Logistic Regression</option>
               <option value="random_forest">Random Forest</option>
               <option value="xgboost">XGBoost</option>
@@ -212,11 +215,11 @@ export default function TrainingPortal() {
             <button
               onClick={uploadAndStart}
               disabled={trainingLoading}
-              className="btn btn-dark min-h-14 w-full rounded-[8px] px-6 py-3 text-[17px] font-black text-white disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+              className="btn-text btn btn-dark min-h-14 w-full rounded-[8px] px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
               {trainingLoading ? 'Training...' : 'Upload and Train'}
             </button>
-            <button onClick={fetchModels} disabled={trainingLoading} className="btn btn-outline-secondary min-h-14 w-full rounded-[8px] border px-6 py-3 text-[17px] font-bold disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
+            <button onClick={fetchModels} disabled={trainingLoading} className="btn-text btn btn-outline-secondary min-h-14 w-full rounded-[8px] border px-6 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
               Refresh models
             </button>
           </div>
@@ -243,7 +246,7 @@ export default function TrainingPortal() {
           {status && <TrainingStatusSummary status={status} />}
 
           <section className="mt-6">
-            <h2 className="mb-4 text-[22px] font-black text-[#202938]">Available models</h2>
+            <h2 className="section-title mb-4 font-black text-[#202938]">Available models</h2>
             <ul className="list-group overflow-hidden rounded-[10px] border border-[#d9e5f3]">
               {models.map((model) => (
                 <li key={model.id ?? model.path ?? model.name} className="list-group-item border-0 border-b border-[#edf2f8] px-5 py-4 last:border-b-0">
@@ -267,7 +270,7 @@ export default function TrainingPortal() {
                           <button
                             onClick={() => activateModel(model.id)}
                             disabled={model.is_active || activatingId === model.id}
-                            className="btn btn-outline-primary btn-sm rounded border px-4 py-2 text-[14px] disabled:opacity-50"
+                            className="btn-text btn btn-outline-primary btn-sm rounded border px-4 py-2 disabled:opacity-50"
                           >
                             {model.is_active ? 'Active' : activatingId === model.id ? 'Activating...' : 'Make active'}
                           </button>
@@ -342,8 +345,8 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
     ['Accuracy', metrics.val_accuracy, 'percent'],
     ['F1-score', metrics.val_f1_score ?? metrics.f1_score, 'percent'],
     ['Precision', metrics.val_precision_weighted, 'percent'],
-    ['Recall / Sensitivity', metrics.val_recall_weighted, 'percent'],
-    ['Specificity', calculateSpecificity(metrics), 'percent'],
+    ['Sensitivity', metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'],
+    ['Specificity', metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'],
     ['AUC Score', metrics.val_roc_auc ?? metrics.val_roc_auc_weighted_ovr, 'decimal'],
   ]
   const details = {
@@ -353,16 +356,18 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
     trainingDate: status?.updated_at ? formatDate(status.updated_at) : 'Not available',
     dataset: file?.name || datasetNameFromPath(status?.dataset) || 'Not available',
     accuracy: formatMetric(metrics.val_accuracy, 'percent'),
+    sensitivity: formatMetric(metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'),
+    specificity: formatMetric(metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'),
   }
 
   return (
     <section className="card border-0 shadow-sm rounded-4 min-w-0 rounded-[16px] border border-[#d9e5f3] bg-white p-6 md:p-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-[30px] font-black leading-9 text-[#0b63ce]">
+          <h2 className="page-title font-black text-[#0b63ce]">
             Training Results Portal
           </h2>
-          <p className="mt-2 text-[17px] font-semibold leading-7 text-[#53668a]">
+          <p className="body-text mt-2 font-semibold text-[#53668a]">
             Model performance summary after the latest training process
           </p>
           {status?.error && <p className="mt-3 text-[16px] font-bold text-[#b91c1c]">Error: {status.error}</p>}
@@ -376,8 +381,8 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
 
       {!isComplete ? (
         <div className="mt-7 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] px-6 py-10 text-center">
-          <p className="text-[22px] font-black text-[#071b49]">No completed training report yet</p>
-          <p className="mt-3 text-[17px] font-semibold text-[#53668a]">
+          <p className="section-title font-black text-[#071b49]">No completed training report yet</p>
+          <p className="body-text mt-3 font-semibold text-[#53668a]">
             Upload a dataset and train a model to populate this performance dashboard.
           </p>
         </div>
@@ -395,6 +400,7 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
           </div>
 
           <ClinicalInterpretation metrics={metrics} />
+          <DatasetCleaningReport report={result.dataset_cleaning || metrics.dataset_cleaning} />
 
           <div className="mt-6 grid gap-5 xl:grid-cols-3">
             <ColumnList title="Numeric features" items={result.numeric_columns} fallbackCount={result.numeric_feature_count} />
@@ -413,8 +419,8 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
 function ReportTile({ label, value, strong = false }) {
   return (
     <div className="min-w-0 rounded-[12px] border border-[#d9e5f3] bg-white px-5 py-4">
-      <p className="text-[13px] font-black uppercase tracking-[0.1em] text-[#64799e]">{label}</p>
-      <p className={`mt-2 break-words text-[17px] ${strong ? 'font-black text-[#1768f2]' : 'font-extrabold text-[#071b49]'}`}>
+      <p className="table-header font-black uppercase tracking-[0.1em] text-[#64799e]">{label}</p>
+      <p className={`body-text mt-2 break-words ${strong ? 'font-black text-[#1768f2]' : 'font-extrabold text-[#071b49]'}`}>
         {value}
       </p>
     </div>
@@ -424,9 +430,9 @@ function ReportTile({ label, value, strong = false }) {
 function MetricCard({ label, rating, value }) {
   return (
     <div className="min-h-[150px] rounded-[12px] border border-[#e5edf7] bg-white px-6 py-6 text-center shadow-[0_8px_24px_rgba(15,35,75,0.08)]">
-      <p className="text-[18px] font-black text-[#263957]">{label}</p>
-      <p className="mt-4 text-[34px] font-black leading-none text-[#166534]">{value}</p>
-      <p className="mt-3 text-[15px] font-black text-[#168246]">{rating}</p>
+      <p className="card-title font-black text-[#263957]">{label}</p>
+      <p className="section-title mt-4 font-black text-[#166534]">{value}</p>
+      <p className="small-text mt-3 font-black text-[#168246]">{rating}</p>
     </div>
   )
 }
@@ -439,20 +445,22 @@ function ModelDetails({ details, result }) {
     ['Training Date', details.trainingDate],
     ['Dataset Used', details.dataset],
     ['Validation Accuracy', details.accuracy],
+    ['Sensitivity', details.sensitivity],
+    ['Specificity', details.specificity],
     ['Feature Count', result.feature_count ?? 'Not available'],
     ['Train / Validation Rows', `${result.training_row_count ?? '-'} / ${result.validation_row_count ?? '-'}`],
   ]
 
   return (
     <div className="min-w-0 rounded-[12px] border border-[#e5edf7] bg-white p-6 shadow-[0_8px_24px_rgba(15,35,75,0.08)]">
-      <h3 className="text-[21px] font-black text-[#0b63ce]">Model Details</h3>
+      <h3 className="section-title font-black text-[#0b63ce]">Model Details</h3>
       <div className="mt-5 space-y-4">
         {rows.map(([label, value]) => (
-          <div key={label} className="grid grid-cols-[150px_minmax(0,1fr)] gap-4 text-[15px]">
+          <div key={label} className="table-body grid grid-cols-[150px_minmax(0,1fr)] gap-4">
             <span className="font-bold text-[#64799e]">{label}:</span>
             <span className="break-words font-extrabold text-[#24334f]">
               {label === 'Training Status' || label === 'Active Model' ? (
-                <span className="rounded-full bg-[#16a34a] px-3 py-2 text-[12px] font-black text-white">
+                <span className="risk-badge-text rounded-full bg-[#16a34a] px-3 py-2 font-black text-white">
                   {value}
                 </span>
               ) : value}
@@ -473,9 +481,9 @@ function ConfusionMatrix({ metrics }) {
 
   return (
     <div className="min-w-0 rounded-[12px] border border-[#e5edf7] bg-white p-6 shadow-[0_8px_24px_rgba(15,35,75,0.08)]">
-      <h3 className="text-[21px] font-black text-[#0b63ce]">Confusion Matrix</h3>
+      <h3 className="section-title font-black text-[#0b63ce]">Confusion Matrix</h3>
       <div className="mt-4 overflow-x-auto">
-        <table className="min-w-full overflow-hidden rounded-[8px] border border-[#d9e5f3] text-left text-[15px]">
+        <table className="table-body min-w-full overflow-hidden rounded-[8px] border border-[#d9e5f3] text-left">
           <thead className="bg-[#f8fbff] text-[#263957]">
             <tr>
               <th className="border-r border-[#d9e5f3] px-5 py-4">Actual / Predicted</th>
@@ -520,10 +528,93 @@ function ClinicalInterpretation({ metrics }) {
 
   return (
     <div className="mt-7 rounded-[12px] border border-[#93c5fd] bg-[#eff6ff] px-6 py-5">
-      <h3 className="text-[21px] font-black text-[#0b63ce]">Clinical Interpretation</h3>
-      <p className="mt-3 text-[16px] font-semibold leading-7 text-[#20365f]">
+      <h3 className="section-title font-black text-[#0b63ce]">Clinical Interpretation</h3>
+      <p className="body-text mt-3 font-semibold text-[#20365f]">
         The model achieved {accuracy} validation accuracy and an F1-score of {f1}. Recall / sensitivity is {recall}, which should be prioritized because missing patients who require postoperative oxygen may affect patient safety. Use the model predictions along with clinical judgment for decision making.
       </p>
+    </div>
+  )
+}
+
+function DatasetCleaningReport({ report }) {
+  if (!report || typeof report !== 'object') return null
+
+  const rows = [
+    ['Original rows', report.original_row_count],
+    ['Final rows used', report.final_row_count],
+    ['Original columns', report.original_column_count],
+    ['Final columns used', report.final_column_count],
+    ['Empty rows removed', report.dropped_empty_row_count],
+    ['Rows missing target removed', report.dropped_missing_target_row_count],
+    ['Blank text values fixed', report.blank_text_values_converted_to_missing],
+    ['Infinite values fixed', report.infinite_values_converted_to_missing],
+    ['Text cells trimmed', report.trimmed_text_cell_count],
+    ['Numeric text columns converted', Array.isArray(report.numeric_text_columns_converted) ? report.numeric_text_columns_converted.length : 0],
+    ['Empty columns removed', Array.isArray(report.dropped_empty_columns) ? report.dropped_empty_columns.length : 0],
+    ['Columns renamed', Array.isArray(report.renamed_columns) ? report.renamed_columns.length : 0],
+  ]
+
+  return (
+    <section className="mt-6 rounded-[12px] border border-[#bfdbfe] bg-[#f8fbff] p-5">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="section-title font-black text-[#0b63ce]">Dataset cleanup before training</h3>
+          <p className="small-text mt-1 font-semibold text-[#53668a]">
+            Small upload issues resolved automatically before the model was trained.
+          </p>
+        </div>
+        <span className="risk-badge-text w-fit rounded-full bg-[#dcfce7] px-4 py-2 text-[#166534]">
+          Applied
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {rows.map(([label, value]) => (
+          <div key={label} className="rounded-[10px] border border-[#d9e5f3] bg-white px-4 py-3">
+            <p className="table-header font-black uppercase tracking-[0.08em] text-[#64799e]">{label}</p>
+            <p className="body-text mt-1 font-extrabold text-[#071b49]">{value ?? 0}</p>
+          </div>
+        ))}
+      </div>
+
+      <CleanupList title="Converted numeric text columns" items={report.numeric_text_columns_converted} />
+      <CleanupList title="Removed empty columns" items={report.dropped_empty_columns} />
+      <RenamedColumnsList items={report.renamed_columns} />
+      <CleanupList title="Cleanup notes" items={report.notes} />
+    </section>
+  )
+}
+
+function CleanupList({ title, items }) {
+  const values = Array.isArray(items) ? items.filter(Boolean) : []
+  if (!values.length) return null
+  return (
+    <div className="mt-4">
+      <p className="table-header font-black uppercase tracking-[0.1em] text-[#64799e]">{title}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {values.map((item) => (
+          <span key={String(item)} className="small-text rounded-full bg-white px-3 py-2 font-bold text-[#071b49] ring-1 ring-[#d9e5f3]">
+            {String(item)}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RenamedColumnsList({ items }) {
+  const values = Array.isArray(items) ? items.filter((item) => item && item.from !== item.to) : []
+  if (!values.length) return null
+  return (
+    <div className="mt-4">
+      <p className="table-header font-black uppercase tracking-[0.1em] text-[#64799e]">Renamed columns</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        {values.map((item) => (
+          <div key={`${item.from}-${item.to}`} className="small-text rounded-[10px] bg-white px-3 py-2 font-bold text-[#071b49] ring-1 ring-[#d9e5f3]">
+            {item.from || 'Blank column'} -> {item.to}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -536,7 +627,7 @@ function ClassificationReport({ report }) {
     <div className="min-w-0 rounded-[12px] border border-[#d9e5f3] bg-white p-5">
       <p className="text-[14px] font-black uppercase tracking-[0.1em] text-[#64799e]">Class performance</p>
       <div className="mt-4 overflow-x-auto">
-        <table className="min-w-full text-left text-[15px]">
+        <table className="table-body min-w-full text-left">
           <thead className="text-[#53668a]">
             <tr>
               <th className="px-4 py-3">Class</th>

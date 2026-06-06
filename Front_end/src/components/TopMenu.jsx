@@ -90,10 +90,10 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
             />
           </div>
           <div className="min-w-0">
-            <span className="block truncate text-[20px] font-extrabold leading-6 text-[#123000]">
+            <span className="card-title block truncate font-extrabold text-[#123000]">
               Clinical ML
             </span>
-            <span className="block max-w-[320px] truncate text-[20px] font-extrabold leading-6 text-[#225000] md:max-w-none">
+            <span className="card-title block max-w-[320px] truncate font-extrabold text-[#225000] md:max-w-none">
              Post-op Oxygen Requirement Prediction 
             </span>
           </div>
@@ -127,7 +127,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 className={`h-6 w-6 ${notificationBellRinging ? 'animate-[bell-ring_0.65s_ease-in-out]' : ''}`}
               />
               {notifications.length > 0 && (
-                <span className="absolute right-0.5 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1768f2] px-1 text-[11px] font-bold text-white sm:right-1">
+                <span className="risk-badge-text absolute right-0.5 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#1768f2] px-1 font-bold text-white sm:right-1">
                   {notifications.length}
                 </span>
               )}
@@ -139,27 +139,27 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 className="dropdown-menu show fixed left-2 right-2 top-[96px] max-h-[calc(100vh-112px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-2 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-auto sm:right-24 sm:w-[360px] md:absolute md:left-auto md:right-0 md:top-[58px]"
               >
                 <div className="flex items-center justify-between border-b border-[#edf2f8] px-4 pb-2">
-                  <p className="text-[14px] font-extrabold text-[#14234a]">Notifications</p>
+                  <p className="small-text font-extrabold text-[#14234a]">Notifications</p>
                   {notifications.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setNotifications([])}
-                      className="text-[12px] font-bold text-[#1768f2] hover:text-[#0f4eb2]"
+                      className="small-text font-bold text-[#1768f2] hover:text-[#0f4eb2]"
                     >
                       Clear
                     </button>
                   )}
                 </div>
                 {notifications.length === 0 ? (
-                  <p className="px-4 py-5 text-[14px] text-[#526383]">No notifications yet.</p>
+                  <p className="small-text px-4 py-5 text-[#526383]">No notifications yet.</p>
                 ) : (
                   <div className="py-1">
                     {notifications.map((item) => (
                       <div key={item.id} className="flex gap-3 px-4 py-3 hover:bg-[#f6f9fd]">
                         <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getNotificationDotClass(item.type)}`} />
                         <div className="min-w-0">
-                          <p className="break-words text-[14px] font-bold leading-5 text-[#14234a]">{item.message}</p>
-                          <p className="mt-0.5 text-[12px] text-[#526383]">{item.time}</p>
+                          <p className="small-text break-words font-bold text-[#14234a]">{item.message}</p>
+                          <p className="small-text mt-0.5 text-[#526383]">{item.time}</p>
                         </div>
                       </div>
                     ))}
@@ -181,8 +181,8 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 <Icon name="user" className="h-full w-full text-[#24334f]" />
               </div>
               <div className="hidden max-w-[120px] text-left md:block lg:max-w-[170px]">
-                <p className="truncate text-[15px] font-extrabold text-[#0d1c3d] lg:text-[16px]">{session?.name || 'Anesthetist'}</p>
-                <p className="truncate text-[13px] text-[#526383] lg:text-[14px]">{session?.role || 'Clinician'}</p>
+                <p className="small-text truncate font-extrabold text-[#0d1c3d]">{session?.name || 'Anesthetist'}</p>
+                <p className="small-text truncate text-[#526383]">{session?.role || 'Clinician'}</p>
               </div>
               <Icon name="chevronDown" className="hidden h-5 w-5 shrink-0 text-[#526383] sm:block" />
             </button>
@@ -223,8 +223,8 @@ function MenuAction({ icon, title, detail, bordered = false, onClick }) {
     >
       <Icon name={icon} className="h-5 w-5 shrink-0 text-[#172a53]" />
       <div className="min-w-0">
-        <p className="break-words text-[14px] font-extrabold leading-5 text-[#14234a] sm:truncate">{title}</p>
-        {detail && <p className="mt-0.5 break-words text-[13px] leading-5 text-[#526383] sm:truncate">{detail}</p>}
+        <p className="small-text break-words font-extrabold text-[#14234a] sm:truncate">{title}</p>
+        {detail && <p className="small-text mt-0.5 break-words text-[#526383] sm:truncate">{detail}</p>}
       </div>
     </button>
   )

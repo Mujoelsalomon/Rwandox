@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import LocalAccessQRCode from './LocalAccessQRCode.jsx'
+import { API_BASE_URL, getSession } from '../authSession.js'
 
 const defaultUsers = [
   { id: 'USR-001', name: 'Joel Munyaneza', email: 'munyanezajoel3@gmail.com', role: 'Super user' },
@@ -56,11 +57,11 @@ export default function SystemAdministrationContent() {
       <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
         <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-primary fw-bold text-uppercase small mb-2 text-[13px] font-black tracking-[0.22em]">System administration</p>
-            <h1 className="fw-black mt-2 break-words text-[24px] font-black leading-8 text-[#071b49]">
+            <p className="small-text text-primary fw-bold text-uppercase mb-2 font-black tracking-[0.22em]">System administration</p>
+            <h1 className="page-title fw-black mt-2 break-words font-black text-[#071b49]">
               Administrative controls
             </h1>
-            <p className="text-secondary mt-2 max-w-[760px] text-[15px] font-semibold leading-6">
+            <p className="small-text text-secondary mt-2 max-w-[760px] font-semibold">
               Manage access, audit visibility, model registry operations, and maintenance settings for the clinical prediction workspace.
             </p>
           </div>
@@ -152,8 +153,8 @@ export default function SystemAdministrationContent() {
       <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-[20px] font-black text-[#071b49]">Model registry</h2>
-            <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Manage active and archived model artifacts.</p>
+            <h2 className="section-title font-black text-[#071b49]">Model registry</h2>
+            <p className="small-text mt-1 font-semibold text-[#64799e]">Manage active and archived model artifacts.</p>
           </div>
           <div>
             <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Export CSV</button>
@@ -162,7 +163,7 @@ export default function SystemAdministrationContent() {
 
         <div className="mt-4 overflow-x-auto">
           <table className="table table-hover align-middle mb-0 w-full min-w-[720px] text-left">
-            <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
+            <thead className="table-header bg-white font-black uppercase tracking-[0.12em] text-[#64799e]">
               <tr>
                 <th className="px-4 py-3">Model ID</th>
                 <th className="px-4 py-3">Name</th>
@@ -189,42 +190,299 @@ export default function SystemAdministrationContent() {
   }
 
   function Maintenance() {
-    const [status, setStatus] = useState({ api: 'ok', db: 'ok', sync: 'ok' })
+    const [health, setHealth] = useState(null)
+    const [loading, setLoading] = useState(false)
+    const [actionLoading, setActionLoading] = useState('')
+    const [message, setMessage] = useState('')
 
-    function refresh() {
-      // placeholder: toggle statuses to simulate check
-      setStatus((s) => ({ api: s.api === 'ok' ? 'degraded' : 'ok', db: s.db, sync: s.sync === 'ok' ? 'syncing' : 'ok' }))
+    useEffect(() => {
+      refreshSystemStatus()
+    }, [])
+
+    function authHeaders(extra = {}) {
+      const session = getSession()
+      return {
+        Authorization: `Bearer ${session?.token || ''}`,
+        'X-User-Email': session?.email || '',
+        ...extra,
+      }
     }
+
+    async function requestMaintenance(path, options = {}) {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        credentials: 'include',
+        ...options,
+        headers: authHeaders(options.headers || {}),
+      })
+      if (options.raw) return response
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || data.message || 'Maintenance request failed.')
+      return data
+    }
+
+    async function refreshSystemStatus() {
+      setLoading(true)
+      setMessage('')
+      try {
+        const data = await requestMaintenance('/api/admin/maintenance/health/')
+        setHealth(data)
+      } catch (error) {
+        setMessage(error.message || 'Could not load maintenance status.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    async function updatePanel(path, key, label) {
+      setActionLoading(label)
+      setMessage('')
+      try {
+        const data = await requestMaintenance(path)
+        setHealth((current) => ({ ...(current || {}), [key]: data }))
+        setMessage(`${label} completed.`)
+      } catch (error) {
+        setMessage(error.message || `${label} failed.`)
+      } finally {
+        setActionLoading('')
+      }
+    }
+
+    async function runAction(path, label, method = 'POST') {
+      setActionLoading(label)
+      setMessage('')
+      try {
+        const data = await requestMaintenance(path, { method })
+        if (path.includes('reload-model')) {
+          setHealth((current) => ({ ...(current || {}), model: data }))
+        }
+        setMessage(data.message || `${label} completed.`)
+        if (!path.includes('reload-model')) refreshSystemStatus()
+      } catch (error) {
+        setMessage(error.message || `${label} failed.`)
+      } finally {
+        setActionLoading('')
+      }
+    }
+
+    async function exportLogs() {
+      setActionLoading('Export System Logs')
+      setMessage('')
+      try {
+        const response = await requestMaintenance('/api/admin/maintenance/export-logs/', { raw: true })
+        if (!response.ok) throw new Error('Could not export system logs.')
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `system-logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')}.txt`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+        setMessage('System logs exported.')
+      } catch (error) {
+        setMessage(error.message || 'Could not export system logs.')
+      } finally {
+        setActionLoading('')
+      }
+    }
+
+    const api = health?.api || {}
+    const database = health?.database || {}
+    const model = health?.model || {}
+    const prediction = health?.prediction_service || {}
+    const storage = health?.storage || {}
+    const sync = health?.sync || {}
 
     return (
       <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-[20px] font-black text-[#071b49]">Maintenance</h2>
-            <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Check API, database, and sync status.</p>
+            <h2 className="section-title font-black text-[#071b49]">Maintenance</h2>
+            <p className="small-text mt-1 font-semibold text-[#64799e]">Monitor clinical ML services, model readiness, storage, and operational maintenance tasks.</p>
           </div>
-          <div>
-            <button onClick={refresh} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Refresh</button>
-          </div>
+          <button onClick={refreshSystemStatus} disabled={loading} className="btn btn-primary fw-bold rounded px-4 py-2 text-white disabled:opacity-70">
+            {loading ? 'Refreshing...' : 'Refresh System Status'}
+          </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="card rounded border p-3">
-            <p className="text-sm font-black text-[#64799e]">API</p>
-            <p className="mt-1 font-extrabold">{status.api}</p>
+        {message && (
+          <div className="small-text mt-4 rounded-[10px] border border-[#d7e4f4] bg-[#f8fbff] px-4 py-3 font-bold text-[#071b49]">
+            {message}
           </div>
-          <div className="card rounded border p-3">
-            <p className="text-sm font-black text-[#64799e]">Database</p>
-            <p className="mt-1 font-extrabold">{status.db}</p>
-          </div>
-          <div className="card rounded border p-3">
-            <p className="text-sm font-black text-[#64799e]">Sync</p>
-            <p className="mt-1 font-extrabold">{status.sync}</p>
+        )}
+
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <HealthSummaryCard title="API Status" status={api.status} value={api.label || api.status || 'Not checked'} />
+          <HealthSummaryCard title="Database Status" status={database.status} value={database.connection_result || 'Not checked'} />
+          <HealthSummaryCard title="Active Model Status" status={model.status} value={model.model_loaded ? 'Loaded' : model.active_model_name || 'Not loaded'} />
+          <HealthSummaryCard title="Sync Status" status={sync.status} value={sync.label || 'Not checked'} />
+          <HealthSummaryCard title="Storage Status" status={storage.status} value={storage.available_storage_display || 'Not checked'} />
+        </div>
+
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <MaintenancePanel
+            title="API Status"
+            status={api.status}
+            rows={[
+              ['Status', api.label || statusLabel(api.status)],
+              ['Backend URL', api.backend_url || 'Not available'],
+              ['Response time', api.response_time_ms !== undefined ? `${api.response_time_ms} ms` : 'Not checked'],
+              ['Last checked time', formatDateTime(api.last_checked)],
+            ]}
+            buttonLabel="Test API"
+            loading={actionLoading === 'Test API'}
+            onClick={() => updatePanel('/api/admin/maintenance/api-status/', 'api', 'Test API')}
+          />
+          <MaintenancePanel
+            title="Database Status"
+            status={database.status}
+            rows={[
+              ['Status', statusLabel(database.status)],
+              ['Database type', database.database_type || 'Not available'],
+              ['Connection result', database.connection_result || 'Not checked'],
+              ['Last successful connection', formatDateTime(database.last_successful_connection)],
+            ]}
+            buttonLabel="Test Database Connection"
+            loading={actionLoading === 'Test Database Connection'}
+            onClick={() => updatePanel('/api/admin/maintenance/database-status/', 'database', 'Test Database Connection')}
+          />
+          <MaintenancePanel
+            title="Model Status"
+            status={model.status}
+            rows={[
+              ['Active model name', model.active_model_name || 'No active model'],
+              ['Model type', model.model_type || 'Not available'],
+              ['Model loaded', model.model_loaded ? 'Yes' : 'No'],
+              ['Last trained date', formatDateTime(model.last_trained_date)],
+              ['Validation accuracy', formatMetric(model.validation_accuracy)],
+              ['F1-score', formatMetric(model.f1_score)],
+            ]}
+            buttonLabel="Reload Active Model"
+            loading={actionLoading === 'Reload Active Model'}
+            onClick={() => runAction('/api/admin/maintenance/reload-model/', 'Reload Active Model')}
+          />
+          <MaintenancePanel
+            title="Prediction Service"
+            status={prediction.status}
+            rows={[
+              ['Prediction API status', prediction.prediction_api_status || statusLabel(prediction.status)],
+              ['Last prediction date', formatDateTime(prediction.last_prediction_date)],
+              ['Total predictions', prediction.total_predictions ?? 'Not available'],
+            ]}
+            buttonLabel="Run Test Prediction"
+            loading={actionLoading === 'Run Test Prediction'}
+            onClick={() => runAction('/api/admin/maintenance/test-prediction/', 'Run Test Prediction')}
+          />
+          <MaintenancePanel
+            title="Storage Status"
+            status={storage.status}
+            rows={[
+              ['Model folder status', storage.model_folder_status || 'Not checked'],
+              ['Uploaded dataset folder status', storage.uploaded_dataset_folder_status || 'Not checked'],
+              ['Log folder status', storage.log_folder_status || 'Not checked'],
+              ['Available storage', storage.available_storage_display || 'Not available'],
+            ]}
+            buttonLabel="Check Storage"
+            loading={actionLoading === 'Check Storage'}
+            onClick={() => updatePanel('/api/admin/maintenance/storage-status/', 'storage', 'Check Storage')}
+          />
+        </div>
+
+        <div className="mt-4 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] p-4">
+          <h3 className="card-title font-black text-[#071b49]">Maintenance Actions</h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <MaintenanceAction label="Refresh System Status" loading={loading} onClick={refreshSystemStatus} />
+            <MaintenanceAction label="Reload Active Model" loading={actionLoading === 'Reload Active Model'} onClick={() => runAction('/api/admin/maintenance/reload-model/', 'Reload Active Model')} />
+            <MaintenanceAction label="Clear Temporary Files" loading={actionLoading === 'Clear Temporary Files'} onClick={() => runAction('/api/admin/maintenance/clear-temp-files/', 'Clear Temporary Files')} />
+            <MaintenanceAction label="Export System Logs" loading={actionLoading === 'Export System Logs'} onClick={exportLogs} />
+            <MaintenanceAction label="Backup Database" loading={actionLoading === 'Backup Database'} onClick={() => runAction('/api/admin/maintenance/backup-database/', 'Backup Database')} />
+            <MaintenanceAction label="Reset Failed Training Jobs" loading={actionLoading === 'Reset Failed Training Jobs'} onClick={() => runAction('/api/admin/maintenance/reset-failed-jobs/', 'Reset Failed Training Jobs')} />
           </div>
         </div>
       </div>
     )
   }
+
+function HealthSummaryCard({ title, status, value }) {
+  return (
+    <div className="card rounded-[12px] border border-[#d9e5f3] bg-[#f8fbff] p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="table-header font-black uppercase tracking-[0.1em] text-[#64799e]">{title}</p>
+        <StatusBadge status={status} />
+      </div>
+      <p className="body-text mt-3 break-words font-black text-[#071b49]">{value}</p>
+    </div>
+  )
+}
+
+function MaintenancePanel({ buttonLabel, loading, onClick, rows, status, title }) {
+  return (
+    <section className="rounded-[14px] border border-[#d9e5f3] bg-white p-4 shadow-sm">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <h3 className="card-title font-black text-[#071b49]">{title}</h3>
+        <StatusBadge status={status} />
+      </div>
+      <div className="mt-3 grid gap-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="grid gap-1 rounded-[10px] bg-[#f8fbff] px-3 py-2 sm:grid-cols-[190px_minmax(0,1fr)]">
+            <p className="table-header font-black uppercase tracking-[0.08em] text-[#64799e]">{label}</p>
+            <p className="small-text break-words font-extrabold text-[#071b49]">{value ?? 'Not available'}</p>
+          </div>
+        ))}
+      </div>
+      <button onClick={onClick} disabled={loading} className="btn-text btn btn-outline-primary mt-4 w-full rounded-[10px] border px-4 py-2 font-extrabold disabled:opacity-70 sm:w-auto">
+        {loading ? 'Working...' : buttonLabel}
+      </button>
+    </section>
+  )
+}
+
+function MaintenanceAction({ label, loading, onClick }) {
+  return (
+    <button onClick={onClick} disabled={loading} className="btn-text btn btn-light min-h-[48px] rounded-[10px] border border-[#cfe0f2] bg-white px-4 py-2 font-extrabold text-[#071b49] shadow-sm disabled:opacity-70">
+      {loading ? 'Working...' : label}
+    </button>
+  )
+}
+
+function StatusBadge({ status }) {
+  const tone = statusTone(status)
+  return (
+    <span className={`risk-badge-text shrink-0 rounded-full px-3 py-1 font-black uppercase tracking-[0.08em] ${tone.className}`}>
+      {tone.label}
+    </span>
+  )
+}
+
+function statusTone(status) {
+  const normalized = String(status || '').toLowerCase()
+  if (['ok', 'ready', 'connected', 'success', 'completed'].includes(normalized)) {
+    return { label: 'OK', className: 'bg-[#dcfce7] text-[#166534]' }
+  }
+  if (['failed', 'error', 'not connected', 'missing'].includes(normalized)) {
+    return { label: 'Failed', className: 'bg-[#fee2e2] text-[#991b1b]' }
+  }
+  return { label: normalized ? 'Warning' : 'Pending', className: 'bg-[#fef3c7] text-[#92400e]' }
+}
+
+function statusLabel(status) {
+  return statusTone(status).label
+}
+
+function formatDateTime(value) {
+  if (!value) return 'Not available'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return 'Not available'
+  return parsed.toLocaleString()
+}
+
+function formatMetric(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 'Not available'
+  const percent = numeric <= 1 ? numeric * 100 : numeric
+  return `${Math.round(percent * 10) / 10}%`
+}
 
   function AuditLogs() {
     const stored = JSON.parse(localStorage.getItem('postop_o2_audit') || '[]')
@@ -254,8 +512,8 @@ export default function SystemAdministrationContent() {
       <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-[20px] font-black text-[#071b49]">Audit logs</h2>
-            <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Recent user activity and system events.</p>
+            <h2 className="section-title font-black text-[#071b49]">Audit logs</h2>
+            <p className="small-text mt-1 font-semibold text-[#64799e]">Recent user activity and system events.</p>
           </div>
           <div>
             <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Export CSV</button>
@@ -264,7 +522,7 @@ export default function SystemAdministrationContent() {
 
         <div className="mt-4 overflow-x-auto">
           <table className="table table-hover align-middle mb-0 w-full min-w-[720px] text-left">
-            <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
+            <thead className="table-header bg-white font-black uppercase tracking-[0.12em] text-[#64799e]">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">User ID</th>
@@ -299,8 +557,8 @@ function AdminAction({ title, detail, isActive = false, onClick }) {
       }`}
       onClick={onClick}
     >
-      <span className="block break-words text-[16px] font-extrabold text-[#071b49]">{title}</span>
-      <span className="mt-2 block break-words text-[13px] font-semibold leading-5 text-[#64799e]">{detail}</span>
+      <span className="body-text block break-words font-extrabold text-[#071b49]">{title}</span>
+      <span className="small-text mt-2 block break-words font-semibold text-[#64799e]">{detail}</span>
     </button>
   )
 }
@@ -310,14 +568,14 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
     <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
       <div className="flex min-w-0 flex-col gap-2 border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-[20px] font-black text-[#071b49]">User management</h2>
-          <p className="mt-1 text-[13px] font-semibold text-[#64799e]">Manage user roles and account permissions.</p>
+          <h2 className="section-title font-black text-[#071b49]">User management</h2>
+          <p className="small-text mt-1 font-semibold text-[#64799e]">Manage user roles and account permissions.</p>
         </div>
       </div>
 
       <div className="hidden overflow-x-auto lg:block">
         <table className="table table-hover align-middle mb-0 w-full min-w-[760px] text-left">
-          <thead className="bg-white text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">
+          <thead className="table-header bg-white font-black uppercase tracking-[0.12em] text-[#64799e]">
             <tr>
               <th className="px-4 py-3">Names</th>
               <th className="px-4 py-3">User ID</th>

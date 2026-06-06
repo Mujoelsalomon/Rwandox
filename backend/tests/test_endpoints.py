@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from io import BytesIO
 import json
+from unittest.mock import patch
 
 from apps.api.models import TrainingJob
 
@@ -23,6 +24,18 @@ class EndpointsTest(TestCase):
         self.assertIsNotNone(data)
         # Expect list or dict with models
         self.assertTrue(isinstance(data, (list, dict)))
+
+    def test_clinician_cannot_access_model_registry(self):
+        clinician = User.objects.create_user(
+            username='model-registry-clinician',
+            email='model-registry-clinician@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(clinician)
+
+        resp = self.client.get('/models')
+
+        self.assertEqual(resp.status_code, 403)
 
     def test_upload_dataset_rejects_unsupported_file_type(self):
         upload = BytesIO(b'not,a,dataset\n')
@@ -61,6 +74,51 @@ class EndpointsTest(TestCase):
         data = resp.json()
         self.assertEqual(data['duration_seconds'], 75)
         self.assertEqual(data['duration_display'], '1m 15s')
+
+    def test_admin_can_read_maintenance_health(self):
+        resp = self.client.get('/api/admin/maintenance/health/')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('api', data)
+        self.assertIn('database', data)
+        self.assertIn('model', data)
+        self.assertIn('prediction_service', data)
+        self.assertIn('storage', data)
+        self.assertIn('sync', data)
+        self.assertIn('backend_url', data['api'])
+        self.assertIn('connection_result', data['database'])
+
+    def test_clinician_cannot_access_maintenance_endpoints(self):
+        clinician = User.objects.create_user(
+            username='maintenance-clinician',
+            email='maintenance-clinician@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(clinician)
+
+        get_resp = self.client.get('/api/admin/maintenance/health/')
+        post_resp = self.client.post('/api/admin/maintenance/reload-model/')
+
+        self.assertEqual(get_resp.status_code, 403)
+        self.assertEqual(post_resp.status_code, 403)
+
+    def test_admin_can_reset_failed_training_jobs_from_maintenance(self):
+        TrainingJob.objects.create(
+            job_id='maintenance-failed-job',
+            dataset_path=__file__,
+            model_type='random_forest',
+            status='failed',
+            error='test failure',
+        )
+
+        resp = self.client.post('/api/admin/maintenance/reset-failed-jobs/')
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['reset_count'], 1)
+        job = TrainingJob.objects.get(job_id='maintenance-failed-job')
+        self.assertEqual(job.status, 'queued')
+        self.assertEqual(job.error, '')
 
     @override_settings(TRAINING_STALE_MINUTES=1)
     def test_stale_running_training_job_is_marked_failed(self):
@@ -101,6 +159,55 @@ class EndpointsTest(TestCase):
 
         jobs_resp = self.client.get('/train/jobs')
         self.assertEqual(jobs_resp.status_code, 403)
+
+    def test_clinician_can_upload_prediction_dataset_without_training_access(self):
+        clinician = User.objects.create_user(
+            username='prediction-dataset-clinician',
+            email='prediction-dataset-clinician@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(clinician)
+
+        upload = BytesIO(b'oxygen_required,age,sex,postop_spo2\nYes,50,Female,90\nNo,41,Male,96\n')
+        upload.name = 'prediction-dataset.csv'
+        upload_resp = self.client.post('/upload-prediction-dataset', {'file': upload})
+        self.assertEqual(upload_resp.status_code, 200)
+        self.assertIn('dataset_path', upload_resp.json())
+
+        train_resp = self.client.post(
+            '/train',
+            data=json.dumps({'dataset_path': upload_resp.json()['dataset_path'], 'model_type': 'random_forest'}),
+            content_type='application/json',
+        )
+        self.assertEqual(train_resp.status_code, 403)
+
+    def test_predict_dataset_runs_without_starting_training(self):
+        upload = BytesIO(b'oxygen_required,age,sex,postop_spo2\nYes,50,Female,90\nNo,41,Male,96\n')
+        upload.name = 'prediction-dataset.csv'
+        upload_resp = self.client.post('/upload-prediction-dataset', {'file': upload})
+        self.assertEqual(upload_resp.status_code, 200)
+
+        with patch('apps.api.prediction_views.run_prediction') as mocked_prediction:
+            mocked_prediction.side_effect = [
+                {'predicted_probability': 0.82, 'predicted_class': 'Yes', 'risk_level': 'High', 'recommendations': [], 'contributing_factors': []},
+                {'predicted_probability': 0.2, 'predicted_class': 'No', 'risk_level': 'Low', 'recommendations': [], 'contributing_factors': []},
+            ]
+            predict_resp = self.client.post(
+                '/predict-dataset',
+                data=json.dumps({
+                    'dataset_path': upload_resp.json()['dataset_path'],
+                    'target_column': 'oxygen_required',
+                    'model_type': 'random_forest',
+                }),
+                content_type='application/json',
+            )
+
+        self.assertEqual(predict_resp.status_code, 200)
+        data = predict_resp.json()
+        self.assertEqual(data['summary']['predicted_rows'], 2)
+        self.assertEqual(data['summary']['high_risk_rows'], 1)
+        self.assertEqual(data['summary']['low_risk_rows'], 1)
+        self.assertEqual(mocked_prediction.call_count, 2)
 
     @override_settings(DEBUG=True)
     def test_admin_header_session_can_upload_dataset_without_cookie(self):
@@ -173,6 +280,50 @@ class EndpointsTest(TestCase):
         history_resp = self.client.get('/prediction-history')
         self.assertEqual(history_resp.status_code, 200)
         self.assertGreaterEqual(len(history_resp.json()['predictions']), 1)
+
+    def test_versioned_rest_prediction_aliases(self):
+        payload = {'features': {'patient_coded_id': 'KBH-REST-001', 'age': 40, 'sex': 'Female', 'postop_spo2': 92}}
+        predict_resp = self.client.post('/api/v1/predictions/run', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(predict_resp.status_code, 200)
+        self.assertIn('predicted_probability', predict_resp.json())
+
+        history_resp = self.client.get('/api/v1/predictions')
+        self.assertEqual(history_resp.status_code, 200)
+        self.assertIn('predictions', history_resp.json())
+
+    def test_fhir_patient_observation_and_risk_assessment_endpoints(self):
+        payload = {
+            'features': {
+                'patient_coded_id': 'KBH-FHIR-001',
+                'age': 61,
+                'sex': 'Male',
+                'baseline_spo2': 93,
+                'postop_spo2': 90,
+                'respiratory_rate': 24,
+            }
+        }
+        predict_resp = self.client.post('/predict', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(predict_resp.status_code, 200)
+        prediction_id = predict_resp.json()['id']
+
+        metadata_resp = self.client.get('/fhir/metadata')
+        self.assertEqual(metadata_resp.status_code, 200)
+        self.assertEqual(metadata_resp.json()['resourceType'], 'CapabilityStatement')
+
+        patient_resp = self.client.get('/fhir/Patient/KBH-FHIR-001')
+        self.assertEqual(patient_resp.status_code, 200)
+        self.assertEqual(patient_resp.json()['resourceType'], 'Patient')
+        self.assertEqual(patient_resp.json()['identifier'][0]['value'], 'KBH-FHIR-001')
+
+        observation_resp = self.client.get('/fhir/Observation?patient=KBH-FHIR-001')
+        self.assertEqual(observation_resp.status_code, 200)
+        self.assertEqual(observation_resp.json()['resourceType'], 'Bundle')
+        self.assertGreaterEqual(observation_resp.json()['total'], 1)
+
+        risk_resp = self.client.get(f'/fhir/RiskAssessment/{prediction_id}')
+        self.assertEqual(risk_resp.status_code, 200)
+        self.assertEqual(risk_resp.json()['resourceType'], 'RiskAssessment')
+        self.assertEqual(risk_resp.json()['subject']['reference'], 'Patient/KBH-FHIR-001')
 
     def test_clinician_cannot_edit_role_or_other_user_profile(self):
         clinician = User.objects.create_user(

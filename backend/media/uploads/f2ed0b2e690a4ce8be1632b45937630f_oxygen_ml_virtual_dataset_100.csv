@@ -1,0 +1,101 @@
+hospital_id,age,sex,bmi,smoking_history,baseline_spo2,comorbidities,surgery_type,urgency,surgery_duration,blood_loss,ward,anesthesia_type,asa_class,residual_effects,opioid_use,airway_event,recovery_status,postop_spo2,respiratory_rate,pain_status,consciousness,time_since_surgery,oxygen_before_prediction,oxygen_required
+KBH-2026-0001,69,Male,21.4,True,94,Hypertension,Abdominal,elective,117,Severe,ICU,General,III,False,False,None,Stable,94,15,Mild,Alert,108,True,0
+KBH-2026-0002,41,Female,28.6,True,94,Asthma,Thoracic,elective,287,Moderate,PACU,Spinal,II,False,True,Difficult Intubation,Monitored,93,23,Mild,Alert,162,False,0
+KBH-2026-0003,55,Female,34.3,False,96,None,Gynecologic,elective,78,Severe,PACU,Sedation,I,True,False,Bronchospasm,Monitored,99,21,Severe,Confused,19,False,0
+KBH-2026-0004,79,Male,34.7,False,97,None,Orthopedic,emergency,84,Minimal,Surgical Ward,Regional,II,False,True,Bronchospasm,Monitored,90,31,Mild,Drowsy,68,False,1
+KBH-2026-0005,20,Male,29.1,True,92,Hypertension,Gynecologic,elective,118,Moderate,Surgical Ward,Spinal,II,False,True,None,Stable,94,25,Mild,Drowsy,13,False,0
+KBH-2026-0006,70,Male,31.2,False,93,Asthma,Gynecologic,elective,121,Minimal,Surgical Ward,Spinal,II,True,False,Bronchospasm,Delayed,91,26,Severe,Drowsy,176,False,0
+KBH-2026-0007,25,Male,31.1,False,93,None,Abdominal,elective,83,Minimal,PACU,Spinal,III,False,True,Bronchospasm,Stable,93,21,Moderate,Drowsy,8,False,1
+KBH-2026-0008,71,Male,20.9,False,96,Diabetes,Abdominal,emergency,247,Moderate,Surgical Ward,Spinal,II,False,True,None,Delayed,89,23,Severe,Drowsy,166,True,1
+KBH-2026-0009,79,Male,27.9,True,98,Diabetes,Orthopedic,elective,244,Severe,ICU,General,II,False,False,Difficult Intubation,Stable,95,19,Mild,Drowsy,86,False,0
+KBH-2026-0010,70,Male,28.6,False,99,None,Thoracic,elective,246,Minimal,PACU,Sedation,II,True,True,Difficult Intubation,Delayed,97,24,Severe,Drowsy,45,True,0
+KBH-2026-0011,46,Female,29.9,False,94,Diabetes,Gynecologic,emergency,290,Severe,Surgical Ward,General,IV,True,True,None,Stable,90,21,Moderate,Alert,45,True,1
+KBH-2026-0012,45,Male,31.4,True,98,None,Obstetric,elective,297,Minimal,ICU,Spinal,II,False,True,Bronchospasm,Monitored,96,13,Mild,Confused,37,True,1
+KBH-2026-0013,65,Male,34.3,False,96,Asthma,Orthopedic,emergency,201,Minimal,PACU,Sedation,III,False,False,Difficult Intubation,Monitored,90,19,Moderate,Confused,39,True,1
+KBH-2026-0014,82,Male,21.4,False,94,Diabetes,Abdominal,emergency,160,Minimal,PACU,Spinal,III,False,True,None,Monitored,92,12,Mild,Drowsy,9,False,1
+KBH-2026-0015,31,Male,43.9,True,98,"HTN, DM",Abdominal,emergency,71,Minimal,PACU,Spinal,II,False,False,Difficult Intubation,Monitored,97,24,Mild,Drowsy,67,True,0
+KBH-2026-0016,69,Female,22.4,False,96,Diabetes,Gynecologic,elective,251,Severe,ICU,Sedation,I,True,False,None,Monitored,91,16,Mild,Alert,155,True,0
+KBH-2026-0017,32,Male,23.1,True,99,"HTN, DM",Abdominal,elective,216,Minimal,PACU,General,III,True,False,Difficult Intubation,Stable,94,30,Severe,Alert,90,True,0
+KBH-2026-0018,45,Female,30.7,True,93,Diabetes,Orthopedic,elective,74,Moderate,Surgical Ward,Spinal,III,False,False,Difficult Intubation,Monitored,97,17,Mild,Alert,32,False,0
+KBH-2026-0019,45,Male,24.9,True,97,"HTN, DM",Obstetric,elective,157,Minimal,Surgical Ward,General,III,True,True,Difficult Intubation,Monitored,98,18,Mild,Drowsy,133,False,0
+KBH-2026-0020,44,Female,20.0,True,97,Hypertension,Obstetric,emergency,145,Minimal,PACU,Spinal,III,False,True,Difficult Intubation,Delayed,96,24,Mild,Confused,7,False,1
+KBH-2026-0021,44,Female,19.9,False,94,None,Abdominal,elective,201,Severe,Surgical Ward,Regional,II,True,False,None,Monitored,97,26,Mild,Confused,63,False,0
+KBH-2026-0022,49,Male,24.9,True,99,None,Orthopedic,elective,262,Severe,PACU,Regional,I,True,False,Difficult Intubation,Stable,95,31,Mild,Drowsy,117,False,0
+KBH-2026-0023,79,Female,26.9,True,92,Hypertension,Abdominal,emergency,142,Moderate,ICU,Sedation,III,True,True,None,Stable,92,28,Mild,Drowsy,117,True,1
+KBH-2026-0024,19,Male,18.6,False,93,Hypertension,Abdominal,emergency,83,Moderate,PACU,Sedation,I,True,False,None,Monitored,99,16,Moderate,Drowsy,133,True,0
+KBH-2026-0025,36,Female,28.7,False,93,None,Obstetric,elective,276,Moderate,ICU,Sedation,II,False,False,None,Stable,93,15,Moderate,Alert,127,False,0
+KBH-2026-0026,34,Female,36.9,False,98,"HTN, DM",Thoracic,elective,127,Minimal,Surgical Ward,Spinal,I,False,False,None,Delayed,93,17,Moderate,Alert,143,True,0
+KBH-2026-0027,33,Female,24.5,True,97,Diabetes,Thoracic,elective,177,Moderate,ICU,Sedation,II,False,False,Difficult Intubation,Delayed,90,15,Moderate,Confused,151,True,0
+KBH-2026-0028,84,Male,31.6,False,98,Asthma,Thoracic,elective,177,Minimal,Surgical Ward,Regional,I,True,False,Difficult Intubation,Delayed,90,18,Severe,Confused,56,False,0
+KBH-2026-0029,50,Female,29.1,True,99,None,Obstetric,elective,296,Severe,ICU,Regional,II,True,True,None,Delayed,88,29,Moderate,Alert,155,True,1
+KBH-2026-0030,48,Male,14.7,False,97,Asthma,Thoracic,elective,128,Minimal,ICU,Sedation,I,False,False,Difficult Intubation,Stable,97,18,Mild,Confused,148,True,0
+KBH-2026-0031,77,Female,27.3,True,99,Hypertension,Thoracic,emergency,38,Moderate,PACU,Spinal,III,True,True,Difficult Intubation,Stable,98,20,Moderate,Confused,103,False,1
+KBH-2026-0032,36,Female,29.5,True,99,Asthma,Gynecologic,emergency,181,Moderate,PACU,Regional,IV,False,False,Bronchospasm,Stable,90,12,Moderate,Drowsy,156,True,1
+KBH-2026-0033,53,Female,28.1,True,94,Hypertension,Orthopedic,elective,128,Minimal,Surgical Ward,Spinal,III,True,False,None,Monitored,96,29,Moderate,Drowsy,132,False,0
+KBH-2026-0034,83,Female,31.2,True,97,"HTN, DM",Gynecologic,elective,237,Moderate,PACU,Regional,II,False,False,Difficult Intubation,Monitored,90,20,Severe,Confused,165,True,1
+KBH-2026-0035,50,Male,20.3,False,99,Diabetes,Gynecologic,elective,164,Severe,PACU,Sedation,II,True,False,Bronchospasm,Delayed,95,14,Mild,Drowsy,149,True,0
+KBH-2026-0036,50,Male,26.9,True,99,Diabetes,Gynecologic,elective,51,Moderate,PACU,Sedation,I,False,False,Difficult Intubation,Monitored,99,25,Moderate,Drowsy,162,False,0
+KBH-2026-0037,55,Female,26.9,True,99,None,Abdominal,elective,56,Minimal,PACU,Spinal,III,True,True,Bronchospasm,Stable,98,13,Mild,Alert,25,False,0
+KBH-2026-0038,47,Female,29.1,False,92,Diabetes,Orthopedic,elective,176,Severe,ICU,General,III,True,True,Difficult Intubation,Stable,99,15,Severe,Alert,39,False,0
+KBH-2026-0039,81,Female,21.6,True,95,None,Thoracic,emergency,35,Severe,ICU,Spinal,II,True,False,Bronchospasm,Monitored,92,14,Severe,Confused,128,True,0
+KBH-2026-0040,54,Female,29.4,False,99,Diabetes,Abdominal,elective,210,Severe,ICU,Regional,III,True,True,Difficult Intubation,Monitored,88,14,Mild,Drowsy,120,False,1
+KBH-2026-0041,80,Female,22.3,True,92,"HTN, DM",Obstetric,emergency,157,Severe,ICU,Sedation,III,False,True,Difficult Intubation,Delayed,90,29,Severe,Drowsy,29,False,1
+KBH-2026-0042,71,Female,24.0,False,93,Hypertension,Gynecologic,emergency,203,Severe,ICU,Sedation,III,False,True,None,Monitored,90,29,Moderate,Alert,36,False,1
+KBH-2026-0043,64,Female,32.3,False,92,"HTN, DM",Abdominal,emergency,275,Severe,PACU,General,II,True,False,Bronchospasm,Monitored,95,27,Moderate,Confused,43,True,1
+KBH-2026-0044,59,Female,27.3,True,98,None,Obstetric,elective,42,Minimal,Surgical Ward,Spinal,III,False,False,Bronchospasm,Delayed,97,18,Moderate,Drowsy,61,False,0
+KBH-2026-0045,53,Female,29.9,False,99,Diabetes,Obstetric,emergency,172,Moderate,PACU,General,II,True,False,Difficult Intubation,Stable,99,13,Severe,Confused,70,True,0
+KBH-2026-0046,49,Female,32.7,True,98,Hypertension,Obstetric,emergency,80,Minimal,Surgical Ward,Spinal,I,False,False,None,Delayed,93,28,Severe,Alert,174,False,0
+KBH-2026-0047,32,Male,22.5,False,92,None,Abdominal,elective,82,Severe,Surgical Ward,Sedation,I,False,False,Difficult Intubation,Monitored,95,23,Mild,Alert,112,False,0
+KBH-2026-0048,22,Female,25.3,False,98,None,Thoracic,elective,291,Severe,ICU,General,IV,True,True,None,Delayed,91,24,Moderate,Alert,120,True,1
+KBH-2026-0049,64,Female,23.2,False,99,Asthma,Obstetric,emergency,153,Severe,Surgical Ward,Regional,I,True,True,Bronchospasm,Delayed,89,21,Mild,Alert,162,True,1
+KBH-2026-0050,36,Male,29.1,True,92,Hypertension,Abdominal,elective,121,Moderate,Surgical Ward,Sedation,II,False,True,None,Stable,95,16,Moderate,Confused,121,False,0
+KBH-2026-0051,79,Female,29.5,True,96,Asthma,Abdominal,elective,87,Severe,PACU,Spinal,III,False,True,None,Stable,88,12,Mild,Alert,38,False,1
+KBH-2026-0052,65,Female,31.3,True,92,Asthma,Obstetric,emergency,266,Severe,Surgical Ward,Regional,II,False,False,Difficult Intubation,Stable,95,12,Severe,Alert,20,False,1
+KBH-2026-0053,78,Male,28.9,True,97,"HTN, DM",Thoracic,elective,105,Minimal,ICU,Regional,III,True,True,None,Monitored,94,27,Severe,Confused,90,False,0
+KBH-2026-0054,74,Female,35.3,True,96,Asthma,Obstetric,elective,98,Moderate,Surgical Ward,Regional,IV,True,False,None,Monitored,99,26,Moderate,Confused,98,False,0
+KBH-2026-0055,79,Female,25.8,True,93,Diabetes,Obstetric,emergency,68,Moderate,PACU,Sedation,II,True,True,Bronchospasm,Delayed,97,15,Moderate,Drowsy,37,True,0
+KBH-2026-0056,40,Female,36.4,True,93,Hypertension,Obstetric,elective,275,Severe,PACU,Regional,I,False,False,Bronchospasm,Monitored,97,16,Mild,Alert,104,True,0
+KBH-2026-0057,51,Female,27.0,True,99,Hypertension,Abdominal,elective,33,Moderate,PACU,Spinal,III,False,True,Bronchospasm,Monitored,92,27,Severe,Confused,28,False,1
+KBH-2026-0058,19,Male,30.8,False,92,"HTN, DM",Orthopedic,elective,189,Moderate,PACU,Spinal,II,True,False,Difficult Intubation,Monitored,99,31,Moderate,Confused,156,False,0
+KBH-2026-0059,29,Female,34.9,True,92,Asthma,Thoracic,elective,130,Moderate,Surgical Ward,Regional,III,False,False,Difficult Intubation,Monitored,90,23,Mild,Confused,71,True,1
+KBH-2026-0060,82,Male,20.8,False,92,Asthma,Gynecologic,elective,72,Moderate,ICU,Spinal,II,False,False,None,Stable,95,23,Severe,Confused,33,False,0
+KBH-2026-0061,30,Male,24.3,False,96,None,Orthopedic,emergency,271,Moderate,ICU,Spinal,III,True,False,Difficult Intubation,Monitored,90,14,Moderate,Confused,85,False,1
+KBH-2026-0062,25,Female,20.7,False,96,"HTN, DM",Abdominal,emergency,119,Severe,PACU,Spinal,III,False,False,None,Delayed,97,13,Mild,Drowsy,119,True,0
+KBH-2026-0063,24,Female,28.8,True,96,Diabetes,Abdominal,emergency,246,Minimal,Surgical Ward,General,III,False,True,Difficult Intubation,Monitored,98,15,Moderate,Alert,142,True,1
+KBH-2026-0064,41,Male,23.5,True,99,None,Thoracic,elective,206,Moderate,ICU,Spinal,II,False,True,Bronchospasm,Stable,90,14,Mild,Drowsy,40,False,1
+KBH-2026-0065,41,Female,27.9,True,95,None,Gynecologic,elective,212,Moderate,ICU,Regional,II,False,False,Bronchospasm,Monitored,88,24,Moderate,Drowsy,27,True,0
+KBH-2026-0066,47,Male,32.4,False,92,"HTN, DM",Obstetric,emergency,91,Severe,Surgical Ward,Regional,IV,True,True,Bronchospasm,Monitored,88,31,Moderate,Alert,116,True,1
+KBH-2026-0067,30,Male,25.8,False,95,Hypertension,Orthopedic,emergency,105,Severe,Surgical Ward,Spinal,IV,True,False,Bronchospasm,Delayed,96,20,Mild,Drowsy,32,False,0
+KBH-2026-0068,69,Male,31.3,False,94,Diabetes,Gynecologic,elective,173,Minimal,PACU,Spinal,I,False,True,Bronchospasm,Delayed,97,16,Moderate,Alert,103,False,0
+KBH-2026-0069,29,Female,33.0,True,95,Asthma,Abdominal,emergency,180,Minimal,PACU,Sedation,IV,False,False,None,Monitored,92,27,Mild,Drowsy,61,True,1
+KBH-2026-0070,56,Female,21.0,False,96,None,Orthopedic,elective,71,Moderate,PACU,Regional,II,True,False,Bronchospasm,Stable,92,18,Severe,Drowsy,146,False,0
+KBH-2026-0071,22,Male,28.6,False,94,Asthma,Abdominal,elective,268,Minimal,PACU,Spinal,III,False,True,Difficult Intubation,Monitored,89,23,Severe,Confused,13,False,1
+KBH-2026-0072,75,Male,35.4,False,95,"HTN, DM",Gynecologic,emergency,282,Moderate,PACU,Regional,II,True,False,Difficult Intubation,Monitored,88,17,Mild,Drowsy,11,True,1
+KBH-2026-0073,63,Male,24.8,False,93,Diabetes,Orthopedic,elective,151,Minimal,Surgical Ward,General,IV,True,False,Bronchospasm,Delayed,98,13,Severe,Alert,9,True,0
+KBH-2026-0074,46,Male,28.0,True,96,"HTN, DM",Orthopedic,elective,165,Severe,PACU,Spinal,III,False,True,None,Delayed,93,27,Mild,Drowsy,113,True,0
+KBH-2026-0075,82,Male,25.4,True,98,Hypertension,Abdominal,elective,161,Moderate,PACU,Regional,IV,True,True,None,Monitored,96,15,Mild,Alert,74,False,0
+KBH-2026-0076,48,Female,29.3,False,94,"HTN, DM",Thoracic,emergency,211,Minimal,Surgical Ward,Spinal,II,True,False,Bronchospasm,Delayed,99,18,Severe,Drowsy,95,False,0
+KBH-2026-0077,36,Female,26.9,False,96,None,Gynecologic,elective,249,Severe,Surgical Ward,General,III,True,False,Difficult Intubation,Delayed,89,31,Mild,Alert,65,True,1
+KBH-2026-0078,56,Female,22.0,False,92,Asthma,Thoracic,elective,219,Severe,Surgical Ward,General,II,True,False,Bronchospasm,Delayed,90,28,Severe,Confused,157,True,0
+KBH-2026-0079,73,Female,14.2,False,93,Asthma,Gynecologic,emergency,202,Severe,PACU,Regional,II,False,False,Difficult Intubation,Delayed,99,24,Moderate,Drowsy,65,True,0
+KBH-2026-0080,64,Male,32.7,True,96,Asthma,Abdominal,elective,242,Severe,ICU,Regional,III,True,True,Bronchospasm,Stable,93,22,Severe,Confused,168,False,1
+KBH-2026-0081,36,Male,27.1,False,92,"HTN, DM",Obstetric,elective,43,Moderate,PACU,Spinal,III,True,False,Bronchospasm,Monitored,88,26,Mild,Alert,163,False,0
+KBH-2026-0082,18,Male,29.5,False,96,"HTN, DM",Thoracic,elective,288,Severe,ICU,General,III,False,False,None,Stable,93,27,Moderate,Confused,16,False,0
+KBH-2026-0083,33,Male,26.4,False,95,None,Orthopedic,elective,37,Severe,ICU,General,IV,True,True,Bronchospasm,Delayed,92,15,Mild,Drowsy,94,False,1
+KBH-2026-0084,25,Female,31.9,True,93,None,Orthopedic,elective,207,Minimal,ICU,General,II,True,False,Difficult Intubation,Monitored,99,16,Severe,Drowsy,45,False,0
+KBH-2026-0085,81,Male,24.5,False,92,Asthma,Abdominal,elective,241,Moderate,ICU,Sedation,III,False,True,None,Stable,88,24,Moderate,Confused,161,True,1
+KBH-2026-0086,30,Male,26.8,False,97,Diabetes,Obstetric,elective,282,Minimal,PACU,Sedation,I,False,True,None,Stable,90,17,Moderate,Confused,86,True,1
+KBH-2026-0087,64,Male,27.7,False,96,None,Gynecologic,emergency,94,Minimal,Surgical Ward,General,II,False,False,Bronchospasm,Monitored,94,29,Severe,Drowsy,15,False,0
+KBH-2026-0088,43,Male,32.2,False,98,Diabetes,Abdominal,elective,206,Moderate,PACU,Spinal,II,False,False,Bronchospasm,Monitored,96,24,Severe,Alert,165,False,0
+KBH-2026-0089,18,Female,28.7,True,96,None,Thoracic,emergency,288,Severe,PACU,Spinal,III,False,True,Difficult Intubation,Delayed,93,16,Severe,Alert,57,True,1
+KBH-2026-0090,54,Male,36.6,True,93,Hypertension,Gynecologic,elective,112,Moderate,ICU,Sedation,I,False,True,Bronchospasm,Monitored,97,28,Mild,Drowsy,89,True,0
+KBH-2026-0091,18,Male,27.6,False,97,"HTN, DM",Abdominal,elective,63,Moderate,Surgical Ward,Sedation,II,True,False,None,Monitored,88,19,Moderate,Alert,43,True,0
+KBH-2026-0092,43,Male,29.6,False,93,"HTN, DM",Orthopedic,elective,147,Moderate,ICU,Sedation,III,True,False,None,Monitored,89,14,Mild,Drowsy,127,True,0
+KBH-2026-0093,67,Female,27.8,False,96,"HTN, DM",Thoracic,elective,141,Severe,PACU,Regional,II,False,True,Difficult Intubation,Monitored,98,26,Moderate,Drowsy,155,True,0
+KBH-2026-0094,31,Female,32.8,True,93,"HTN, DM",Gynecologic,elective,132,Moderate,Surgical Ward,Spinal,III,False,True,None,Delayed,98,17,Severe,Alert,42,False,1
+KBH-2026-0095,67,Male,18.3,True,94,Diabetes,Thoracic,elective,278,Moderate,ICU,Regional,II,True,False,Bronchospasm,Delayed,90,17,Severe,Confused,83,True,0
+KBH-2026-0096,47,Male,34.2,False,98,Diabetes,Orthopedic,elective,80,Minimal,Surgical Ward,Sedation,III,True,False,None,Stable,97,28,Mild,Alert,137,False,0
+KBH-2026-0097,46,Female,18.5,True,99,"HTN, DM",Gynecologic,elective,63,Minimal,PACU,Spinal,III,True,True,Bronchospasm,Monitored,92,17,Mild,Drowsy,57,False,1
+KBH-2026-0098,83,Female,26.7,False,96,Hypertension,Thoracic,elective,72,Minimal,Surgical Ward,Sedation,III,True,False,Difficult Intubation,Delayed,98,27,Severe,Drowsy,119,False,0
+KBH-2026-0099,40,Male,28.8,True,99,"HTN, DM",Orthopedic,emergency,213,Moderate,PACU,Sedation,III,False,False,Bronchospasm,Stable,91,14,Severe,Confused,100,True,1
+KBH-2026-0100,84,Female,22.3,True,94,Asthma,Abdominal,emergency,90,Minimal,Surgical Ward,Regional,II,True,False,Difficult Intubation,Stable,89,30,Moderate,Confused,151,False,0

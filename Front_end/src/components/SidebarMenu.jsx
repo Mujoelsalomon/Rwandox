@@ -7,7 +7,7 @@ const sidebarItems = [
   { label: 'New Prediction', to: '/new-prediction', icon: 'plus' },
   { label: 'Prediction History', to: '/prediction-history', icon: 'history' },
   { label: 'Model Training', to: '/train', icon: 'barChart', adminOnly: true },
-  { label: 'System Administration', to: '/system-administration', icon: 'shield' },
+  { label: 'System Administration', to: '/system-administration', icon: 'shield', adminOnly: true },
   { label: 'Settings', to: '/settings', icon: 'settings' },
 ]
 
@@ -49,7 +49,7 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
                 to={item.to}
                 title={item.label}
                 onClick={onNavigate}
-                className={`nav-link flex h-12 items-center rounded-[8px] px-3 text-[20px] font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
+                className={`nav-link body-text flex h-12 items-center rounded-[8px] px-3 font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
                 } ${
                   location.pathname === item.to
@@ -65,7 +65,7 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
                 key={item.label}
                 title={item.label}
                 onClick={onNavigate}
-                className={`flex h-12 min-w-0 cursor-pointer items-center rounded-[8px] px-3 text-[20px] font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
+                className={`body-text flex h-12 min-w-0 cursor-pointer items-center rounded-[8px] px-3 font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
                 } ${
                   'text-white hover:bg-[#0d3c78]'
@@ -92,8 +92,8 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
                 </div>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[18px] font-extrabold leading-6 text-white">{session?.name || 'Anesthetist'}</p>
-                <p className="truncate text-[15px] font-bold leading-5 text-[#d7e8ff]">{session?.role || 'Clinician'}</p>
+                <p className="card-title truncate font-extrabold text-white">{session?.name || 'Anesthetist'}</p>
+                <p className="small-text truncate font-bold text-[#d7e8ff]">{session?.role || 'Clinician'}</p>
               </div>
               <Icon name={profileOpen ? 'chevronRight' : 'chevronRight'} className="h-5 w-5" />
             </div>

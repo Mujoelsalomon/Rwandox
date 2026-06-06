@@ -2,6 +2,8 @@ from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+import trainer
+
 from apps.patients.models import Patient
 from apps.perioperative.models import PerioperativeRecord
 from apps.predictions.models import PredictionResult
@@ -11,6 +13,7 @@ from .common import bool_value, cors, float_value, int_or_none, int_value, json_
 from .dataset_history import dataset_prediction_history_payloads
 from .models import ModelArtifact
 from .serializers import prediction_history_payload
+from .training_views import validate_uploaded_dataset_path
 
 
 @csrf_exempt
@@ -33,6 +36,78 @@ def predict_view(request):
     return cors(JsonResponse(prediction_response_payload(result)))
 
 
+@csrf_exempt
+def predict_dataset_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+    if request.method != "POST":
+        return cors(JsonResponse({"error": "method not allowed"}, status=405))
+
+    payload = json_body(request)
+    dataset_path = payload.get("dataset_path")
+    target_column = str(payload.get("target") or payload.get("target_column") or "").strip()
+    if not dataset_path:
+        return cors(JsonResponse({"error": "dataset_path required"}, status=400))
+
+    dataset_error = validate_uploaded_dataset_path(dataset_path)
+    if dataset_error:
+        return cors(JsonResponse({"error": dataset_error}, status=400))
+
+    try:
+        dataframe = trainer.read_dataset(dataset_path)
+    except Exception as exc:
+        return cors(JsonResponse({"error": str(exc)}, status=400))
+
+    feature_columns = list(dataframe.columns)
+    if target_column and target_column in feature_columns:
+        feature_columns.remove(target_column)
+
+    predictions = []
+    errors = []
+    for index, row in dataframe.iterrows():
+        features = {str(column): clean_dataset_value(row[column]) for column in feature_columns}
+        try:
+            result = run_prediction(features)
+            predictions.append({
+                "row_index": int(index),
+                "predicted_probability": result.get("predicted_probability"),
+                "predicted_class": result.get("predicted_class"),
+                "risk_level": result.get("risk_level"),
+                "recommendations": result.get("recommendations") or [],
+                "contributing_factors": result.get("contributing_factors") or [],
+                "active_model": result.get("active_model"),
+                "model_type": result.get("model_type"),
+                "training_metrics": result.get("training_metrics") or {},
+            })
+        except Exception as exc:
+            errors.append({"row_index": int(index), "error": str(exc)})
+
+    risk_counts = {"High": 0, "Moderate": 0, "Low": 0}
+    for prediction in predictions:
+        risk = prediction.get("risk_level")
+        if risk in risk_counts:
+            risk_counts[risk] += 1
+
+    return cors(JsonResponse({
+        "predictions": predictions,
+        "errors": errors[:25],
+        "summary": {
+            "total_rows": int(len(dataframe)),
+            "predicted_rows": len(predictions),
+            "failed_rows": len(errors),
+            "high_risk_rows": risk_counts["High"],
+            "moderate_risk_rows": risk_counts["Moderate"],
+            "low_risk_rows": risk_counts["Low"],
+            "active_model": predictions[0].get("active_model") if predictions else None,
+            "model_type": predictions[0].get("model_type") if predictions else None,
+            "training_metrics": predictions[0].get("training_metrics") if predictions else {},
+        },
+    }))
+
+
 def prediction_history_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
@@ -45,6 +120,19 @@ def prediction_history_view(request):
     if not predictions:
         predictions = dataset_prediction_history_payloads()
     return cors(JsonResponse({"predictions": predictions}))
+
+
+def clean_dataset_value(value):
+    if value is None:
+        return None
+    try:
+        if hasattr(value, "item"):
+            value = value.item()
+    except ValueError:
+        pass
+    if isinstance(value, float) and value != value:
+        return None
+    return value
 
 
 def prediction_response_payload(result):

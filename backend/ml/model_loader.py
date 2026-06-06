@@ -19,7 +19,9 @@ def load_model_assets():
         from .schema import FEATURE_ORDER
         feature_order = FEATURE_ORDER
 
-    model_path = _active_model_path() or _latest_model_with_metadata() or DEFAULT_MODEL_PATH
+    active_artifact = _active_model_artifact()
+    latest_path = None if active_artifact else _latest_model_with_metadata()
+    model_path = Path(active_artifact.path) if active_artifact else latest_path or DEFAULT_MODEL_PATH
     if not model_path.exists():
         _train_default_model()
 
@@ -27,18 +29,24 @@ def load_model_assets():
     if metadata.get("columns"):
         feature_order = metadata["columns"]
 
+    metadata["_model_name"] = active_artifact.name if active_artifact else model_path.name
+    metadata["_model_path"] = str(model_path)
+    metadata["_model_type"] = metadata.get("algorithm") or (active_artifact.model_type if active_artifact else "generic")
+    metadata["_training_metrics"] = active_artifact.metrics if active_artifact else None
+    metadata["_used_trained_model"] = bool(model_path.exists())
+
     model = joblib.load(model_path) if model_path.exists() else None
     return model, metadata, feature_order
 
 
-def _active_model_path():
+def _active_model_artifact():
     try:
         from apps.api.models import ModelArtifact
 
         artifact = ModelArtifact.objects.filter(is_active=True).first()
         if artifact and artifact.path:
             path = Path(artifact.path)
-            return path if path.exists() and _metadata_for(path) else None
+            return artifact if path.exists() and _metadata_for(path) else None
     except Exception:
         return None
     return None

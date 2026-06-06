@@ -76,7 +76,7 @@ export default function PatientRecordsContent() {
               <div className="text-primary fw-bold text-uppercase small mb-2" style={{ letterSpacing: '0.14em' }}>
                 Patient Records
               </div>
-              <h1 className="fw-black mb-2" style={{ color: '#071b49', fontSize: 35, fontWeight: 900, lineHeight: 1.15 }}>
+              <h1 className="page-title fw-black mb-2" style={{ color: '#071b49', fontWeight: 900 }}>
                 Surgical patient registry
               </h1>
               <p className="mb-0 text-secondary fs-6">

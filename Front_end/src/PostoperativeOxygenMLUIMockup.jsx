@@ -53,6 +53,7 @@ export default function PostoperativeOxygenMLUIMockup() {
   ])
   const [recommendations, setRecommendations] = useState([
     'Start close oxygen monitoring immediately.',
+    'Book an ICU or HDU bed for closer postoperative monitoring.',
     'Prepare supplemental oxygen in PACU or ward.',
     'Repeat SpO2 and respiratory rate within 15 minutes.',
     'Escalate clinical review if saturation remains below target.',
@@ -153,6 +154,7 @@ export default function PostoperativeOxygenMLUIMockup() {
       factors: ['Post-op SpO2 90%', 'ASA III', 'Emergency surgery', 'Duration 210 min', 'BMI 31.2'],
       recommendations: [
         'Start close oxygen monitoring immediately.',
+        'Book an ICU or HDU bed for closer postoperative monitoring.',
         'Prepare supplemental oxygen in PACU or ward.',
         'Repeat SpO2 and respiratory rate within 15 minutes.',
         'Escalate clinical review if saturation remains below target.',

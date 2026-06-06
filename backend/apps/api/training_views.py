@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 import trainer
 
-from .common import cors, json_body, require_admin
+from .common import cors, json_body, require_admin, require_login
 from .models import ModelArtifact, TrainingJob
 
 
@@ -39,6 +39,23 @@ def upload_dataset_view(request):
     if request.method != "POST":
         return cors(JsonResponse({"error": "method not allowed"}, status=405))
 
+    return save_uploaded_dataset(request)
+
+
+@csrf_exempt
+def upload_prediction_dataset_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+    if request.method != "POST":
+        return cors(JsonResponse({"error": "method not allowed"}, status=405))
+
+    return save_uploaded_dataset(request)
+
+
+def save_uploaded_dataset(request):
     uploaded_file = request.FILES.get("file")
     if not uploaded_file:
         return cors(JsonResponse({"error": "no file provided"}, status=400))
@@ -60,6 +77,13 @@ def upload_dataset_view(request):
         columns = trainer.dataset_columns(str(dest))
     except Exception as exc:
         column_error = str(exc)
+        return cors(JsonResponse({
+            "error": column_error,
+            "dataset_path": str(dest),
+            "filename": saved_name,
+            "columns": columns,
+            "column_error": column_error,
+        }, status=400))
 
     return cors(JsonResponse({
         "dataset_path": str(dest),
@@ -192,6 +216,7 @@ def run_training(job_id, dataset_path, model_type, target_column):
             "numeric_feature_count": metadata.get("numeric_feature_count"),
             "categorical_feature_count": metadata.get("categorical_feature_count"),
             "dropped_columns": metadata.get("dropped_columns") or [],
+            "dataset_cleaning": metadata.get("dataset_cleaning") or result.get("metrics", {}).get("dataset_cleaning") or {},
             "numeric_columns": metadata.get("numeric_columns") or [],
             "categorical_columns": metadata.get("categorical_columns") or [],
             "class_labels": metadata.get("class_labels") or [],

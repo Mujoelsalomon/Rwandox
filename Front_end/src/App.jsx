@@ -71,7 +71,7 @@ export default function App() {
         <Route
           path="/system-administration"
           element={(
-            <ProtectedRoute>
+            <ProtectedRoute adminOnly>
               <AppLayout>
                 <SystemAdministrationContent />
               </AppLayout>

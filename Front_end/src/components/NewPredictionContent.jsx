@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { clearCurrentSession, getSession, isAdminSession } from '../authSession.js'
+import { clearCurrentSession, getSession } from '../authSession.js'
 import { notifyPredictionHistoryUpdated } from '../predictionEvents.js'
 import { API_BASE_URL } from '../config/api.js'
 
@@ -188,14 +188,13 @@ export default function NewPredictionContent() {
   const [existingSearch, setExistingSearch] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [predictionResult, setPredictionResult] = useState(null)
-  const [trainPredictionReport, setTrainPredictionReport] = useState(null)
+  const [datasetPredictionReport, setDatasetPredictionReport] = useState(null)
   const [hasGeneratedPrediction, setHasGeneratedPrediction] = useState(false)
   const [syncingPrediction, setSyncingPrediction] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState('')
   const lastSyncedPayloadRef = useRef('')
-  const canManageModels = isAdminSession(getSession())
 
   function handleExpiredBackendSession() {
     clearCurrentSession()
@@ -212,10 +211,6 @@ export default function NewPredictionContent() {
   function updateField(name, value) {
     setForm((current) => ({ ...current, [name]: value }))
   }
-
-  useEffect(() => {
-    if (!canManageModels && mode === 'dataset') setMode('new')
-  }, [canManageModels, mode])
 
   useEffect(() => {
     if (!hasGeneratedPrediction || mode === 'dataset' || actionLoading === 'prediction') return undefined
@@ -385,7 +380,7 @@ export default function NewPredictionContent() {
     setDatasetName(file?.name || '')
     setTargetColumn('')
     setDatasetColumns([])
-    setTrainPredictionReport(null)
+    setDatasetPredictionReport(null)
 
     if (!file) return
 
@@ -414,7 +409,7 @@ export default function NewPredictionContent() {
         Authorization: `Bearer ${session?.token || ''}`,
         'X-User-Email': session?.email || '',
       }
-      const uploadResp = await fetch(`${API_BASE_URL}/upload-dataset`, {
+      const uploadResp = await fetch(`${API_BASE_URL}/upload-prediction-dataset`, {
         method: 'POST',
         body: fd,
         credentials: 'include',
@@ -435,7 +430,7 @@ export default function NewPredictionContent() {
       }
       setTargetColumn(selectedTargetColumn)
 
-      const trainResp = await fetch(`${API_BASE_URL}/train`, {
+      const predictResp = await fetch(`${API_BASE_URL}/predict-dataset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -445,53 +440,32 @@ export default function NewPredictionContent() {
         body: JSON.stringify({
           dataset_path: uploadData.dataset_path,
           target_column: selectedTargetColumn,
-          model_type: modelType,
         }),
       })
-      const trainData = await trainResp.json()
-      if (!trainResp.ok) {
-        setStatusMessage(trainData.error || 'Could not start model training.')
+      const predictionData = await predictResp.json()
+      if (!predictResp.ok) {
+        setStatusMessage(predictionData.error || 'Could not run dataset prediction.')
         return
       }
 
-      setStatusMessage(`Training ${modelType} with ${datasetName}. Target column: ${selectedTargetColumn}.`)
-      setTrainPredictionReport({
+      const summary = predictionData.summary || {}
+      const firstPrediction = Array.isArray(predictionData.predictions) ? predictionData.predictions[0] : null
+      setStatusMessage(`Prediction complete for ${summary.predicted_rows || 0} rows in ${datasetName}.`)
+      setDatasetPredictionReport({
         datasetName,
         targetColumn: selectedTargetColumn,
-        modelType,
-        trainingStatus: 'Running',
-        activeModel: 'Pending',
-        validationAccuracy: null,
-        predictionStatus: 'Waiting for training to complete',
+        activeModel: summary.active_model || firstPrediction?.active_model,
+        modelType: summary.model_type || firstPrediction?.model_type,
+        trainingMetrics: summary.training_metrics || firstPrediction?.training_metrics || {},
+        predictionStatus: 'Prediction complete',
+        rowCount: summary.total_rows,
+        predictedRows: summary.predicted_rows,
+        highRiskRows: summary.high_risk_rows,
+        moderateRiskRows: summary.moderate_risk_rows,
+        lowRiskRows: summary.low_risk_rows,
+        probability: firstPrediction?.predicted_probability,
+        riskLevel: firstPrediction?.risk_level,
       })
-      const completedJob = await pollTrainingJob(trainData.job_id, authHeaders)
-      if (completedJob.status === 'completed') {
-        setStatusMessage(`Training complete. New active model: ${completedJob.result?.model_name || modelType}. Generate a prediction to use it.`)
-        setTrainPredictionReport({
-          datasetName,
-          targetColumn: selectedTargetColumn,
-          modelType,
-          trainingStatus: 'Completed',
-          activeModel: completedJob.result?.model_name || modelType,
-          validationAccuracy: completedJob.result?.metrics?.val_accuracy,
-          f1Score: completedJob.result?.metrics?.val_f1_score ?? completedJob.result?.metrics?.f1_score,
-          predictionStatus: predictionResult ? 'Prediction generated' : 'Ready for prediction',
-          probability: predictionResult?.predicted_probability ?? predictionResult?.probability,
-          riskLevel: predictionResult?.risk_level,
-        })
-      } else {
-        setStatusMessage(completedJob.error || 'Training did not complete.')
-        setTrainPredictionReport((current) => ({
-          ...(current || {
-            datasetName,
-            targetColumn: selectedTargetColumn,
-            modelType,
-            activeModel: 'Not available',
-          }),
-          trainingStatus: completedJob.status === 'failed' ? 'Failed' : 'Incomplete',
-          predictionStatus: 'Prediction not available',
-        }))
-      }
     } catch (error) {
       console.error(error)
       setStatusMessage('Could not upload and predict from dataset.')
@@ -505,26 +479,26 @@ export default function NewPredictionContent() {
       <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#d7e2ef] bg-white px-5 py-5 md:px-6">
         <div className="card-body p-0 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <p className="text-primary fw-bold text-uppercase small mb-2 text-[13px] font-extrabold tracking-[0.14em]">New Prediction</p>
-            <h1 className="fw-black mb-2 mt-2 text-[30px] font-black leading-tight text-[#071b49] md:text-[38px]">
+            <p className="small-text text-primary fw-bold text-uppercase mb-2 font-extrabold tracking-[0.14em]">New Prediction</p>
+            <h1 className="page-title fw-black mb-2 mt-2 font-black text-[#071b49]">
               Postoperative oxygen prediction form
             </h1>
-            <p className="mb-0 text-secondary mt-2 max-w-[720px] text-[16px] leading-7">
+            <p className="body-text mb-0 text-secondary mt-2 max-w-[720px]">
               Capture screening details and candidate predictors before generating an oxygen requirement risk estimate.
             </p>
           </div>
 
-          <div className={`btn-group flex-wrap grid gap-2 rounded-[14px] bg-[#eef4fb] p-1 ${canManageModels ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`} role="group" aria-label="Prediction mode">
+          <div className="btn-group flex-wrap grid gap-2 rounded-[14px] bg-[#eef4fb] p-1 sm:grid-cols-3" role="group" aria-label="Prediction mode">
             <ModeButton active={mode === 'new'} onClick={() => setMode('new')}>Prediction form</ModeButton>
             <ModeButton active={mode === 'existing'} onClick={() => setMode('existing')}>Existing patient</ModeButton>
-            {canManageModels && <ModeButton active={mode === 'dataset'} onClick={() => setMode('dataset')}>Add dataset</ModeButton>}
+            <ModeButton active={mode === 'dataset'} onClick={() => setMode('dataset')}>Add dataset</ModeButton>
           </div>
         </div>
       </section>
 
       {mode === 'existing' && (
         <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#c7d8eb] bg-white px-5 py-5 md:px-6">
-          <h2 className="fw-bold h4 text-[22px] font-black text-[#071b49]">Search by patient Hospital ID</h2>
+          <h2 className="section-title fw-bold h4 font-black text-[#071b49]">Search by patient Hospital ID</h2>
           <div className="input-group input-group-lg mt-4 flex flex-col gap-3 sm:flex-row">
             <input
               className="form-control min-h-[48px] flex-1 rounded-[10px] border border-[#c7d8eb] bg-white px-4 text-[16px] font-semibold text-[#071b49] outline-none focus:border-[#1768f2]"
@@ -535,7 +509,7 @@ export default function NewPredictionContent() {
             <button
               onClick={loadExistingPatient}
               disabled={loading}
-              className="btn btn-dark fw-bold rounded-[10px] px-6 py-3 text-[15px] font-extrabold text-white disabled:opacity-70"
+              className="btn-text btn btn-dark fw-bold rounded-[10px] px-6 py-3 font-extrabold text-white disabled:opacity-70"
             >
               {loading ? 'Loading...' : 'Load patient'}
             </button>
@@ -547,9 +521,7 @@ export default function NewPredictionContent() {
         <DatasetPanel
           datasetName={datasetName}
           datasetColumns={datasetColumns}
-          modelType={modelType}
           onDatasetFileChange={handleDatasetFile}
-          setModelType={setModelType}
           setTargetColumn={setTargetColumn}
           targetColumn={targetColumn}
           loading={loading}
@@ -572,14 +544,14 @@ export default function NewPredictionContent() {
               <button
                 onClick={() => submitAssessment(false)}
                 disabled={loading}
-                className="btn btn-success fw-bold min-h-[52px] rounded-[10px] px-6 py-3 text-[15px] font-extrabold text-white disabled:opacity-70"
+                className="btn-text btn btn-success fw-bold min-h-[52px] rounded-[10px] px-6 py-3 font-extrabold text-white disabled:opacity-70"
               >
                 {actionLoading === 'draft' ? 'Saving draft...' : 'Save draft'}
               </button>
               <button
                 onClick={() => submitAssessment(true)}
                 disabled={loading}
-                className="btn btn-warning fw-bold min-h-[52px] rounded-[10px] px-7 py-3 text-[15px] font-extrabold text-[#071b49] disabled:opacity-70"
+                className="btn-text btn btn-warning fw-bold min-h-[52px] rounded-[10px] px-7 py-3 font-extrabold text-[#071b49] disabled:opacity-70"
               >
                 {actionLoading === 'prediction' ? 'Generating...' : 'Generate prediction'}
               </button>
@@ -603,8 +575,8 @@ export default function NewPredictionContent() {
         </div>
       )}
 
-      {mode === 'dataset' && trainPredictionReport && (
-        <TrainPredictionReport report={trainPredictionReport} />
+      {mode === 'dataset' && datasetPredictionReport && (
+        <DatasetPredictionReport report={datasetPredictionReport} />
       )}
     </div>
   )
@@ -715,7 +687,7 @@ function ModeButton({ active, children, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`btn rounded-[10px] px-5 py-3 text-[15px] font-extrabold transition ${
+      className={`btn-text btn rounded-[10px] px-5 py-3 font-extrabold transition ${
         active ? 'btn-light active bg-white text-[#071b49] shadow-sm' : 'btn-outline-secondary border-0 text-[#53668a] hover:text-[#071b49]'
       }`}
     >
@@ -731,8 +703,8 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
         <div className="flex items-center gap-4">
           <span className="h-10 w-10 shrink-0 animate-spin rounded-full border-4 border-[#dbeafe] border-t-[#1768f2]" />
           <div>
-            <h2 className="text-[21px] font-black text-[#071b49]">Generating prediction</h2>
-            <p className="mt-1 text-[15px] font-semibold text-[#53668a]">
+            <h2 className="card-title font-black text-[#071b49]">Generating prediction</h2>
+            <p className="small-text mt-1 font-semibold text-[#53668a]">
               Sending the completed clinical form to the prediction service. Please wait.
             </p>
           </div>
@@ -744,8 +716,8 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
   if (error) {
     return (
       <section className="alert alert-danger rounded-4 rounded-[16px] border border-[#fecaca] bg-[#fff5f5] px-5 py-5 md:px-6" role="alert">
-        <h2 className="text-[21px] font-black text-[#991b1b]">Prediction could not be generated</h2>
-        <p className="mt-2 text-[15px] font-semibold leading-6 text-[#7f1d1d]">{error}</p>
+        <h2 className="card-title font-black text-[#991b1b]">Prediction could not be generated</h2>
+        <p className="small-text mt-2 font-semibold text-[#7f1d1d]">{error}</p>
       </section>
     )
   }
@@ -754,7 +726,8 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
 
   const probability = normalizeProbability(prediction.predicted_probability ?? prediction.probability)
   const riskLevel = classifyRisk(probability)
-  const recommendation = clinicalRecommendation(riskLevel)
+  const veryCritical = isVeryCriticalSurgeryPatient(form, riskLevel)
+  const recommendation = clinicalRecommendation(riskLevel, veryCritical)
   const keyPredictors = getKeyPredictors(prediction, form, bmi)
   const tone = riskTone(riskLevel)
 
@@ -762,7 +735,7 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
     <section className={`card border-0 shadow-lg rounded-4 mb-3 rounded-[16px] border-2 ${tone.border} ${tone.bg} px-5 py-5 md:px-6`} aria-live="polite">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
-          <p className={`badge rounded-pill px-4 py-2 text-[12px] font-black uppercase tracking-[0.14em] shadow-sm ${tone.badge}`}>
+          <p className={`risk-badge-text badge rounded-pill px-4 py-2 font-black uppercase tracking-[0.14em] shadow-sm ${tone.badge}`}>
             Prediction Result
           </p>
           {syncing && (
@@ -770,7 +743,7 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
               Updating from backend...
             </p>
           )}
-          <h2 className="mt-3 text-[27px] font-black text-[#06163d]">Postoperative oxygen requirement assessment</h2>
+          <h2 className="section-title mt-3 font-black text-[#06163d]">Postoperative oxygen requirement assessment</h2>
           <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(260px,1fr)]">
             <OutcomeMetric label="Probability of Postoperative Oxygen Requirement" value={`${probability}%`} valueClass={tone.text} />
             <KeyPredictors predictors={keyPredictors} />
@@ -784,9 +757,9 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
         <div className={`w-full rounded-[14px] border-2 ${tone.border} bg-white px-5 py-5 shadow-md xl:max-w-[320px]`}>
           <p className="text-center text-[13px] font-black uppercase tracking-[0.14em] text-[#071b49]">Current prediction</p>
           <div className={`mx-auto mt-3 flex h-36 w-36 items-center justify-center rounded-full border-[12px] ${tone.ring}`}>
-            <span className={`text-[36px] font-black ${tone.text}`}>{probability}%</span>
+            <span className={`prediction-value font-black ${tone.text}`}>{probability}%</span>
           </div>
-          <p className={`mx-auto mt-4 w-fit rounded-full px-4 py-2 text-center text-[16px] font-black uppercase ${tone.badge}`}>{riskLevel}</p>
+          <p className={`risk-badge-text mx-auto mt-4 w-fit rounded-full px-4 py-2 text-center font-black uppercase ${tone.badge}`}>{riskLevel}</p>
           <p className="mt-3 text-center text-[14px] font-bold leading-6 text-[#20365f]">
             Classification uses Low &lt;30%, Moderate 30-69%, High 70% and above.
           </p>
@@ -889,10 +862,8 @@ function DatasetPanel({
   datasetColumns,
   datasetName,
   loading,
-  modelType,
   onDatasetFileChange,
   onUploadAndPredict,
-  setModelType,
   setTargetColumn,
   targetColumn,
 }) {
@@ -900,9 +871,9 @@ function DatasetPanel({
     <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#cfdded] bg-white px-5 py-5 md:px-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-[28px] font-black text-[#071b49]">Upload dataset for prediction</h2>
-          <p className="mt-2 max-w-[650px] text-[16px] leading-7 text-[#53668a]">
-            Upload a patient dataset, choose the target column from its columns, and run prediction with the selected model.
+          <h2 className="section-title font-black text-[#071b49]">Upload dataset for prediction</h2>
+          <p className="body-text mt-2 max-w-[650px] text-[#53668a]">
+            Upload a patient dataset, choose the target column from its columns, and run prediction with the active trained model.
           </p>
         </div>
         <span className="rounded-[10px] bg-[#eaf2ff] px-4 py-2 text-[13px] font-extrabold text-[#1768f2]">
@@ -942,16 +913,10 @@ function DatasetPanel({
             options={datasetColumns}
             placeholder={datasetColumns.length > 0 ? 'Select target column' : 'Upload readable dataset first'}
           />
-          <SimpleSelect
-            label="Model type"
-            value={modelType}
-            onChange={setModelType}
-            options={['xgboost', 'random_forest', 'logistic_regression', 'lightgbm', 'knn', 'svm']}
-          />
           <button
             onClick={onUploadAndPredict}
             disabled={loading || !datasetName}
-            className="btn btn-dark fw-bold w-full rounded-[10px] px-7 py-3 text-[15px] font-extrabold text-white disabled:opacity-70"
+            className="btn-text btn btn-dark fw-bold w-full rounded-[10px] px-7 py-3 font-extrabold text-white disabled:opacity-70"
           >
             {loading ? 'Uploading...' : 'Upload and predict'}
           </button>
@@ -961,9 +926,7 @@ function DatasetPanel({
   )
 }
 
-function TrainPredictionReport({ report }) {
-  const accuracy = formatAccuracy(report.validationAccuracy)
-  const f1Score = formatAccuracy(report.f1Score)
+function DatasetPredictionReport({ report }) {
   const probability = report.probability === undefined || report.probability === null
     ? 'Not generated'
     : `${normalizeProbability(report.probability)}%`
@@ -972,24 +935,28 @@ function TrainPredictionReport({ report }) {
     <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#c7d8eb] bg-white px-5 py-5 md:px-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="text-primary fw-bold text-uppercase small mb-2 text-[12px] font-extrabold tracking-[0.14em]">Train-prediction report</p>
-          <h2 className="text-[24px] font-black text-[#071b49]">Training and prediction summary</h2>
+          <p className="small-text text-primary fw-bold text-uppercase mb-2 font-extrabold tracking-[0.14em]">Dataset prediction report</p>
+          <h2 className="section-title font-black text-[#071b49]">Prediction summary</h2>
         </div>
-        <span className={`rounded-[10px] px-4 py-2 text-[13px] font-extrabold ${report.trainingStatus === 'Completed' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#eaf2ff] text-[#1768f2]'}`}>
-          {report.trainingStatus}
+        <span className="rounded-[10px] bg-[#dcfce7] px-4 py-2 text-[13px] font-extrabold text-[#166534]">
+          {report.predictionStatus}
         </span>
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <ReportMetric label="Dataset" value={report.datasetName || 'Not selected'} />
         <ReportMetric label="Target column" value={report.targetColumn || 'Not selected'} />
-        <ReportMetric label="Model type" value={report.modelType || 'Not selected'} />
-        <ReportMetric label="Validation accuracy" value={accuracy} />
-        <ReportMetric label="F1-score" value={f1Score} />
-        <ReportMetric label="Active model" value={report.activeModel || 'Pending'} />
-        <ReportMetric label="Prediction status" value={report.predictionStatus || 'Ready for prediction'} />
-        <ReportMetric label="Predicted probability" value={probability} />
-        <ReportMetric label="Risk level" value={report.riskLevel || 'Not generated'} />
+        <ReportMetric label="Active trained model" value={report.activeModel || 'No active model'} />
+        <ReportMetric label="Model type" value={report.modelType || 'Not available'} />
+        <ReportMetric label="Training accuracy" value={formatTrainingMetric(report.trainingMetrics?.val_accuracy)} />
+        <ReportMetric label="Training F1-score" value={formatTrainingMetric(report.trainingMetrics?.val_f1_score ?? report.trainingMetrics?.f1_score)} />
+        <ReportMetric label="Rows in dataset" value={report.rowCount ?? 'Not available'} />
+        <ReportMetric label="Predicted rows" value={report.predictedRows ?? 'Not available'} />
+        <ReportMetric label="High risk rows" value={report.highRiskRows ?? 0} />
+        <ReportMetric label="Moderate risk rows" value={report.moderateRiskRows ?? 0} />
+        <ReportMetric label="Low risk rows" value={report.lowRiskRows ?? 0} />
+        <ReportMetric label="First row probability" value={probability} />
+        <ReportMetric label="First row risk level" value={report.riskLevel || 'Not generated'} />
       </div>
     </section>
   )
@@ -1213,19 +1180,6 @@ function buildPredictionPayload(form, bmi) {
   }
 }
 
-async function pollTrainingJob(jobId, headers) {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    await new Promise((resolve) => window.setTimeout(resolve, 1000))
-    const resp = await fetch(`${API_BASE_URL}/train/status/${jobId}`, {
-      credentials: 'include',
-      headers,
-    })
-    const data = await resp.json()
-    if (!resp.ok || ['completed', 'failed'].includes(data.status)) return data
-  }
-  return { status: 'timeout', error: 'Training is still running. Check the model registry shortly.' }
-}
-
 function mapSurgeryType(value) {
   const normalized = String(value || '').toLowerCase()
   if (normalized.includes('ortho')) return 'Orthopedic'
@@ -1274,10 +1228,11 @@ function normalizeProbability(value) {
   return Math.min(100, Math.max(0, Math.round(percentValue)))
 }
 
-function formatAccuracy(value) {
+function formatTrainingMetric(value) {
   const numericValue = Number(value)
-  if (!Number.isFinite(numericValue)) return 'Pending'
-  return `${Math.round(numericValue * 1000) / 10}%`
+  if (!Number.isFinite(numericValue)) return 'Not available'
+  const percentValue = numericValue <= 1 ? numericValue * 100 : numericValue
+  return `${Math.round(percentValue * 10) / 10}%`
 }
 
 function classifyRisk(probability) {
@@ -1286,16 +1241,32 @@ function classifyRisk(probability) {
   return 'High Risk'
 }
 
-function clinicalRecommendation(riskLevel) {
+function clinicalRecommendation(riskLevel, veryCritical = false) {
+  const criticalSupport = 'Because this is a very critical surgical patient, book an ICU or HDU bed when available to support cardiorespiratory monitoring and escalation after surgery.'
+
   if (riskLevel === 'High Risk') {
-    return 'Patient has a high predicted risk of requiring postoperative oxygen. Provide close postoperative monitoring, prepare oxygen support, monitor SpO2 continuously, and consider early senior clinician review or extended recovery observation.'
+    return `Patient has a high predicted risk of requiring postoperative oxygen. Book an ICU or HDU bed for closer monitoring and cardiorespiratory support, provide close postoperative monitoring, prepare oxygen support, monitor SpO2 continuously, and arrange early senior clinician review.`
   }
 
   if (riskLevel === 'Moderate Risk') {
-    return 'Patient has a moderate predicted risk of requiring postoperative oxygen. Monitor SpO2 closely, ensure oxygen equipment is available, and reassess respiratory status frequently during the early postoperative period.'
+    const base = 'Patient has a moderate predicted risk of requiring postoperative oxygen. Monitor SpO2 closely, ensure oxygen equipment is available, and reassess respiratory status frequently during the early postoperative period.'
+    return veryCritical ? `${base} ${criticalSupport}` : base
   }
 
-  return 'Patient has a low predicted risk of requiring postoperative oxygen. Continue routine postoperative monitoring, maintain standard recovery room observation, and reassess if clinical condition changes.'
+  const base = 'Patient has a low predicted risk of requiring postoperative oxygen. Continue routine postoperative monitoring, maintain standard recovery room observation, and reassess if clinical condition changes.'
+  return veryCritical ? `${base} ${criticalSupport}` : base
+}
+
+function isVeryCriticalSurgeryPatient(form, riskLevel) {
+  const asaClass = String(form?.asaClass || '').toUpperCase()
+  const emergency = String(form?.surgeryStatus || '').toLowerCase() === 'emergency'
+  const majorSurgery = String(form?.surgeryMagnitude || '').toLowerCase() === 'major'
+  const anesthesia = String(form?.typeOfAnesthesia || '').toLowerCase()
+  const hasSevereAsa = ['IV', 'V'].includes(asaClass)
+  const hasHighAcuityAsa = ['III', 'IV', 'V'].includes(asaClass)
+  const highRisk = riskLevel === 'High Risk'
+
+  return hasSevereAsa || highRisk || (emergency && hasHighAcuityAsa) || (emergency && majorSurgery && anesthesia.includes('general'))
 }
 
 function riskTone(riskLevel) {

@@ -116,7 +116,11 @@ def _risk_level(probability):
 
 def _dataset_recommendations(risk_level, oxygen_required):
     if risk_level == "High":
-        return ["Immediate oxygen review", "Close postoperative monitoring"]
+        return [
+            "Immediate oxygen review",
+            "Book an ICU or HDU bed for closer postoperative monitoring",
+            "Close postoperative monitoring",
+        ]
     if oxygen_required or risk_level == "Moderate":
         return ["Repeat SpO2 assessment", "Prepare supplemental oxygen if needed"]
     return ["Routine recovery monitoring"]
