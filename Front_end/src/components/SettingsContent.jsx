@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import LanguageSelector from './LanguageSelector.jsx'
 import { logoutFromAllDevices } from '../authSession.js'
 
 const defaultPreferences = {
@@ -54,6 +56,7 @@ function notify(message, type = 'info') {
 }
 
 export default function SettingsContent() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [enabled, setEnabled] = useState(defaultPreferences)
   const [thresholds, setThresholds] = useState(defaultThresholds)
@@ -108,25 +111,28 @@ export default function SettingsContent() {
   return (
     <div className="settings-content-18 container-fluid min-w-0 px-0">
       <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
-        <p className="small-text text-primary fw-bold text-uppercase mb-2 font-black tracking-[0.22em]">Account settings</p>
-        <div className="mt-2">
-          <h1 className="page-title fw-black break-words font-black text-[#071b49]">
-            User account and security
-          </h1>
-          <p className="body-text text-secondary mt-2 max-w-[760px]">
-            View personal information, role access, login security, and account notification preferences.
-          </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="small-text text-primary fw-bold text-uppercase mb-2 font-black tracking-[0.22em]">{t('accountSettings')}</p>
+            <h1 className="page-title fw-black break-words font-black text-[#071b49]">
+              {t('accountSettingsTitle')}
+            </h1>
+            <p className="body-text text-secondary mt-2 max-w-[760px]">
+              {t('accountSettingsIntro')}
+            </p>
+          </div>
+          <LanguageSelector />
         </div>
       </section>
 
       <section className="grid min-w-0 gap-5 xl:grid-cols-2">
-        <AccountPanel title="Personal information">
+        <AccountPanel title={t('personalInformation')}>
           {personalInformation.map((item) => (
             <ReadOnlyField key={item.label} {...item} />
           ))}
         </AccountPanel>
 
-        <AccountPanel title="Role">
+        <AccountPanel title={t('role')}>
           {roleInformation.map((item) => (
             <ReadOnlyField key={item.label} {...item} />
           ))}
@@ -134,13 +140,13 @@ export default function SettingsContent() {
       </section>
 
       <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
-        <AccountPanel title="Login security">
+        <AccountPanel title={t('loginSecurity')}>
           {loginSecurity.map((item) => (
             <SecurityField key={item.label} onAction={handleSecurityAction} {...item} />
           ))}
         </AccountPanel>
 
-        <AccountPanel title="Notification preferences">
+        <AccountPanel title={t('notificationPreferences')}>
           <div className="grid gap-3">
             {notificationItems.map((item) => (
               <button
@@ -163,9 +169,9 @@ export default function SettingsContent() {
       </section>
 
       <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
-        <h2 className="section-title h4 fw-bold font-black text-[#071b49]">Risk thresholds</h2>
+        <h2 className="section-title h4 fw-bold font-black text-[#071b49]">{t('riskThresholds')}</h2>
         <p className="small-text text-secondary mt-1 font-semibold">
-          Adjust probability bands used across prediction views.
+          {t('riskThresholdsIntro')}
         </p>
         <ThresholdGraph selectedRisk={selectedRisk} thresholds={thresholds} />
         <div className="mt-4 grid min-w-0 gap-3 lg:grid-cols-3">
@@ -214,14 +220,14 @@ export default function SettingsContent() {
           onClick={discardChanges}
           className="btn-text btn btn-dark fw-bold min-h-12 w-full rounded-full px-6 py-3 text-center font-extrabold text-white sm:w-auto sm:min-w-[180px]"
         >
-          Discard changes
+          {t('discardChanges')}
         </button>
         <button
           type="button"
           onClick={saveChanges}
           className="btn-text btn btn-success fw-bold min-h-12 w-full rounded-full px-6 py-3 text-center font-extrabold text-white sm:w-auto sm:min-w-[170px]"
         >
-          Save changes
+          {t('saveChanges')}
         </button>
       </div>
     </div>

@@ -1,55 +1,56 @@
-import React, { useEffect, useState } from 'react'
+ import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { API_BASE_URL } from '../config/api.js'
 import { PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents'
 
-function dashboardMetrics(activeModel) {
+function dashboardMetrics(activeModel, t) {
   const modelMetrics = activeModel?.metrics || {}
   const aucValue = formatModelMetric(modelMetrics.val_auc ?? modelMetrics.auc, '0.84')
   const f1Value = formatModelMetric(modelMetrics.val_f1_score ?? modelMetrics.f1_score, '0.81')
 
   return [
   {
-    label: 'Predictions Today',
+    label: t('predictionsToday'),
     value: '24',
-    sub: '4 high-risk cases',
+    sub: t('highRiskCasesCount', { count: 4 }),
     chip: '14%',
     chipTone: 'blue',
     icon: 'trendUp',
     iconTone: 'blue',
   },
   {
-    label: 'Average Risk Score',
+    label: t('averageRiskScore'),
     value: '41%',
-    sub: 'Across all assessed patients',
+    sub: t('acrossAllAssessedPatients'),
     chip: '5%',
     chipTone: 'green',
     icon: 'users',
     iconTone: 'green',
   },
   {
-    label: 'High-Risk Alerts',
+    label: t('highRiskAlerts'),
     value: '6',
-    sub: 'Require close oxygen review',
-    chip: 'Critical',
+    sub: t('requireCloseOxygenReview'),
+    chip: t('critical'),
     chipTone: 'orange',
     icon: 'warning',
     iconTone: 'orange',
   },
   {
-    label: 'Model AUC',
+    label: t('modelAuc'),
     value: aucValue,
-    sub: 'Latest validated version',
-    chip: 'Excellent',
+    sub: t('latestValidatedVersion'),
+    chip: t('excellent'),
     chipTone: 'purple',
     icon: 'shield',
     iconTone: 'purple',
   },
   {
-    label: 'Model F1-score',
+    label: t('modelF1Score'),
     value: f1Value,
-    sub: 'Balance of precision and recall',
-    chip: 'Strong',
+    sub: t('balancePrecisionRecall'),
+    chip: t('strong'),
     chipTone: 'teal',
     icon: 'checkCircle',
     iconTone: 'teal',
@@ -58,10 +59,10 @@ function dashboardMetrics(activeModel) {
 }
 
 const workflowSteps = [
-  { title: 'Patient Assessment', sub: 'Enter patient clinical data', tone: 'blue', icon: 'user' },
-  { title: 'Risk Prediction', sub: 'AI model calculates risk', tone: 'green', icon: 'brain' },
-  { title: 'Review Results', sub: 'Check risk level and alerts', tone: 'orange', icon: 'warning' },
-  { title: 'Clinical Decision', sub: 'Plan oxygen management', tone: 'purple', icon: 'clipboard' },
+  { titleKey: 'patientAssessment', subKey: 'enterPatientClinicalData', tone: 'blue', icon: 'user' },
+  { titleKey: 'riskPrediction', subKey: 'aiModelCalculatesRisk', tone: 'green', icon: 'brain' },
+  { titleKey: 'reviewResults', subKey: 'checkRiskLevelAlerts', tone: 'orange', icon: 'warning' },
+  { titleKey: 'clinicalDecision', subKey: 'planOxygenManagement', tone: 'purple', icon: 'clipboard' },
 ]
 
 const riskRows = [
@@ -80,12 +81,13 @@ export default function DashboardContent({
   probability,
   riskLabel = 'High',
 }) {
+  const { t } = useTranslation()
   const riskScore = Math.round(probability * 100)
-  const metrics = dashboardMetrics(activeModel)
+  const metrics = dashboardMetrics(activeModel, t)
 
   return (
     <div className="container-fluid min-w-0 space-y-4 px-0 pb-4">
-      <HeroCard />
+      <HeroCard t={t} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {metrics.map((metric) => (
@@ -94,11 +96,11 @@ export default function DashboardContent({
       </section>
 
       <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
-        <RiskDistribution />
+        <RiskDistribution t={t} />
         <RiskTrend riskScore={riskScore} />
       </section>
 
-      <WorkflowPanel />
+      <WorkflowPanel t={t} />
 
       <AssessmentPredictionPanel
         factorChips={factorChips}
@@ -112,16 +114,18 @@ export default function DashboardContent({
 }
 
 function HeroCard() {
+  const { t } = useTranslation()
   return (
     <section className="card shadow-sm rounded-4 mb-3 mx-auto max-w-[720px] rounded-[14px] border border-[#bfdbfe] bg-white px-4 py-3 text-center md:px-5 md:py-4">
       <h1 className="page-title fw-black mb-0 font-black text-[#071b49]">
-        Postoperative Oxygen Requirement Prediction
+        {t('dashboardHeroTitle')}
       </h1>
     </section>
   )
 }
 
 function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
+  const { t } = useTranslation()
   return (
     <article className="card shadow-sm rounded-4 min-w-0 rounded-[14px] border border-[#cbd8e8] bg-white px-4 py-4">
       <div className="flex gap-4">
@@ -141,7 +145,7 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
           {chip}
         </span>
         {(chipTone === 'blue' || chipTone === 'green') && (
-          <span className="text-[12px] font-black text-[#334766]">vs yesterday</span>
+          <span className="text-[12px] font-black text-[#334766]">{t('vsYesterday')}</span>
         )}
       </div>
     </article>
@@ -149,14 +153,15 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
 }
 
 function RiskDistribution() {
+  const { t } = useTranslation()
   return (
     <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-5 md:px-6">
-      <h2 className="section-title h4 fw-bold font-black text-[#071b49]">Risk Distribution</h2>
+      <h2 className="section-title h4 fw-bold font-black text-[#071b49]">{t('riskDistribution')}</h2>
       <div className="mt-3 flex flex-col items-center gap-8 md:flex-row md:justify-center">
         <div className="relative flex h-[170px] w-[170px] shrink-0 items-center justify-center rounded-full bg-[conic-gradient(#fb2d2d_0_25%,#ff9f12_25%_67%,#31b966_67%_100%)]">
           <div className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full bg-white shadow-inner">
             <span className="text-[28px] font-black leading-none text-[#071b49]">24</span>
-            <span className="text-[14px] text-[#53668a]">Total</span>
+            <span className="text-[14px] text-[#53668a]">{t('total')}</span>
           </div>
         </div>
 
@@ -164,7 +169,7 @@ function RiskDistribution() {
           {riskRows.map((row) => (
             <div key={row.label} className="grid grid-cols-[16px_1fr_auto] items-center gap-3 text-[16px]">
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
-              <span className="font-semibold text-[#334766]">{row.label}</span>
+              <span className="font-semibold text-[#334766]">{translateRiskLabel(row.label, t)}</span>
               <span className="font-medium text-[#20365f]">{row.value}</span>
             </div>
           ))}
@@ -175,6 +180,7 @@ function RiskDistribution() {
 }
 
 function RiskTrend({ riskScore }) {
+  const { t } = useTranslation()
   const points = [
     [8, 50],
     [22, 36],
@@ -187,7 +193,7 @@ function RiskTrend({ riskScore }) {
 
   return (
     <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-5 md:px-6">
-      <h2 className="section-title h4 fw-bold font-black text-[#071b49]">Risk Trend (Last 7 Days)</h2>
+      <h2 className="section-title h4 fw-bold font-black text-[#071b49]">{t('riskTrendLast7Days')}</h2>
       <div className="relative mt-3 h-[175px]">
         <div className="absolute inset-x-0 top-2 h-px bg-[#dfe7f2]" />
         <div className="absolute inset-x-0 top-[46px] h-px bg-[#dfe7f2]" />
@@ -232,17 +238,18 @@ function RiskTrend({ riskScore }) {
 }
 
 function WorkflowPanel() {
+  const { t } = useTranslation()
   return (
     <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-4 md:px-6">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="section-title font-black text-[#071b49]">System workflow</h2>
-          <p className="small-text font-semibold text-[#334766]">Assess and manage patient risk</p>
+          <h2 className="section-title font-black text-[#071b49]">{t('systemWorkflow')}</h2>
+          <p className="small-text font-semibold text-[#334766]">{t('assessManagePatientRisk')}</p>
         </div>
       </div>
       <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {workflowSteps.map((step, index) => (
-          <React.Fragment key={step.title}>
+          <React.Fragment key={step.titleKey}>
             <WorkflowStep index={index + 1} {...step} />
           </React.Fragment>
         ))}
@@ -251,7 +258,8 @@ function WorkflowPanel() {
   )
 }
 
-function WorkflowStep({ index, title, sub, tone, icon }) {
+function WorkflowStep({ index, titleKey, subKey, tone, icon }) {
+  const { t } = useTranslation()
   return (
     <div className={`card flex min-h-[58px] min-w-0 items-center gap-3 rounded-[10px] border px-3 py-2 ${toneClass(tone, 'panel')}`}>
       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[18px] font-black ${toneClass(tone, 'stepNumber')}`}>
@@ -259,14 +267,15 @@ function WorkflowStep({ index, title, sub, tone, icon }) {
       </div>
       <Icon name={icon} className={`h-6 w-6 shrink-0 ${toneClass(tone, 'text')}`} />
       <div className="min-w-0">
-        <p className="break-words text-[14px] font-extrabold leading-5 text-[#071b49]">{title}</p>
-        <p className="break-words text-[12px] font-semibold leading-4 text-[#334766]">{sub}</p>
+        <p className="break-words text-[14px] font-extrabold leading-5 text-[#071b49]">{t(titleKey)}</p>
+        <p className="break-words text-[12px] font-semibold leading-4 text-[#334766]">{t(subKey)}</p>
       </div>
     </div>
   )
 }
 
 function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskLabel, riskScore }) {
+  const { t } = useTranslation()
   const riskTone = getRiskTone(riskLabel)
 
   return (
@@ -277,19 +286,19 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
         <section className="card shadow rounded-4 rounded-[20px] border border-[#cbd8e8] bg-white px-6 py-6 text-[#071b49]">
           <div className="flex items-start justify-between gap-4">
             <h2 className="section-title max-w-[170px] font-black tracking-wide">
-              Current prediction
+              {t('currentPrediction')}
             </h2>
             <RiskStatusCard risk={riskLabel} />
           </div>
           <p className={`prediction-value mt-7 ${riskTone.text}`}>{riskScore}%</p>
           <p className="body-text mt-5 max-w-[340px] font-extrabold text-[#20365f]">
-            Probability of postoperative oxygen requirement. This patient is likely to require supplemental oxygen during the immediate postoperative period.
+            {t('probabilityExplanation')}
           </p>
         </section>
 
         <section className="card shadow-sm rounded-4 rounded-[20px] border border-[#cbd8e8] bg-white px-5 py-5">
           <h2 className="section-title font-black text-[#071b49]">
-            Key contributing factors
+            {t('keyContributingFactors')}
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {factorChips.map((chip) => (
@@ -308,6 +317,7 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
 }
 
 function RecentPredictionsTable() {
+  const { t } = useTranslation()
   const [predictions, setPredictions] = useState([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
@@ -361,14 +371,14 @@ function RecentPredictionsTable() {
       <div className="flex flex-col gap-2 border-b border-[#cbd8e8] px-5 py-5 md:flex-row md:items-end md:justify-between md:px-6">
         <div>
             <h2 className="section-title font-black text-[#071b49]">
-            Recent predictions
+            {t('recentPredictions')}
           </h2>
           <p className="small-text mt-1 font-semibold text-[#334766]">
-            Latest generated postoperative oxygen risk results.
+            {t('latestGeneratedResults')}
           </p>
         </div>
         <span className="risk-badge-text badge rounded-pill w-fit bg-[#1768f2] px-3 py-2 font-extrabold uppercase tracking-[0.08em] text-white">
-          Latest {showingStart}-{showingEnd} of {predictions.length || 0}
+          {t('latestRange', { start: showingStart, end: showingEnd, total: predictions.length || 0 })}
         </span>
       </div>
 
@@ -382,29 +392,29 @@ function RecentPredictionsTable() {
         <table className="table table-hover align-middle mb-0 min-w-[760px] w-full text-left">
           <thead>
             <tr className="table-header border-b border-[#cbd8e8] bg-[#eaf2ff] font-black uppercase tracking-[0.08em] text-[#071b49]">
-              <th className="px-5 py-3">Generated</th>
-              <th className="px-5 py-3">Patient ID</th>
-              <th className="px-5 py-3">Surgery</th>
-              <th className="px-5 py-3">Disposition</th>
-              <th className="px-5 py-3">Risk</th>
-              <th className="px-5 py-3">Probability</th>
-              <th className="px-5 py-3">Model</th>
+              <th className="px-5 py-3">{t('generated')}</th>
+              <th className="px-5 py-3">{t('patientId')}</th>
+              <th className="px-5 py-3">{t('surgery')}</th>
+              <th className="px-5 py-3">{t('disposition')}</th>
+              <th className="px-5 py-3">{t('risk')}</th>
+              <th className="px-5 py-3">{t('probability')}</th>
+              <th className="px-5 py-3">{t('model')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
                 <td className="px-5 py-5 text-[15px] font-bold text-[#334766]" colSpan="7">
-                  Loading recent predictions...
+                  {t('loadingRecentPredictions')}
                 </td>
               </tr>
             ) : visiblePredictions.length > 0 ? (
               visiblePredictions.map((prediction) => (
                 <tr key={prediction.id || `${prediction.patient_id}-${prediction.generated_at}`} className="border-b border-[#eef3fa] last:border-0">
                   <td className="table-body break-words px-5 py-4 font-semibold text-[#20365f]">{formatDate(prediction.generated_at)}</td>
-                  <td className="table-body break-words px-5 py-4 font-black text-[#071b49]">{prediction.patient_id || 'Not recorded'}</td>
-                  <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.surgery_type || 'Not recorded'}</td>
-                  <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.patient_disposition || 'Not recorded'}</td>
+                  <td className="table-body break-words px-5 py-4 font-black text-[#071b49]">{prediction.patient_id || t('notRecorded')}</td>
+                  <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.surgery_type || t('notRecorded')}</td>
+                  <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.patient_disposition || t('notRecorded')}</td>
                   <td className="min-w-[150px] px-5 py-4"><RiskBadge risk={prediction.risk_level} /></td>
                   <td className="table-body px-5 py-4 font-black text-[#071b49]">{Math.round(Number(prediction.predicted_probability || 0))}%</td>
                   <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.model_version || 'v1.0'}</td>
@@ -413,7 +423,7 @@ function RecentPredictionsTable() {
             ) : (
               <tr>
                 <td className="px-5 py-5 text-[15px] font-bold text-[#334766]" colSpan="7">
-                  No recent predictions found.
+                  {t('noRecentPredictions')}
                 </td>
               </tr>
             )}
@@ -423,7 +433,7 @@ function RecentPredictionsTable() {
 
       <div className="flex flex-col gap-3 border-t border-[#cbd8e8] bg-white px-5 py-4 text-[13px] font-bold text-[#334766] md:flex-row md:items-center md:justify-between md:px-6">
         <span>
-          Showing {showingStart}-{showingEnd} of {predictions.length} latest predictions
+          {t('showingLatestPredictions', { start: showingStart, end: showingEnd, total: predictions.length })}
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -432,10 +442,10 @@ function RecentPredictionsTable() {
             onClick={() => setPage((value) => Math.max(1, value - 1))}
             className="btn-text btn btn-light rounded-[10px] border border-[#cbd8e8] bg-[#f8fbff] px-3 py-2 font-extrabold text-[#071b49] disabled:opacity-50"
           >
-            Previous
+            {t('previous')}
           </button>
           <span className="rounded-[10px] bg-[#eaf2ff] px-3 py-2 text-[13px] font-black text-[#1768f2]">
-            Page {currentPage} / {totalPages}
+            {t('pageCount', { current: currentPage, total: totalPages })}
           </span>
           <button
             type="button"
@@ -443,7 +453,7 @@ function RecentPredictionsTable() {
             onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
             className="btn-text btn btn-light rounded-[10px] border border-[#cbd8e8] bg-[#f8fbff] px-3 py-2 font-extrabold text-[#071b49] disabled:opacity-50"
           >
-            Next
+            {t('next')}
           </button>
         </div>
       </div>
@@ -463,26 +473,28 @@ function sortPredictionsByDate(items) {
 }
 
 function RiskBadge({ risk }) {
+  const { t } = useTranslation()
   const riskTone = getRiskTone(risk)
 
   return (
     <span className={`risk-badge-text inline-flex min-w-[112px] items-center justify-center rounded-full border px-4 py-2 text-center font-black shadow-sm ${riskTone.tableBadge}`}>
-      {riskTone.statusLabel}
+      {translateRiskLabel(riskTone.statusLabel, t)}
     </span>
   )
 }
 
 function RiskStatusCard({ risk }) {
+  const { t } = useTranslation()
   const riskTone = getRiskTone(risk)
 
   return (
     <div className="w-[176px] shrink-0 rounded-[14px] border border-[#dce5f0] bg-white px-4 py-3 text-center shadow-[0_10px_24px_rgba(7,27,73,0.10)]">
-      <p className="small-text font-black uppercase tracking-[0.12em] text-[#17325d]">Risk status</p>
+      <p className="small-text font-black uppercase tracking-[0.12em] text-[#17325d]">{t('riskStatus')}</p>
       <div className={`risk-badge-text mx-auto mt-3 inline-flex min-h-[36px] items-center justify-center gap-2 rounded-full px-4 py-2 font-black text-white shadow-sm ${riskTone.statusPill}`}>
         <WarningIcon className="h-4 w-4 shrink-0" />
-        <span>{riskTone.statusLabel}</span>
+        <span>{translateRiskLabel(riskTone.statusLabel, t)}</span>
       </div>
-      <p className="small-text mt-2 font-extrabold text-[#53668a]">{riskTone.helperText}</p>
+      <p className="small-text mt-2 font-extrabold text-[#53668a]">{t(riskTone.helperKey)}</p>
     </div>
   )
 }
@@ -504,7 +516,7 @@ function getRiskTone(risk) {
     return {
       label: 'High',
       statusLabel: 'High Risk',
-      helperText: 'Urgent attention',
+      helperKey: 'urgentAttention',
       currentBadge: 'bg-[#dc2626] text-white shadow-sm',
       badge: 'border-[#ffd0d0] bg-[#fff1f1] text-[#d92d2d]',
       tableBadge: 'border-[#fecaca] bg-[#dc2626] text-white',
@@ -517,7 +529,7 @@ function getRiskTone(risk) {
     return {
       label: 'Moderate',
       statusLabel: 'Moderate Risk',
-      helperText: 'Close monitoring',
+      helperKey: 'closeMonitoring',
       currentBadge: 'bg-[#f59e0b] text-white shadow-sm',
       badge: 'border-[#fde68a] bg-[#fffbeb] text-[#b45309]',
       tableBadge: 'border-[#fbbf24] bg-[#f59e0b] text-white',
@@ -530,7 +542,7 @@ function getRiskTone(risk) {
     return {
       label: 'Low',
       statusLabel: 'Low Risk',
-      helperText: 'Stable',
+      helperKey: 'stable',
       currentBadge: 'bg-[#16a34a] text-white shadow-sm',
       badge: 'border-[#cdeed9] bg-[#f1fbf5] text-[#168246]',
       tableBadge: 'border-[#bbf7d0] bg-[#16a34a] text-white',
@@ -542,13 +554,21 @@ function getRiskTone(risk) {
   return {
     label: 'Unknown',
     statusLabel: 'Unknown Risk',
-    helperText: 'Needs review',
+    helperKey: 'needsReview',
     currentBadge: 'bg-[#2563eb] text-white shadow-sm',
     badge: 'border-[#d9e2ef] bg-[#f8fbff] text-[#53668a]',
     tableBadge: 'border-[#cbd5e1] bg-[#475569] text-white',
     statusPill: 'bg-gradient-to-r from-[#64748b] to-[#334155]',
     text: 'text-[#2563eb]',
   }
+}
+
+function translateRiskLabel(label, t) {
+  const normalized = String(label || '').toLowerCase()
+  if (normalized.includes('high')) return t('highRisk')
+  if (normalized.includes('moderate') || normalized.includes('medium')) return t('moderateRisk')
+  if (normalized.includes('low')) return t('lowRisk')
+  return t('unknownRisk')
 }
 
 function formatDate(value) {

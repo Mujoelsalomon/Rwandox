@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents.js'
 import { API_BASE_URL } from '../config/api.js'
+import i18n from '../i18n'
 
 const pageSizes = [10, 25, 50, 100]
 
 export default function PredictionHistoryContent() {
+  const { t } = useTranslation()
   const [predictions, setPredictions] = useState([])
   const [search, setSearch] = useState('')
   const [riskFilter, setRiskFilter] = useState('All')
@@ -134,13 +137,13 @@ export default function PredictionHistoryContent() {
           <div className="row g-3 align-items-end">
             <div className="col-12 col-xl">
               <div className="small-text text-primary fw-bold text-uppercase mb-2" style={{ letterSpacing: '0.14em' }}>
-                Prediction History
+                {t('predictionHistory')}
               </div>
               <h1 className="page-title fw-black mb-2" style={{ color: '#071b49', fontWeight: 900 }}>
-                Oxygen risk prediction log
+                {t('predictionHistoryTitle')}
               </h1>
               <p className="body-text mb-0 text-secondary">
-                Review generated predictions, patient disposition, model version, and clinical follow-up notes.
+                {t('predictionHistoryIntro')}
               </p>
             </div>
             <div className="col-12 col-xl-auto position-relative">
@@ -150,7 +153,7 @@ export default function PredictionHistoryContent() {
                 onClick={() => setExportOpen((open) => !open)}
                 aria-expanded={exportOpen}
               >
-                Export history
+                {t('exportHistory')}
               </button>
               {exportOpen && (
                 <div
@@ -162,14 +165,14 @@ export default function PredictionHistoryContent() {
                     type="button"
                     onClick={downloadHistory}
                   >
-                    Download CSV
+                    {t('downloadCsv')}
                   </button>
                   <button
                     className="btn btn-warning rounded-4 fw-bold w-100 py-2"
                     type="button"
                     onClick={shareByEmail}
                   >
-                    Share by email
+                    {t('shareByEmail')}
                   </button>
                 </div>
               )}
@@ -179,32 +182,32 @@ export default function PredictionHistoryContent() {
       </div>
 
       <div className="row g-3 mb-3">
-        <SummaryCard label="Total predictions" value={summary.total} accent="#1265dc" />
-        <SummaryCard label="High-risk cases" value={summary.high} accent="#ef4444" />
-        <SummaryCard label="Average probability" value={`${summary.average}%`} accent="#facc15" />
-        <SummaryCard label="Latest generated" value={summary.latest ? formatDate(summary.latest, true) : 'None'} accent="#22c55e" />
+        <SummaryCard label={t('totalPredictions')} value={summary.total} accent="#1265dc" />
+        <SummaryCard label={t('highRiskCases')} value={summary.high} accent="#ef4444" />
+        <SummaryCard label={t('averageProbability')} value={`${summary.average}%`} accent="#facc15" />
+        <SummaryCard label={t('latestGenerated')} value={summary.latest ? formatDate(summary.latest, true) : t('none')} accent="#22c55e" />
       </div>
 
       <div className="card border-0 shadow-sm rounded-4 mb-3">
         <div className="card-body p-4">
           <div className="row g-3">
             <div className="col-12 col-xl-5">
-              <label className="form-label fw-bold text-secondary">Search</label>
+              <label className="form-label fw-bold text-secondary">{t('search')}</label>
               <input
                 className="form-control form-control-lg rounded-4"
-                placeholder="Search by patient ID, surgery, model"
+                placeholder={t('searchHistoryPlaceholder')}
                 value={search}
                 onChange={(event) => updateFilter(setSearch, event.target.value)}
               />
             </div>
             <div className="col-12 col-md-4 col-xl">
-              <FilterSelect label="Risk" value={riskFilter} onChange={(value) => updateFilter(setRiskFilter, value)} options={['All', 'High', 'Moderate', 'Low']} />
+              <FilterSelect label={t('risk')} value={riskFilter} onChange={(value) => updateFilter(setRiskFilter, value)} options={['All', 'High', 'Moderate', 'Low']} />
             </div>
             <div className="col-12 col-md-4 col-xl">
-              <FilterSelect label="Disposition" value={dispositionFilter} onChange={(value) => updateFilter(setDispositionFilter, value)} options={['All', 'OPD', 'Ward', 'HDU', 'ICU']} />
+              <FilterSelect label={t('disposition')} value={dispositionFilter} onChange={(value) => updateFilter(setDispositionFilter, value)} options={['All', 'OPD', 'Ward', 'HDU', 'ICU']} />
             </div>
             <div className="col-12 col-md-4 col-xl">
-              <FilterSelect label="Table size" value={String(pageSize)} onChange={(value) => {
+              <FilterSelect label={t('tableSize')} value={String(pageSize)} onChange={(value) => {
                 setPageSize(Number(value))
                 setPage(1)
               }} options={pageSizes.map(String)} />
@@ -224,28 +227,28 @@ export default function PredictionHistoryContent() {
           <table className="table table-hover align-middle mb-0">
             <thead className="table-light">
               <tr className="table-header text-uppercase text-secondary">
-                <th className="px-4 py-3">Generated</th>
-                <th className="px-4 py-3">Patient ID</th>
-                <th className="px-4 py-3">Surgery</th>
-                <th className="px-4 py-3">Disposition</th>
-                <th className="px-4 py-3">Risk</th>
-                <th className="px-4 py-3">Probability</th>
-                <th className="px-4 py-3">Model</th>
-                <th className="px-4 py-3">Clinical note</th>
+                <th className="px-4 py-3">{t('generated')}</th>
+                <th className="px-4 py-3">{t('patientId')}</th>
+                <th className="px-4 py-3">{t('surgery')}</th>
+                <th className="px-4 py-3">{t('disposition')}</th>
+                <th className="px-4 py-3">{t('risk')}</th>
+                <th className="px-4 py-3">{t('probability')}</th>
+                <th className="px-4 py-3">{t('model')}</th>
+                <th className="px-4 py-3">{t('clinicalNote')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="px-4 py-4 text-secondary fw-semibold" colSpan="8">Loading prediction history...</td>
+                  <td className="px-4 py-4 text-secondary fw-semibold" colSpan="8">{t('loadingPredictionHistory')}</td>
                 </tr>
               ) : visiblePredictions.length > 0 ? (
                 visiblePredictions.map((prediction) => (
                   <tr key={prediction.id}>
                     <td className="table-body px-4 py-3 fw-semibold text-nowrap">{formatDate(prediction.generated_at)}</td>
                     <td className="table-body px-4 py-3 fw-bold" style={{ color: '#071b49' }}>{prediction.patient_id}</td>
-                    <td className="table-body px-4 py-3">{prediction.surgery_type || 'Not recorded'}</td>
-                    <td className="table-body px-4 py-3">{prediction.patient_disposition || 'Not recorded'}</td>
+                    <td className="table-body px-4 py-3">{prediction.surgery_type || t('notRecorded')}</td>
+                    <td className="table-body px-4 py-3">{prediction.patient_disposition || t('notRecorded')}</td>
                     <td className="table-body px-4 py-3"><RiskBadge risk={prediction.risk_level} /></td>
                     <td className="table-body px-4 py-3 fw-bold" style={{ color: '#071b49' }}>{Math.round(Number(prediction.predicted_probability || 0))}%</td>
                     <td className="table-body px-4 py-3">{prediction.model_version || 'v1.0'}</td>
@@ -256,7 +259,7 @@ export default function PredictionHistoryContent() {
                 ))
               ) : (
                 <tr>
-                  <td className="px-4 py-4 text-secondary fw-semibold" colSpan="8">No prediction history found.</td>
+                  <td className="px-4 py-4 text-secondary fw-semibold" colSpan="8">{t('noPredictionHistory')}</td>
                 </tr>
               )}
             </tbody>
@@ -275,7 +278,7 @@ export default function PredictionHistoryContent() {
                 <ul className="pagination mb-0">
                   <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
                     <button className="page-link rounded-start-pill" onClick={() => setPage((value) => Math.max(1, value - 1))}>
-                      Previous
+                      {t('previous')}
                     </button>
                   </li>
                   <li className="page-item active">
@@ -285,7 +288,7 @@ export default function PredictionHistoryContent() {
                   </li>
                   <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
                     <button className="page-link rounded-end-pill" onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>
-                      Next
+                      {t('next')}
                     </button>
                   </li>
                 </ul>
@@ -324,6 +327,7 @@ function SummaryCard({ label, value, accent }) {
 }
 
 function FilterSelect({ label, value, onChange, options }) {
+  const { t } = useTranslation()
   return (
     <>
       <label className="form-label fw-bold text-secondary">{label}</label>
@@ -333,7 +337,7 @@ function FilterSelect({ label, value, onChange, options }) {
         onChange={(event) => onChange(event.target.value)}
       >
         {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
+          <option key={option} value={option}>{translateFilterOption(option, t)}</option>
         ))}
       </select>
     </>
@@ -341,6 +345,7 @@ function FilterSelect({ label, value, onChange, options }) {
 }
 
 function RiskBadge({ risk }) {
+  const { t } = useTranslation()
   const cls = risk === 'High'
     ? 'text-bg-danger'
     : risk === 'Moderate'
@@ -349,13 +354,14 @@ function RiskBadge({ risk }) {
 
   return (
     <span className={`badge rounded-pill px-3 py-2 ${cls}`}>
-      {risk || 'Unknown'}
+      {translateRiskLabel(risk, t)}
     </span>
   )
 }
 
 function ClinicalNote({ prediction, onOpen }) {
-  const recommendation = firstRecommendation(prediction)
+  const { t } = useTranslation()
+  const recommendation = firstRecommendation(prediction, t)
   const factors = normalizeFactors(prediction.contributing_factors)
 
   return (
@@ -367,12 +373,12 @@ function ClinicalNote({ prediction, onOpen }) {
         style={{ color: '#1265dc', width: 'fit-content' }}
         onClick={onOpen}
       >
-        View key factors and care plan
+        {t('viewKeyFactorsCarePlan')}
         <span aria-hidden="true">&rsaquo;</span>
       </button>
       {factors.length > 0 && (
         <span className="small text-secondary">
-          Key factor: {factors[0].display}
+          {t('keyFactor')}: {factors[0].display}
         </span>
       )}
     </div>
@@ -380,9 +386,10 @@ function ClinicalNote({ prediction, onOpen }) {
 }
 
 function PredictionDetailModal({ prediction, onClose }) {
+  const { t } = useTranslation()
   const probability = Math.round(Number(prediction.predicted_probability || 0))
   const factors = normalizeFactors(prediction.contributing_factors)
-  const carePlan = buildCarePlan(prediction)
+  const carePlan = buildCarePlan(prediction, t)
 
   return (
     <div
@@ -400,16 +407,16 @@ function PredictionDetailModal({ prediction, onClose }) {
           <div className="d-flex flex-column flex-md-row justify-content-between gap-3">
             <div>
               <div className="small-text text-primary fw-bold text-uppercase mb-2" style={{ letterSpacing: '0.12em' }}>
-                Prediction guidance
+                {t('predictionGuidance')}
               </div>
               <h2 id="prediction-detail-title" className="fw-black mb-2" style={{ color: '#071b49', fontWeight: 900 }}>
-                {prediction.patient_id || 'Patient'} postoperative oxygen plan
+                {t('postoperativeOxygenPlan', { patient: prediction.patient_id || 'Patient' })}
               </h2>
               <p className="mb-0 text-secondary fw-semibold">
-                {prediction.risk_level || 'Unknown'} risk, {probability}% probability, {prediction.patient_disposition || 'Ward'} disposition
+                {t('predictionDetailSummary', { risk: translateRiskLabel(prediction.risk_level, t), probability, disposition: prediction.patient_disposition || 'Ward' })}
               </p>
             </div>
-            <button type="button" className="btn btn-light rounded-circle fw-bold align-self-start" onClick={onClose} aria-label="Close details">
+            <button type="button" className="btn btn-light rounded-circle fw-bold align-self-start" onClick={onClose} aria-label={t('closeDetails')}>
               &times;
             </button>
           </div>
@@ -417,30 +424,30 @@ function PredictionDetailModal({ prediction, onClose }) {
           <div className="row g-3 mt-3">
             <div className="col-12 col-lg-5">
               <section className="rounded-4 border bg-white p-4 h-100">
-                <h3 className="card-title fw-black mb-3" style={{ color: '#071b49', fontWeight: 900 }}>Key factors that led to prediction</h3>
+                <h3 className="card-title fw-black mb-3" style={{ color: '#071b49', fontWeight: 900 }}>{t('keyFactorsLedToPrediction')}</h3>
                 {factors.length > 0 ? (
                   <div className="d-flex flex-column gap-2">
                     {factors.map((factor, index) => (
                       <div key={`${factor.feature}-${index}`} className="rounded-4 border bg-light px-3 py-3">
                         <p className="mb-1 fw-bold" style={{ color: '#071b49' }}>{index + 1}. {factor.display}</p>
                         {factor.impact && (
-                          <p className="small-text mb-0 text-secondary">Relative impact: {factor.impact}</p>
+                          <p className="small-text mb-0 text-secondary">{t('relativeImpact')}: {factor.impact}</p>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="mb-0 text-secondary fw-semibold">No key factors were recorded for this prediction.</p>
+                  <p className="mb-0 text-secondary fw-semibold">{t('noKeyFactorsRecorded')}</p>
                 )}
               </section>
             </div>
 
             <div className="col-12 col-lg-7">
               <section className="rounded-4 border bg-white p-4 h-100">
-                <h3 className="card-title fw-black mb-3" style={{ color: '#071b49', fontWeight: 900 }}>Recommendations after surgery</h3>
-                <CarePlanBlock title="Oxygenotherapy" items={carePlan.oxygenotherapy} accent="#1265dc" />
-                <CarePlanBlock title="Monitoring" items={carePlan.monitoring} accent="#16a34a" />
-                <CarePlanBlock title="Disposition" items={carePlan.disposition} accent="#d97706" />
+                <h3 className="card-title fw-black mb-3" style={{ color: '#071b49', fontWeight: 900 }}>{t('recommendationsAfterSurgery')}</h3>
+                <CarePlanBlock title={t('oxygenotherapy')} items={carePlan.oxygenotherapy} accent="#1265dc" />
+                <CarePlanBlock title={t('monitoring')} items={carePlan.monitoring} accent="#16a34a" />
+                <CarePlanBlock title={t('disposition')} items={carePlan.disposition} accent="#d97706" />
               </section>
             </div>
           </div>
@@ -481,14 +488,14 @@ function formatDate(value, compact = false) {
 }
 
 function clinicalNote(prediction) {
-  const recommendation = firstRecommendation(prediction)
+  const recommendation = firstRecommendation(prediction, i18n.t.bind(i18n))
   const factor = normalizeFactors(prediction.contributing_factors)[0]?.display
   if (recommendation && factor) return `${recommendation} - key factor: ${factor}`
   return recommendation || factor || 'No recommendation recorded'
 }
 
-function firstRecommendation(prediction) {
-  return prediction.recommendations?.[0] || recommendationByRisk(prediction.risk_level).monitoring[0]
+function firstRecommendation(prediction, t) {
+  return prediction.recommendations?.[0] || recommendationByRisk(prediction.risk_level, t).monitoring[0]
 }
 
 function normalizeFactors(factors) {
@@ -509,14 +516,14 @@ function normalizeFactors(factors) {
     .filter(Boolean)
 }
 
-function buildCarePlan(prediction) {
+function buildCarePlan(prediction, t) {
   const recommendations = Array.isArray(prediction.recommendations) ? prediction.recommendations.filter(Boolean) : []
-  const fallback = recommendationByRisk(prediction.risk_level)
+  const fallback = recommendationByRisk(prediction.risk_level, t)
   const lowerRecommendations = recommendations.map((item) => String(item).toLowerCase())
   const dispositionItems = lowerRecommendations.some((item) => /icu|hdu|ward|bed|disposition/.test(item))
     ? recommendations.filter((item) => /icu|hdu|ward|bed|disposition/i.test(item))
     : fallback.disposition
-  const criticalDisposition = 'Book ICU or HDU care when available for cardiorespiratory support, close observation, and rapid escalation after surgery.'
+  const criticalDisposition = t('carePlan.criticalDisposition')
 
   return {
     oxygenotherapy: recommendations.filter((item) => /oxygen|supplemental|saturation|spo2/i.test(item)).length
@@ -531,27 +538,43 @@ function buildCarePlan(prediction) {
   }
 }
 
-function recommendationByRisk(riskLevel) {
+function recommendationByRisk(riskLevel, t) {
   const risk = String(riskLevel || '').toLowerCase()
   if (risk.includes('high')) {
     return {
-      oxygenotherapy: ['Prepare supplemental oxygen immediately and titrate to the patient target saturation.'],
-      monitoring: ['Use close PACU or HDU monitoring with frequent SpO2 and respiratory-rate reassessment.'],
-      disposition: ['Book ICU or HDU care for cardiorespiratory support and arrange early senior clinician review.'],
+      oxygenotherapy: [t('carePlan.highOxygen')],
+      monitoring: [t('carePlan.highMonitoring')],
+      disposition: [t('carePlan.highDisposition')],
     }
   }
   if (risk.includes('moderate')) {
     return {
-      oxygenotherapy: ['Keep oxygen equipment ready and start oxygen if SpO2 falls or respiratory work increases.'],
-      monitoring: ['Repeat SpO2 assessment and reassess respiratory status during early recovery.'],
-      disposition: ['Use HDU or enhanced ward observation according to clinical status and local protocol.'],
+      oxygenotherapy: [t('carePlan.moderateOxygen')],
+      monitoring: [t('carePlan.moderateMonitoring')],
+      disposition: [t('carePlan.moderateDisposition')],
     }
   }
   return {
-    oxygenotherapy: ['Oxygen only if clinically indicated by saturation or respiratory status.'],
-    monitoring: ['Continue routine postoperative monitoring and reassess if condition changes.'],
-    disposition: ['Ward disposition is appropriate if recovery observations remain stable.'],
+    oxygenotherapy: [t('carePlan.lowOxygen')],
+    monitoring: [t('carePlan.lowMonitoring')],
+    disposition: [t('carePlan.lowDisposition')],
   }
+}
+
+function translateRiskLabel(label, t) {
+  const normalized = String(label || '').toLowerCase()
+  if (normalized.includes('high')) return t('highRisk')
+  if (normalized.includes('moderate') || normalized.includes('medium')) return t('moderateRisk')
+  if (normalized.includes('low')) return t('lowRisk')
+  return t('unknownRisk')
+}
+
+function translateFilterOption(option, t) {
+  if (option === 'All') return t('all')
+  if (option === 'High') return t('highRisk')
+  if (option === 'Moderate') return t('moderateRisk')
+  if (option === 'Low') return t('lowRisk')
+  return option
 }
 
 function isVeryCriticalPrediction(prediction) {

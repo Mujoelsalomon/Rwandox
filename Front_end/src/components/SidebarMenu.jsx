@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { clearCurrentSession, getSession, isAdminSession, SESSION_EVENT } from '../authSession.js'
 
 const sidebarItems = [
-  { label: 'Dashboard', to: '/dashboard', icon: 'grid' },
-  { label: 'New Prediction', to: '/new-prediction', icon: 'plus' },
-  { label: 'Prediction History', to: '/prediction-history', icon: 'history' },
-  { label: 'Model Training', to: '/train', icon: 'barChart', adminOnly: true },
-  { label: 'System Administration', to: '/system-administration', icon: 'shield', adminOnly: true },
-  { label: 'Settings', to: '/settings', icon: 'settings' },
+  { labelKey: 'dashboard', to: '/dashboard', icon: 'grid' },
+  { labelKey: 'newPrediction', to: '/new-prediction', icon: 'plus' },
+  { labelKey: 'predictionHistory', to: '/prediction-history', icon: 'history' },
+  { labelKey: 'modelTraining', to: '/train', icon: 'barChart', adminOnly: true },
+  { labelKey: 'systemAdministration', to: '/system-administration', icon: 'shield', adminOnly: true },
+  { labelKey: 'settings', to: '/settings', icon: 'settings' },
 ]
 
 export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
+  const { t } = useTranslation()
   const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
   const [session, setSession] = useState(() => getSession())
@@ -45,9 +47,9 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
           {visibleSidebarItems.map((item) => (
             item.to ? (
               <Link
-                key={item.label}
+                key={item.labelKey}
                 to={item.to}
-                title={item.label}
+                title={t(item.labelKey)}
                 onClick={onNavigate}
                 className={`nav-link body-text flex h-12 items-center rounded-[8px] px-3 font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
@@ -58,12 +60,12 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
                 }`}
               >
                 <Icon name={item.icon} className="h-6 w-6 shrink-0 lg:h-7 lg:w-7" />
-                <span className={`truncate ${isOpen ? 'block' : 'lg:hidden'}`}>{item.label}</span>
+                <span className={`truncate ${isOpen ? 'block' : 'lg:hidden'}`}>{t(item.labelKey)}</span>
               </Link>
             ) : (
               <div
-                key={item.label}
-                title={item.label}
+                key={item.labelKey}
+                title={t(item.labelKey)}
                 onClick={onNavigate}
                 className={`body-text flex h-12 min-w-0 cursor-pointer items-center rounded-[8px] px-3 font-semibold transition sm:h-14 lg:h-[60px] lg:px-4 ${
                   isOpen ? 'gap-3 lg:gap-5' : 'justify-center gap-0'
@@ -72,7 +74,7 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
                 }`}
               >
                 <Icon name={item.icon} className="h-6 w-6 shrink-0 lg:h-7 lg:w-7" />
-                <span className={`min-w-0 truncate ${isOpen ? 'block' : 'lg:hidden'}`}>{item.label}</span>
+                <span className={`min-w-0 truncate ${isOpen ? 'block' : 'lg:hidden'}`}>{t(item.labelKey)}</span>
               </div>
             )
           ))}
@@ -102,10 +104,10 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
           {profileOpen && (
             <div className="border-t border-white/10 bg-[#083a85] p-3">
             <Link to="/settings" onClick={onNavigate} className="btn btn-link text-start block py-2 text-sm text-white hover:underline">
-                Account settings
+                {t('accountSettings')}
               </Link>
               <Link to="/profile" onClick={onNavigate} className="btn btn-link text-start block py-2 text-sm text-white hover:underline">
-                View profile
+                {t('viewProfile')}
               </Link>
               <button
                 type="button"
@@ -115,7 +117,7 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
                 }}
                 className="btn btn-primary mt-2 w-full rounded bg-[#155fbf] px-3 py-2 text-left text-sm font-semibold text-white"
               >
-                Sign out
+                {t('signOut')}
               </button>
             </div>
           )}

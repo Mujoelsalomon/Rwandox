@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { clearCurrentSession, getSession, SESSION_EVENT } from '../authSession.js'
+import LanguageSelector from './LanguageSelector.jsx'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false)
@@ -31,7 +34,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
     }
 
     function handleAppNotification(event) {
-      const message = event.detail?.message || 'New notification'
+      const message = event.detail?.message || t('notifications')
       const type = event.detail?.type || 'info'
       setNotifications((items) => [
         {
@@ -56,7 +59,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
       window.removeEventListener('app-notification', handleAppNotification)
       window.removeEventListener(SESSION_EVENT, handleSessionChange)
     }
-  }, [])
+  }, [t])
 
   function handleSessionChange() {
     setSession(getSession())
@@ -91,10 +94,10 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
           </div>
           <div className="min-w-0">
             <span className="card-title block truncate font-extrabold text-[#123000]">
-              Clinical ML
+              {t('clinicalML')}
             </span>
             <span className="card-title block max-w-[320px] truncate font-extrabold text-[#225000] md:max-w-none">
-             Post-op Oxygen Requirement Prediction 
+             {t('appName')}
             </span>
           </div>
         </div>
@@ -102,17 +105,20 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
         <div className="flex min-w-0 shrink-0 items-center gap-3 md:gap-5">
           <button
             type="button"
-            aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-label={isSidebarOpen ? t('collapseSidebar') : t('expandSidebar')}
             aria-expanded={isSidebarOpen}
             onClick={onToggleSidebar}
             className="btn btn-light flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2f6fc] text-[#172a53] transition hover:bg-[#e7eef8]"
           >
             <Icon name="menu" className="h-6 w-6" />
           </button>
+          <div className="hidden lg:block">
+            <LanguageSelector compact />
+          </div>
           <div ref={notificationMenuRef} className="relative">
             <button
               type="button"
-              aria-label="Notifications"
+              aria-label={t('notifications')}
               aria-expanded={notificationMenuOpen}
               aria-haspopup="menu"
               onClick={() => {
@@ -139,19 +145,19 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 className="dropdown-menu show fixed left-2 right-2 top-[96px] max-h-[calc(100vh-112px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-2 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-auto sm:right-24 sm:w-[360px] md:absolute md:left-auto md:right-0 md:top-[58px]"
               >
                 <div className="flex items-center justify-between border-b border-[#edf2f8] px-4 pb-2">
-                  <p className="small-text font-extrabold text-[#14234a]">Notifications</p>
+                  <p className="small-text font-extrabold text-[#14234a]">{t('notifications')}</p>
                   {notifications.length > 0 && (
                     <button
                       type="button"
                       onClick={() => setNotifications([])}
                       className="small-text font-bold text-[#1768f2] hover:text-[#0f4eb2]"
                     >
-                      Clear
+                      {t('clear')}
                     </button>
                   )}
                 </div>
                 {notifications.length === 0 ? (
-                  <p className="small-text px-4 py-5 text-[#526383]">No notifications yet.</p>
+                  <p className="small-text px-4 py-5 text-[#526383]">{t('noNotifications')}</p>
                 ) : (
                   <div className="py-1">
                     {notifications.map((item) => (
@@ -192,9 +198,12 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 role="menu"
                 className="dropdown-menu show fixed left-2 right-2 top-[96px] max-h-[calc(100vh-112px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-1 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-4 sm:right-4 md:absolute md:left-auto md:right-0 md:top-[58px] md:w-[260px]"
               >
-                <MenuAction icon="user" title="View Profile" onClick={handleViewProfile} />
-                <MenuAction icon="settings" title="Account Settings" bordered onClick={handleAccountSettings} />
-                <MenuAction icon="logout" title="Logout" bordered onClick={handleLogout} />
+                <div className="px-4 py-3 lg:hidden">
+                  <LanguageSelector />
+                </div>
+                <MenuAction icon="user" title={t('viewProfile')} onClick={handleViewProfile} />
+                <MenuAction icon="settings" title={t('accountSettings')} bordered onClick={handleAccountSettings} />
+                <MenuAction icon="logout" title={t('logout')} bordered onClick={handleLogout} />
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getSession } from './authSession.js'
 import { API_BASE_URL } from './config/api.js'
 
@@ -26,6 +27,7 @@ function authHeaders(extraHeaders = {}) {
 }
 
 export default function TrainingPortal() {
+  const { t } = useTranslation()
   const [file, setFile] = useState(null)
   const [target, setTarget] = useState('')
   const [modelType, setModelType] = useState('random_forest')
@@ -166,15 +168,15 @@ export default function TrainingPortal() {
       <div className="grid min-w-0 gap-6 xl:grid-cols-[520px_minmax(0,1fr)]">
         <section className="card border-0 shadow-sm rounded-4 min-w-0 rounded-[16px] border border-[#cfe0f2] bg-white p-6">
           <div className="mb-6">
-            <p className="small-text font-extrabold uppercase tracking-[0.14em] text-[#1768f2]">Model Management</p>
-            <h1 className="page-title mt-2 font-black text-[#071b49]">Training Portal</h1>
+            <p className="small-text font-extrabold uppercase tracking-[0.14em] text-[#1768f2]">{t('modelManagement')}</p>
+            <h1 className="page-title mt-2 font-black text-[#071b49]">{t('trainingPortal')}</h1>
             <p className="body-text mt-3 text-[#53668a]">
-              Upload a labeled dataset, train a model, and choose the active model used by new predictions.
+              {t('trainingPortalIntro')}
             </p>
           </div>
 
           <section className="mb-6 min-w-0">
-            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">Dataset file</label>
+            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">{t('datasetFile')}</label>
             <input
               className="form-control body-text min-h-12 max-w-full"
               type="file"
@@ -182,22 +184,22 @@ export default function TrainingPortal() {
               onChange={(e) => setFile(e.target.files[0])}
             />
             <p className="small-text mt-3 text-slate-600">
-              Accepted formats: CSV, TSV, TXT, JSON, JSONL, XLS, and XLSX.
+              {t('acceptedFormats')}
             </p>
           </section>
 
           <section className="mb-6 min-w-0">
-            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">Target column</label>
+            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">{t('targetColumn')}</label>
             <input
               className="form-control body-text min-h-12 w-full min-w-0 rounded-[8px] border border-[#cbd8e8] px-3 py-3"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              placeholder="Optional, defaults to trainer behavior"
+              placeholder={t('optionalTargetPlaceholder')}
             />
           </section>
 
           <section className="mb-6 min-w-0">
-            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">Model type</label>
+            <label className="form-label body-text mb-2 block font-bold text-[#1d2d4f]">{t('modelType')}</label>
             <select value={modelType} onChange={(e) => setModelType(e.target.value)} className="form-select body-text min-h-12 w-full rounded-[8px] border border-[#cbd8e8] px-3 py-3">
               <option value="logistic_regression">Logistic Regression</option>
               <option value="random_forest">Random Forest</option>
@@ -217,10 +219,10 @@ export default function TrainingPortal() {
               disabled={trainingLoading}
               className="btn-text btn btn-dark min-h-14 w-full rounded-[8px] px-6 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
-              {trainingLoading ? 'Training...' : 'Upload and Train'}
+              {trainingLoading ? t('training') : t('uploadAndTrain')}
             </button>
             <button onClick={fetchModels} disabled={trainingLoading} className="btn-text btn btn-outline-secondary min-h-14 w-full rounded-[8px] border px-6 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto">
-              Refresh models
+              {t('refreshModels')}
             </button>
           </div>
 
@@ -246,7 +248,7 @@ export default function TrainingPortal() {
           {status && <TrainingStatusSummary status={status} />}
 
           <section className="mt-6">
-            <h2 className="section-title mb-4 font-black text-[#202938]">Available models</h2>
+            <h2 className="section-title mb-4 font-black text-[#202938]">{t('availableModels')}</h2>
             <ul className="list-group overflow-hidden rounded-[10px] border border-[#d9e5f3]">
               {models.map((model) => (
                 <li key={model.id ?? model.path ?? model.name} className="list-group-item border-0 border-b border-[#edf2f8] px-5 py-4 last:border-b-0">
@@ -260,7 +262,7 @@ export default function TrainingPortal() {
                       </span>
                       {model.is_active && (
                         <span className="badge rounded-pill bg-success rounded-full px-3 py-2 text-xs font-bold text-emerald-700">
-                          Active
+                          {t('active')}
                         </span>
                       )}
                     </div>
@@ -272,14 +274,14 @@ export default function TrainingPortal() {
                             disabled={model.is_active || activatingId === model.id}
                             className="btn-text btn btn-outline-primary btn-sm rounded border px-4 py-2 disabled:opacity-50"
                           >
-                            {model.is_active ? 'Active' : activatingId === model.id ? 'Activating...' : 'Make active'}
+                            {model.is_active ? t('active') : activatingId === model.id ? t('activating') : t('makeActive')}
                           </button>
                           <a className="text-sky-600 underline" href={`${API_BASE_URL}/models/download?id=${encodeURIComponent(model.id)}`}>
-                            Download
+                            {t('download')}
                           </a>
                         </>
                       ) : (
-                        <span className="text-slate-500">Download unavailable</span>
+                        <span className="text-slate-500">{t('downloadUnavailable')}</span>
                       )}
                     </div>
                   </div>
@@ -338,6 +340,7 @@ function TrainingStatusSummary({ status }) {
 }
 
 function TrainingReport({ status, selectedModelType, latestModel, file }) {
+  const { t } = useTranslation()
   const result = status?.result || {}
   const metrics = result.metrics || {}
   const isComplete = status?.status === 'completed'
@@ -365,25 +368,25 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h2 className="page-title font-black text-[#0b63ce]">
-            Training Results Portal
+            {t('trainingResultsPortal')}
           </h2>
           <p className="body-text mt-2 font-semibold text-[#53668a]">
-            Model performance summary after the latest training process
+            {t('modelPerformanceSummary')}
           </p>
           {status?.error && <p className="mt-3 text-[16px] font-bold text-[#b91c1c]">Error: {status.error}</p>}
         </div>
         <span className={`w-fit rounded-full px-5 py-3 text-[14px] font-black uppercase ${
           isComplete ? 'bg-[#dcfce7] text-[#166534]' : status?.status === 'failed' ? 'bg-[#fee2e2] text-[#991b1b]' : 'bg-[#eaf2ff] text-[#1768f2]'
         }`}>
-          {status?.status || 'Waiting'}
+          {status?.status || t('waiting')}
         </span>
       </div>
 
       {!isComplete ? (
         <div className="mt-7 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] px-6 py-10 text-center">
-          <p className="section-title font-black text-[#071b49]">No completed training report yet</p>
+          <p className="section-title font-black text-[#071b49]">{t('noCompletedTrainingReport')}</p>
           <p className="body-text mt-3 font-semibold text-[#53668a]">
-            Upload a dataset and train a model to populate this performance dashboard.
+            {t('uploadTrainPopulate')}
           </p>
         </div>
       ) : (
@@ -438,6 +441,7 @@ function MetricCard({ label, rating, value }) {
 }
 
 function ModelDetails({ details, result }) {
+  const { t } = useTranslation()
   const rows = [
     ['Model Type', formatModelType(details.modelType)],
     ['Training Status', details.status],
@@ -453,7 +457,7 @@ function ModelDetails({ details, result }) {
 
   return (
     <div className="min-w-0 rounded-[12px] border border-[#e5edf7] bg-white p-6 shadow-[0_8px_24px_rgba(15,35,75,0.08)]">
-      <h3 className="section-title font-black text-[#0b63ce]">Model Details</h3>
+      <h3 className="section-title font-black text-[#0b63ce]">{t('modelDetails')}</h3>
       <div className="mt-5 space-y-4">
         {rows.map(([label, value]) => (
           <div key={label} className="table-body grid grid-cols-[150px_minmax(0,1fr)] gap-4">
@@ -522,13 +526,14 @@ function ConfusionMatrix({ metrics }) {
 }
 
 function ClinicalInterpretation({ metrics }) {
+  const { t } = useTranslation()
   const accuracy = formatMetric(metrics.val_accuracy, 'percent')
   const f1 = formatMetric(metrics.val_f1_score ?? metrics.f1_score, 'percent')
   const recall = formatMetric(metrics.val_recall_weighted, 'percent')
 
   return (
     <div className="mt-7 rounded-[12px] border border-[#93c5fd] bg-[#eff6ff] px-6 py-5">
-      <h3 className="section-title font-black text-[#0b63ce]">Clinical Interpretation</h3>
+      <h3 className="section-title font-black text-[#0b63ce]">{t('clinicalInterpretation')}</h3>
       <p className="body-text mt-3 font-semibold text-[#20365f]">
         The model achieved {accuracy} validation accuracy and an F1-score of {f1}. Recall / sensitivity is {recall}, which should be prioritized because missing patients who require postoperative oxygen may affect patient safety. Use the model predictions along with clinical judgment for decision making.
       </p>
@@ -611,7 +616,7 @@ function RenamedColumnsList({ items }) {
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         {values.map((item) => (
           <div key={`${item.from}-${item.to}`} className="small-text rounded-[10px] bg-white px-3 py-2 font-bold text-[#071b49] ring-1 ring-[#d9e5f3]">
-            {item.from || 'Blank column'} -> {item.to}
+            {item.from || 'Blank column'} &gt; {item.to}
           </div>
         ))}
       </div>

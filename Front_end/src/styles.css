@@ -26,11 +26,20 @@ html, body, #root {
   height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   font-family: var(--font-family-main);
   font-size: var(--font-base);
   line-height: var(--line-height-normal);
+  min-width: 320px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
@@ -38,6 +47,33 @@ input,
 select,
 textarea {
   font-family: inherit;
+}
+
+button,
+[role="button"],
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+button,
+select {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh !important;
+  }
 }
 
 .page-title {

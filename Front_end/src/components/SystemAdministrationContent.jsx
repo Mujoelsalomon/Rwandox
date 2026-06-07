@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import LocalAccessQRCode from './LocalAccessQRCode.jsx'
 import { API_BASE_URL, getSession } from '../authSession.js'
 
@@ -16,6 +17,7 @@ function notify(message, type = 'info') {
 }
 
 export default function SystemAdministrationContent() {
+  const { t } = useTranslation()
   const [activeAdminPanel, setActiveAdminPanel] = useState(null)
   const [users, setUsers] = useState(defaultUsers)
   const [editingUserId, setEditingUserId] = useState(null)
@@ -57,44 +59,44 @@ export default function SystemAdministrationContent() {
       <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
         <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="small-text text-primary fw-bold text-uppercase mb-2 font-black tracking-[0.22em]">System administration</p>
+            <p className="small-text text-primary fw-bold text-uppercase mb-2 font-black tracking-[0.22em]">{t('systemAdministration')}</p>
             <h1 className="page-title fw-black mt-2 break-words font-black text-[#071b49]">
-              Administrative controls
+              {t('systemAdministrationTitle')}
             </h1>
             <p className="small-text text-secondary mt-2 max-w-[760px] font-semibold">
-              Manage access, audit visibility, model registry operations, and maintenance settings for the clinical prediction workspace.
+              {t('systemAdministrationIntro')}
             </p>
           </div>
         </div>
 
         <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <AdminAction
-            title="User access"
-            detail="Review roles and account permissions."
+            title={t('userAccess')}
+            detail={t('userAccessDetail')}
             isActive={activeAdminPanel === 'users'}
             onClick={() => openAdminPanel('User access')}
           />
           <AdminAction
-            title="Audit logs"
-            detail="view recent users activitues"
+            title={t('auditLogs')}
+            detail={t('auditLogsDetail')}
             isActive={activeAdminPanel === 'audit'}
             onClick={() => openAdminPanel('Audit logs')}
           />
           <AdminAction
-            title="Model registry"
-            detail="Manage active and archived model artifacts."
+            title={t('modelRegistry')}
+            detail={t('modelRegistryDetail')}
             isActive={activeAdminPanel === 'model'}
             onClick={() => openAdminPanel('Model registry')}
           />
           <AdminAction
-            title="Maintenance"
-            detail="Check API, database, and sync status."
+            title={t('maintenance')}
+            detail={t('maintenanceDetail')}
             isActive={activeAdminPanel === 'maintenance'}
             onClick={() => openAdminPanel('Maintenance')}
           />
           <AdminAction
-            title="QR-code access"
-            detail="Share local network access for testing."
+            title={t('qrCodeAccess')}
+            detail={t('qrCodeAccessDetail')}
             isActive={activeAdminPanel === 'qr'}
             onClick={() => openAdminPanel('QR-code access')}
           />
@@ -126,6 +128,7 @@ export default function SystemAdministrationContent() {
 }
 
   function ModelRegistry() {
+    const { t } = useTranslation()
     const stored = JSON.parse(localStorage.getItem('postop_o2_models') || '[]')
     const models = stored.length
       ? stored
@@ -153,11 +156,11 @@ export default function SystemAdministrationContent() {
       <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="section-title font-black text-[#071b49]">Model registry</h2>
-            <p className="small-text mt-1 font-semibold text-[#64799e]">Manage active and archived model artifacts.</p>
+            <h2 className="section-title font-black text-[#071b49]">{t('modelRegistry')}</h2>
+            <p className="small-text mt-1 font-semibold text-[#64799e]">{t('modelRegistryDetail')}</p>
           </div>
           <div>
-            <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Export CSV</button>
+            <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">{t('exportCsv')}</button>
           </div>
         </div>
 
@@ -166,7 +169,7 @@ export default function SystemAdministrationContent() {
             <thead className="table-header bg-white font-black uppercase tracking-[0.12em] text-[#64799e]">
               <tr>
                 <th className="px-4 py-3">Model ID</th>
-                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">{t('names')}</th>
                 <th className="px-4 py-3">Version</th>
                 <th className="px-4 py-3">Uploaded At</th>
                 <th className="px-4 py-3">Status</th>
@@ -190,6 +193,7 @@ export default function SystemAdministrationContent() {
   }
 
   function Maintenance() {
+    const { t } = useTranslation()
     const [health, setHealth] = useState(null)
     const [loading, setLoading] = useState(false)
     const [actionLoading, setActionLoading] = useState('')
@@ -298,11 +302,11 @@ export default function SystemAdministrationContent() {
       <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="section-title font-black text-[#071b49]">Maintenance</h2>
-            <p className="small-text mt-1 font-semibold text-[#64799e]">Monitor clinical ML services, model readiness, storage, and operational maintenance tasks.</p>
+            <h2 className="section-title font-black text-[#071b49]">{t('maintenance')}</h2>
+            <p className="small-text mt-1 font-semibold text-[#64799e]">{t('maintenanceIntro')}</p>
           </div>
           <button onClick={refreshSystemStatus} disabled={loading} className="btn btn-primary fw-bold rounded px-4 py-2 text-white disabled:opacity-70">
-            {loading ? 'Refreshing...' : 'Refresh System Status'}
+            {loading ? t('refreshing') : t('refreshSystemStatus')}
           </button>
         </div>
 
@@ -313,11 +317,11 @@ export default function SystemAdministrationContent() {
         )}
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <HealthSummaryCard title="API Status" status={api.status} value={api.label || api.status || 'Not checked'} />
-          <HealthSummaryCard title="Database Status" status={database.status} value={database.connection_result || 'Not checked'} />
-          <HealthSummaryCard title="Active Model Status" status={model.status} value={model.model_loaded ? 'Loaded' : model.active_model_name || 'Not loaded'} />
-          <HealthSummaryCard title="Sync Status" status={sync.status} value={sync.label || 'Not checked'} />
-          <HealthSummaryCard title="Storage Status" status={storage.status} value={storage.available_storage_display || 'Not checked'} />
+          <HealthSummaryCard title={t('apiStatus')} status={api.status} value={api.label || api.status || 'Not checked'} />
+          <HealthSummaryCard title={t('databaseStatus')} status={database.status} value={database.connection_result || 'Not checked'} />
+          <HealthSummaryCard title={t('activeModelStatus')} status={model.status} value={model.model_loaded ? 'Loaded' : model.active_model_name || 'Not loaded'} />
+          <HealthSummaryCard title={t('syncStatus')} status={sync.status} value={sync.label || 'Not checked'} />
+          <HealthSummaryCard title={t('storageStatus')} status={storage.status} value={storage.available_storage_display || 'Not checked'} />
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-2">
@@ -390,7 +394,7 @@ export default function SystemAdministrationContent() {
         </div>
 
         <div className="mt-4 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] p-4">
-          <h3 className="card-title font-black text-[#071b49]">Maintenance Actions</h3>
+          <h3 className="card-title font-black text-[#071b49]">{t('maintenanceActions')}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <MaintenanceAction label="Refresh System Status" loading={loading} onClick={refreshSystemStatus} />
             <MaintenanceAction label="Reload Active Model" loading={actionLoading === 'Reload Active Model'} onClick={() => runAction('/api/admin/maintenance/reload-model/', 'Reload Active Model')} />
@@ -417,6 +421,7 @@ function HealthSummaryCard({ title, status, value }) {
 }
 
 function MaintenancePanel({ buttonLabel, loading, onClick, rows, status, title }) {
+  const { t } = useTranslation()
   return (
     <section className="rounded-[14px] border border-[#d9e5f3] bg-white p-4 shadow-sm">
       <div className="flex min-w-0 items-start justify-between gap-3">
@@ -432,16 +437,17 @@ function MaintenancePanel({ buttonLabel, loading, onClick, rows, status, title }
         ))}
       </div>
       <button onClick={onClick} disabled={loading} className="btn-text btn btn-outline-primary mt-4 w-full rounded-[10px] border px-4 py-2 font-extrabold disabled:opacity-70 sm:w-auto">
-        {loading ? 'Working...' : buttonLabel}
+        {loading ? t('working') : buttonLabel}
       </button>
     </section>
   )
 }
 
 function MaintenanceAction({ label, loading, onClick }) {
+  const { t } = useTranslation()
   return (
     <button onClick={onClick} disabled={loading} className="btn-text btn btn-light min-h-[48px] rounded-[10px] border border-[#cfe0f2] bg-white px-4 py-2 font-extrabold text-[#071b49] shadow-sm disabled:opacity-70">
-      {loading ? 'Working...' : label}
+      {loading ? t('working') : label}
     </button>
   )
 }
@@ -485,6 +491,7 @@ function formatMetric(value) {
 }
 
   function AuditLogs() {
+    const { t } = useTranslation()
     const stored = JSON.parse(localStorage.getItem('postop_o2_audit') || '[]')
     const [logs] = useState(stored.length ? stored : [
       { id: 1, name: 'Joel Munyaneza', userId: 'USR-001', time: '2026-05-13T16:30:00Z', action: 'Logged in' },
@@ -512,11 +519,11 @@ function formatMetric(value) {
       <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="section-title font-black text-[#071b49]">Audit logs</h2>
-            <p className="small-text mt-1 font-semibold text-[#64799e]">Recent user activity and system events.</p>
+            <h2 className="section-title font-black text-[#071b49]">{t('auditLogs')}</h2>
+            <p className="small-text mt-1 font-semibold text-[#64799e]">{t('auditLogsDetail')}</p>
           </div>
           <div>
-            <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">Export CSV</button>
+            <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">{t('exportCsv')}</button>
           </div>
         </div>
 
@@ -524,7 +531,7 @@ function formatMetric(value) {
           <table className="table table-hover align-middle mb-0 w-full min-w-[720px] text-left">
             <thead className="table-header bg-white font-black uppercase tracking-[0.12em] text-[#64799e]">
               <tr>
-                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">{t('names')}</th>
                 <th className="px-4 py-3">User ID</th>
                 <th className="px-4 py-3">Time</th>
                 <th className="px-4 py-3">Action</th>
@@ -564,12 +571,13 @@ function AdminAction({ title, detail, isActive = false, onClick }) {
 }
 
 function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
+  const { t } = useTranslation()
   return (
     <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
       <div className="flex min-w-0 flex-col gap-2 border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="section-title font-black text-[#071b49]">User management</h2>
-          <p className="small-text mt-1 font-semibold text-[#64799e]">Manage user roles and account permissions.</p>
+          <h2 className="section-title font-black text-[#071b49]">{t('userManagement')}</h2>
+          <p className="small-text mt-1 font-semibold text-[#64799e]">{t('manageUserRoles')}</p>
         </div>
       </div>
 
@@ -577,11 +585,11 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
         <table className="table table-hover align-middle mb-0 w-full min-w-[760px] text-left">
           <thead className="table-header bg-white font-black uppercase tracking-[0.12em] text-[#64799e]">
             <tr>
-              <th className="px-4 py-3">Names</th>
+              <th className="px-4 py-3">{t('names')}</th>
               <th className="px-4 py-3">User ID</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3 text-right">Edit</th>
+              <th className="px-4 py-3">{t('email')}</th>
+              <th className="px-4 py-3">{t('role')}</th>
+              <th className="px-4 py-3 text-right">{t('edit')}</th>
             </tr>
           </thead>
           <tbody>
@@ -635,7 +643,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
             </div>
 
             <div className="mt-3">
-              <p className="mb-2 text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">Role</p>
+              <p className="mb-2 text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">{t('role')}</p>
               {editingUserId === user.id ? (
                 <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
               ) : (
