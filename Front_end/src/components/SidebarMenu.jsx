@@ -42,8 +42,8 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
           : 'hidden w-full overflow-y-scroll bg-gradient-to-b from-[#06295e] to-[#001b42] p-0 shadow-[0_18px_38px_rgba(4,23,58,0.22)] lg:block lg:h-full lg:w-[var(--sidebar-width)] lg:overflow-y-scroll lg:p-3'
       }`}
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <nav className="grid min-h-0 grid-cols-2 gap-2 pr-1 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-col lg:space-y-2">
+      <div className="flex min-h-full flex-col">
+        <nav className="grid grid-cols-2 gap-2 pr-1 sm:grid-cols-3 lg:flex lg:flex-none lg:flex-col lg:space-y-2">
           {visibleSidebarItems.map((item) => (
             item.to ? (
               <Link

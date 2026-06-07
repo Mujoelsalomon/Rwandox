@@ -278,10 +278,10 @@ function ThresholdGraph({ selectedRisk, thresholds }) {
 
   return (
     <div className="card bg-light rounded-4 mt-5 rounded-[14px] border border-[#d9e5f3] px-4 py-4">
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <RiskLegend isSelected={selectedRisk === 'green'} label={`Low 0-${thresholds.lowMax}%`} tone="green" />
-        <RiskLegend isSelected={selectedRisk === 'amber'} label={`Moderate ${thresholds.lowMax + 1}-${thresholds.highMin - 1}%`} tone="amber" />
-        <RiskLegend isSelected={selectedRisk === 'red'} label={`High ${thresholds.highMin}-100%`} tone="red" />
+      <div className="mb-3 flex min-w-0 items-center gap-0">
+        <RiskLegend isSelected={selectedRisk === 'green'} label={`Low 0-${thresholds.lowMax}%`} tone="green" width={lowWidth} />
+        <RiskLegend isSelected={selectedRisk === 'amber'} label={`Moderate ${thresholds.lowMax + 1}-${thresholds.highMin - 1}%`} tone="amber" width={moderateWidth} />
+        <RiskLegend isSelected={selectedRisk === 'red'} label={`High ${thresholds.highMin}-100%`} tone="red" width={highWidth} />
       </div>
       <div className="flex h-8 min-w-0 overflow-hidden rounded-full border border-white shadow-inner">
         <div className="bg-[#22c55e]" style={{ width: `${lowWidth}%` }} title="Low risk" />
@@ -298,13 +298,15 @@ function ThresholdGraph({ selectedRisk, thresholds }) {
   )
 }
 
-function RiskLegend({ isSelected, label, tone }) {
+function RiskLegend({ isSelected, label, tone, width }) {
   return (
-    <span className={`risk-badge-text badge rounded-pill inline-flex items-center gap-2 px-3 py-2 font-extrabold ${
-      isSelected ? `${riskSoftClass(tone)} ring-2 ring-offset-1 ${riskRingClass(tone)}` : 'bg-white text-[#53668a]'
-    }`}>
-      <span className={`h-3 w-3 rounded-full ${dotClass(tone)}`} />
-      {label}
+    <span className="flex min-w-0 justify-center px-1" style={{ width: `${width}%` }}>
+      <span className={`risk-badge-text inline-flex max-w-full items-center gap-2 rounded-full px-3 py-2 text-center font-extrabold ${
+        isSelected ? `${riskSoftClass(tone)} ring-2 ring-offset-1 ${riskRingClass(tone)}` : 'bg-white text-[#53668a]'
+      }`}>
+        <span className={`h-3 w-3 shrink-0 rounded-full ${dotClass(tone)}`} />
+        <span className="min-w-0 truncate">{label}</span>
+      </span>
     </span>
   )
 }
@@ -393,9 +395,9 @@ function riskBorderClass(tone) {
 }
 
 function riskSoftClass(tone) {
-  if (tone === 'red') return 'bg-[#fff1f2] text-[#b91c1c]'
-  if (tone === 'amber') return 'bg-[#fffbeb] text-[#92400e]'
-  return 'bg-[#f0fdf4] text-[#166534]'
+  if (tone === 'red') return 'bg-[#fff1f2] !text-[#991b1b]'
+  if (tone === 'amber') return 'bg-[#fffbeb] !text-[#7c2d12]'
+  return 'bg-[#f0fdf4] !text-[#14532d]'
 }
 
 function riskRingClass(tone) {
