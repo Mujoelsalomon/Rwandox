@@ -8,7 +8,7 @@ export default function Footer() {
           <span>Developed by Joel Munyaneza</span>
           <span>Email: munyanezajoel11@gmail.com</span>
           <span>Tel: +250782112057</span>
-          <span>Location: Kigali/Gasabo</span>
+          <span>Location: Kigali/Kibagabaga L2TH</span>
         </div>
         <p className="text-[14px] font-bold text-[#365314] sm:text-[16px]">
           ML-powered risk assessment for postoperative oxygen needs

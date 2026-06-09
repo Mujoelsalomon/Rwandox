@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { clearCurrentSession, getSession, isAdminSession, SESSION_EVENT } from '../authSession.js'
+import { getSession, isAdminSession, SESSION_EVENT } from '../authSession.js'
 
 const sidebarItems = [
   { labelKey: 'dashboard', to: '/dashboard', icon: 'grid' },
@@ -15,7 +15,6 @@ const sidebarItems = [
 export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
   const { t } = useTranslation()
   const location = useLocation()
-  const [profileOpen, setProfileOpen] = useState(false)
   const [session, setSession] = useState(() => getSession())
 
   useEffect(() => {
@@ -26,10 +25,6 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
     window.addEventListener(SESSION_EVENT, handleSessionChange)
     return () => window.removeEventListener(SESSION_EVENT, handleSessionChange)
   }, [])
-
-  function toggleProfile() {
-    setProfileOpen((s) => !s)
-  }
 
   const visibleSidebarItems = sidebarItems.filter((item) => !item.adminOnly || isAdminSession(session))
 
@@ -81,46 +76,24 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
         </nav>
 
         <div className={`mt-3 shrink-0 rounded-[8px] border border-white/10 bg-[#0c438c] p-0 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
-          <button
-            type="button"
-            aria-expanded={profileOpen}
-            onClick={toggleProfile}
-            className="w-full p-3 text-left"
+          <Link
+            to="/support"
+            onClick={onNavigate}
+            className="block w-full p-3 text-left text-white no-underline hover:text-white"
           >
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 overflow-hidden rounded-full bg-[#dbe6f5]">
-                <div className="flex h-full w-full items-end justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">
-                  <div className="mb-1 h-8 w-8 rounded-full bg-[#24334f]" />
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">
+                  <Icon name="mail" className="h-7 w-7 text-[#24334f]" />
                 </div>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="card-title truncate font-extrabold text-white">{session?.name || 'Anesthetist'}</p>
-                <p className="small-text truncate font-bold text-[#d7e8ff]">{session?.role || 'Clinician'}</p>
+                <p className="card-title truncate font-extrabold text-white">{t('supportPortal')}</p>
+                <p className="small-text truncate font-bold text-[#d7e8ff]">{t('writeEmailMessage')}</p>
               </div>
-              <Icon name={profileOpen ? 'chevronRight' : 'chevronRight'} className="h-5 w-5" />
+              <Icon name="chevronRight" className="h-5 w-5" />
             </div>
-          </button>
-
-          {profileOpen && (
-            <div className="border-t border-white/10 bg-[#083a85] p-3">
-            <Link to="/settings" onClick={onNavigate} className="btn btn-link text-start block py-2 text-sm text-white hover:underline">
-                {t('accountSettings')}
-              </Link>
-              <Link to="/profile" onClick={onNavigate} className="btn btn-link text-start block py-2 text-sm text-white hover:underline">
-                {t('viewProfile')}
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  clearCurrentSession()
-                  window.location.href = '/login'
-                }}
-                className="btn btn-primary mt-2 w-full rounded bg-[#155fbf] px-3 py-2 text-left text-sm font-semibold text-white"
-              >
-                {t('signOut')}
-              </button>
-            </div>
-          )}
+          </Link>
         </div>
       </div>
     </aside>
@@ -194,6 +167,12 @@ function Icon({ name, className = '' }) {
       </>
     ),
     chevronRight: <path d="m9 18 6-6-6-6" />,
+    mail: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </>
+    ),
   }
 
   return <svg {...common}>{paths[name]}</svg>

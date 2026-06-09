@@ -6,6 +6,7 @@ import NewPredictionContent from './components/NewPredictionContent.jsx'
 import ProfileContent from './components/ProfileContent.jsx'
 import PredictionHistoryContent from './components/PredictionHistoryContent.jsx'
 import SettingsContent from './components/SettingsContent.jsx'
+import SupportPortal from './components/SupportPortal.jsx'
 import SystemAdministrationContent from './components/SystemAdministrationContent.jsx'
 import Login_Form from './components/Login_Form.jsx'
 import Sign_Up_Form from './components/Sign_Up_Form.jsx'
@@ -64,6 +65,16 @@ export default function App() {
             <ProtectedRoute>
               <AppLayout>
                 <SettingsContent />
+              </AppLayout>
+            </ProtectedRoute>
+          )}
+        />
+        <Route
+          path="/support"
+          element={(
+            <ProtectedRoute>
+              <AppLayout>
+                <SupportPortal />
               </AppLayout>
             </ProtectedRoute>
           )}

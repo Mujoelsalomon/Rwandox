@@ -9,6 +9,7 @@ urlpatterns = [
     path('', include('apps.dashboard.urls')),
     path('predictions/', include('apps.predictions.urls')),
     path('patients/', include('apps.patients.urls')),
+    path('api/support/', include('apps.support.urls')),
 ]
 
 if settings.DEBUG:
