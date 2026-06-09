@@ -27,6 +27,7 @@ class SupportTicketSerializer(serializers.ModelSerializer):
             "status",
             "status_display",
             "admin_response",
+            "email_delivery_error",
             "created_at",
             "updated_at",
         ]
@@ -36,6 +37,7 @@ class SupportTicketSerializer(serializers.ModelSerializer):
             "category_display",
             "priority_display",
             "status_display",
+            "email_delivery_error",
             "created_at",
             "updated_at",
         ]

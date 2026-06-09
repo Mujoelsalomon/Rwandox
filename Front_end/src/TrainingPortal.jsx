@@ -34,6 +34,7 @@ export default function TrainingPortal() {
   const [jobId, setJobId] = useState(null)
   const [status, setStatus] = useState(null)
   const [models, setModels] = useState([])
+  const [selectedModelId, setSelectedModelId] = useState(null)
   const [activatingId, setActivatingId] = useState(null)
   const [trainingLoading, setTrainingLoading] = useState(false)
   const [trainingNotice, setTrainingNotice] = useState('')
@@ -104,6 +105,7 @@ export default function TrainingPortal() {
 
       if (job.job_id) {
         setJobId(job.job_id)
+        setSelectedModelId(null)
         setTrainingNotice('Training started. Waiting for completion...')
         pollStatus(job.job_id)
       } else {
@@ -154,7 +156,8 @@ export default function TrainingPortal() {
         notify(data.error || 'Could not activate model', 'error')
         return
       }
-      fetchModels()
+      await fetchModels()
+      notify('Model is now active for new predictions.', 'success')
     } catch (e) {
       console.error(e)
       notify('Could not activate model', 'error')
@@ -162,6 +165,8 @@ export default function TrainingPortal() {
       setActivatingId(null)
     }
   }
+
+  const selectedModel = models.find((model) => String(model.id) === String(selectedModelId))
 
   return (
     <div className="container-fluid min-w-0 px-0">
@@ -270,6 +275,16 @@ export default function TrainingPortal() {
                       {model.id ? (
                         <>
                           <button
+                            onClick={() => setSelectedModelId(model.id)}
+                            className={`btn-text btn btn-sm rounded border px-4 py-2 font-bold ${
+                              String(selectedModelId) === String(model.id)
+                                ? 'border-[#1768f2] bg-[#eaf2ff] text-[#0b63ce]'
+                                : 'border-[#cbd8e8] bg-white text-[#1768f2]'
+                            }`}
+                          >
+                            {t('view')}
+                          </button>
+                          <button
                             onClick={() => activateModel(model.id)}
                             disabled={model.is_active || activatingId === model.id}
                             className="btn-text btn btn-outline-primary btn-sm rounded border px-4 py-2 disabled:opacity-50"
@@ -291,7 +306,15 @@ export default function TrainingPortal() {
           </section>
         </section>
 
-        <TrainingReport status={status} selectedModelType={modelType} latestModel={models.find((model) => model.is_active)} file={file} />
+        {selectedModel ? (
+          <SavedModelReport
+            model={selectedModel}
+            activatingId={activatingId}
+            onActivate={activateModel}
+          />
+        ) : (
+          <TrainingReport status={status} selectedModelType={modelType} latestModel={models.find((model) => model.is_active)} file={file} />
+        )}
       </div>
     </div>
   )
@@ -413,6 +436,88 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
 
           <ClassificationReport report={metrics.classification_report} />
           <ModelParameters parameters={result.model_parameters} />
+        </>
+      )}
+    </section>
+  )
+}
+
+function SavedModelReport({ model, activatingId, onActivate }) {
+  const { t } = useTranslation()
+  const metrics = model.metrics || {}
+  const metricCards = [
+    ['Accuracy', metrics.val_accuracy, 'percent'],
+    ['F1-score', metrics.val_f1_score ?? metrics.f1_score, 'percent'],
+    ['Precision', metrics.val_precision_weighted, 'percent'],
+    ['Sensitivity', metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'],
+    ['Specificity', metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'],
+    ['AUC Score', metrics.val_roc_auc ?? metrics.val_roc_auc_weighted_ovr, 'decimal'],
+  ]
+  const hasMetrics = Object.keys(metrics).length > 0
+  const details = {
+    modelType: model.model_type || 'Not selected',
+    status: hasMetrics ? 'Completed' : 'Saved',
+    activeModel: model.is_active ? 'Yes' : 'No',
+    trainingDate: formatDate(model.created_at),
+    dataset: 'Not available',
+    accuracy: formatMetric(metrics.val_accuracy, 'percent'),
+    sensitivity: formatMetric(metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'),
+    specificity: formatMetric(metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'),
+  }
+
+  return (
+    <section className="card border-0 shadow-sm rounded-4 min-w-0 rounded-[16px] border border-[#d9e5f3] bg-white p-6 md:p-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="small-text font-extrabold uppercase tracking-[0.14em] text-[#1768f2]">{t('selectedModelResults')}</p>
+          <h2 className="page-title mt-2 break-words font-black text-[#0b63ce]">
+            {model.name || model.path || `Model ${model.id}`}
+          </h2>
+          <p className="body-text mt-2 font-semibold text-[#53668a]">
+            {t('selectedModelResultsIntro')}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className={`w-fit rounded-full px-5 py-3 text-[14px] font-black uppercase ${
+            model.is_active ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#eaf2ff] text-[#1768f2]'
+          }`}>
+            {model.is_active ? t('active') : t('available')}
+          </span>
+          {model.id && (
+            <button
+              onClick={() => onActivate(model.id)}
+              disabled={model.is_active || activatingId === model.id}
+              className="btn-text btn btn-primary min-h-12 rounded-[8px] px-5 py-3 font-black disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {model.is_active ? t('active') : activatingId === model.id ? t('activating') : t('makeActive')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {!hasMetrics ? (
+        <div className="mt-7 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] px-6 py-10 text-center">
+          <p className="section-title font-black text-[#071b49]">{t('noSavedModelResults')}</p>
+          <p className="body-text mt-3 font-semibold text-[#53668a]">
+            {t('noSavedModelResultsIntro')}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mt-7 grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
+            {metricCards.map(([label, value, format]) => (
+              <MetricCard key={label} label={label} value={formatMetric(value, format)} rating={metricRating(value)} />
+            ))}
+          </div>
+
+          <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
+            <ModelDetails details={details} result={{}} />
+            <ConfusionMatrix metrics={metrics} />
+          </div>
+
+          <ClinicalInterpretation metrics={metrics} />
+          <DatasetCleaningReport report={metrics.dataset_cleaning} />
+          <ClassificationReport report={metrics.classification_report} />
         </>
       )}
     </section>

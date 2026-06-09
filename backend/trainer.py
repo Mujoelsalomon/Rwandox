@@ -40,13 +40,16 @@ try:
 except Exception:
     lgb = None
 
+MAX_CATEGORICAL_UNIQUE_VALUES = int(os.getenv("TRAINING_MAX_CATEGORICAL_UNIQUE_VALUES", "80"))
+MAX_LOCAL_TRAINING_ROWS = int(os.getenv("TRAINING_MAX_ROWS", "2500"))
+
 
 def read_dataset(dataset_path: str, **kwargs) -> pd.DataFrame:
     """Read a training dataset from a supported tabular file."""
     extension = os.path.splitext(str(dataset_path))[1].lower()
     if extension == ".xlsx":
         try:
-            return pd.read_excel(dataset_path, engine="openpyxl", **kwargs)
+            return drop_fully_empty_rows(pd.read_excel(dataset_path, engine="openpyxl", **kwargs))
         except ImportError as exc:
             raise RuntimeError(
                 "Excel XLSX support is not active in the running backend. Install backend requirements, "
@@ -54,19 +57,25 @@ def read_dataset(dataset_path: str, **kwargs) -> pd.DataFrame:
             ) from exc
     if extension == ".xls":
         try:
-            return pd.read_excel(dataset_path, engine="xlrd", **kwargs)
+            return drop_fully_empty_rows(pd.read_excel(dataset_path, engine="xlrd", **kwargs))
         except ImportError as exc:
             raise RuntimeError(
                 "Excel XLS support is not active in the running backend. Install backend requirements, "
                 "restart the backend server, and upload the dataset again."
             ) from exc
     if extension in {".tsv", ".tab"}:
-        return pd.read_csv(dataset_path, sep="\t", **kwargs)
+        return drop_fully_empty_rows(pd.read_csv(dataset_path, sep="\t", low_memory=False, **kwargs))
     if extension == ".jsonl":
-        return pd.read_json(dataset_path, lines=True, **kwargs)
+        return drop_fully_empty_rows(pd.read_json(dataset_path, lines=True, **kwargs))
     if extension == ".json":
-        return pd.read_json(dataset_path, **kwargs)
-    return pd.read_csv(dataset_path, **kwargs)
+        return drop_fully_empty_rows(pd.read_json(dataset_path, **kwargs))
+    return drop_fully_empty_rows(pd.read_csv(dataset_path, low_memory=False, **kwargs))
+
+
+def drop_fully_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    return df.dropna(how="all")
 
 
 def dataset_columns(dataset_path: str) -> list[str]:
@@ -133,6 +142,14 @@ def clean_training_dataset(df: pd.DataFrame, target_column: str = None) -> tuple
     if target_column not in cleaned.columns:
         raise ValueError(f"target column '{target_column}' not found in dataset")
 
+    missing_target = cleaned[target_column].isna()
+    report["dropped_missing_target_row_count"] = int(missing_target.sum())
+    if report["dropped_missing_target_row_count"]:
+        cleaned = cleaned.loc[~missing_target].copy()
+
+    if cleaned.empty:
+        raise ValueError("dataset has no rows after cleaning missing target values")
+
     object_columns = cleaned.select_dtypes(include=["object", "string"]).columns.tolist()
     for column in object_columns:
         series = cleaned[column]
@@ -156,14 +173,6 @@ def clean_training_dataset(df: pd.DataFrame, target_column: str = None) -> tuple
             continue
         cleaned[column] = converted
         report["numeric_text_columns_converted"].append(str(column))
-
-    missing_target = cleaned[target_column].isna()
-    report["dropped_missing_target_row_count"] = int(missing_target.sum())
-    if report["dropped_missing_target_row_count"]:
-        cleaned = cleaned.loc[~missing_target].copy()
-
-    if cleaned.empty:
-        raise ValueError("dataset has no rows after cleaning missing target values")
 
     report["final_row_count"] = int(len(cleaned))
     report["final_column_count"] = int(len(cleaned.columns))
@@ -247,24 +256,26 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
 
     y = df[target_column]
     X = df.drop(columns=[target_column])
-    id_columns = [
-        column for column in X.columns
-        if column.lower() in {"id", "hospital_id", "patient_id", "patient_coded_id"}
-        or column.lower().endswith("_id")
-    ]
-    leakage_columns = [
-        column for column in X.columns
-        if column.lower() in {
-            "date_of_discharge_or_death",
-            "oxygen_need_probability",
-            "oxygen_duration_hours",
-            "risk_classification",
-            "brief_recommendation",
-        }
-    ]
-    dropped_columns = id_columns + leakage_columns
+    dropped_columns = columns_to_drop_before_training(X)
     if dropped_columns:
         X = X.drop(columns=dropped_columns)
+
+    if MAX_LOCAL_TRAINING_ROWS > 0 and len(X) > MAX_LOCAL_TRAINING_ROWS:
+        sample_state = 42
+        y_series = pd.Series(y)
+        try:
+            sampled_index = (
+                X.assign(__target=y_series)
+                .groupby("__target", group_keys=False)
+                .sample(frac=MAX_LOCAL_TRAINING_ROWS / len(X), random_state=sample_state)
+                .index
+            )
+            if len(sampled_index) < min(MAX_LOCAL_TRAINING_ROWS, len(X) // 2):
+                sampled_index = X.sample(n=MAX_LOCAL_TRAINING_ROWS, random_state=sample_state).index
+        except Exception:
+            sampled_index = X.sample(n=MAX_LOCAL_TRAINING_ROWS, random_state=sample_state).index
+        X = X.loc[sampled_index].copy()
+        y = y_series.loc[sampled_index].copy()
 
     algo = model_type.lower()
     label_encoder = None
@@ -278,6 +289,11 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
     numeric_columns = X.select_dtypes(include=["number"]).columns.tolist() + boolean_columns
     numeric_columns = list(dict.fromkeys(numeric_columns))
     categorical_columns = [column for column in X.columns if column not in numeric_columns]
+    high_cardinality_columns = high_cardinality_categorical_columns(X, categorical_columns)
+    if high_cardinality_columns:
+        X = X.drop(columns=high_cardinality_columns)
+        dropped_columns += high_cardinality_columns
+        categorical_columns = [column for column in categorical_columns if column not in high_cardinality_columns]
 
     preprocessor = ColumnTransformer(
         transformers=[
@@ -303,7 +319,13 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
     model = None
 
     if algo == 'random_forest':
-        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        model = RandomForestClassifier(
+            n_estimators=20,
+            max_depth=8,
+            min_samples_leaf=2,
+            n_jobs=1,
+            random_state=42,
+        )
     elif algo == 'logistic_regression' or algo == 'logistic':
         model = LogisticRegression(max_iter=1000)
     elif algo == 'knn' or algo == 'knearest' or algo == 'k-nearest':
@@ -319,7 +341,7 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
             raise RuntimeError('xgboost is not installed')
         model = xgb.XGBClassifier(
             eval_metric='logloss',
-            n_estimators=80,
+            n_estimators=50,
             max_depth=3,
             learning_rate=0.08,
             subsample=0.9,
@@ -385,6 +407,8 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         "feature_count": int(len(X.columns)),
         "numeric_feature_count": int(len(numeric_columns)),
         "categorical_feature_count": int(len(categorical_columns)),
+        "high_cardinality_limit": MAX_CATEGORICAL_UNIQUE_VALUES,
+        "row_limit": MAX_LOCAL_TRAINING_ROWS or None,
         "model_parameters": json_safe(model.get_params()),
         "dataset_cleaning": dataset_cleaning,
     }
@@ -393,6 +417,54 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         json.dump(metadata, mf)
 
     return {"model_path": model_path, "metrics": metrics, "metadata": metadata}
+
+
+def columns_to_drop_before_training(X: pd.DataFrame) -> list:
+    """Remove identifiers, dates, leakage outputs, and free-text columns that make training slow/noisy."""
+    drop_names = {
+        "id",
+        "hospital_id",
+        "patient_id",
+        "patient_coded_id",
+        "date_of_admission",
+        "date_of_surgery",
+        "date_of_discharge_or_death",
+        "admission_date",
+        "surgery_date",
+        "discharge_date",
+        "death_date",
+        "oxygen_need_probability",
+        "oxygen_duration_hours",
+        "risk_classification",
+        "brief_recommendation",
+        "recommendation",
+        "other_relevant_preoperative_labs",
+        "data_sources_reviewed",
+        "reason_for_exclusion",
+    }
+    dropped = []
+    for column in X.columns:
+        normalized = str(column).strip().lower()
+        if normalized in drop_names or normalized.endswith("_id") or normalized.startswith("date_"):
+            dropped.append(column)
+            continue
+        if "date" in normalized and pd.api.types.is_object_dtype(X[column]):
+            dropped.append(column)
+            continue
+        if pd.api.types.is_object_dtype(X[column]) or pd.api.types.is_string_dtype(X[column]):
+            average_length = X[column].dropna().astype(str).str.len().mean()
+            if average_length and average_length > 40:
+                dropped.append(column)
+    return dropped
+
+
+def high_cardinality_categorical_columns(X: pd.DataFrame, categorical_columns: list) -> list:
+    dropped = []
+    for column in categorical_columns:
+        unique_count = int(X[column].nunique(dropna=True))
+        if unique_count > MAX_CATEGORICAL_UNIQUE_VALUES:
+            dropped.append(column)
+    return dropped
 
 
 def build_training_metrics(pipeline, X_val, y_val, preds, labels) -> dict:

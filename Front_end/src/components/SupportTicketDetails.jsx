@@ -65,6 +65,15 @@ export default function SupportTicketDetails({ isAdmin, loading, onClose, onUpda
             )}
           </section>
 
+          {isAdmin && ticket.email_delivery_error && (
+            <section className="mt-4 rounded-[12px] border border-[#f6b3b8] bg-[#fff1f2] p-4">
+              <h3 className="card-title font-black text-[#7f1d1d]">Email delivery issue</h3>
+              <p className="body-text mt-2 whitespace-pre-wrap font-semibold text-[#7f1d1d]">
+                The ticket was saved, but email delivery failed. Check SMTP settings or reply to the user manually.
+              </p>
+            </section>
+          )}
+
           <section className="mt-4 rounded-[12px] border border-[#d9e5f3] bg-white p-4">
             <h3 className="card-title font-black text-[#071b49]">Admin Response</h3>
             {isAdmin ? (

@@ -57,13 +57,17 @@ export default function SupportPortal() {
         headers: authHeaders(false),
         body,
       })
-      const data = await response.json()
+      const data = await readJsonResponse(response)
       if (!response.ok) throw new Error(formatApiError(data))
       await loadTickets()
-      setMessage(`Support ticket sent successfully to ${SUPPORT_EMAIL}.`)
+      if (data.email_delivery_error) {
+        setMessage('Support ticket saved. Email delivery is not configured yet, so the administrator should review it in the support portal.')
+      } else {
+        setMessage(`Support ticket sent successfully to ${SUPPORT_EMAIL}.`)
+      }
       return true
     } catch (error) {
-      setError(error.message || 'Could not send the support ticket email.')
+      setError(supportRequestErrorMessage(error))
       return false
     } finally {
       setSubmitting(false)
@@ -83,13 +87,13 @@ export default function SupportPortal() {
         headers: authHeaders(false),
         body,
       })
-      const data = await response.json()
+      const data = await readJsonResponse(response)
       if (!response.ok) throw new Error(formatApiError(data))
       setSelectedTicket(data)
       setMessage('Support ticket updated successfully.')
       await loadTickets()
     } catch (error) {
-      setError(error.message || 'Could not update support ticket.')
+      setError(supportRequestErrorMessage(error, 'Could not update support ticket.'))
     } finally {
       setSaving(false)
     }
@@ -130,6 +134,24 @@ export default function SupportPortal() {
   )
 }
 
+async function readJsonResponse(response) {
+  try {
+    return await response.json()
+  } catch {
+    return {}
+  }
+}
+
+function supportRequestErrorMessage(error, fallback = 'Could not send the support ticket email.') {
+  if (isSmtpConfigurationError(error?.message)) {
+    return 'Support request was received, but the support email account needs SMTP setup. The administrator can review the ticket in the support portal.'
+  }
+  if (error?.message && error.message !== 'Failed to fetch') {
+    return error.message
+  }
+  return `${fallback} Please confirm the backend server is running and try again.`
+}
+
 function authHeaders(includeJson = true) {
   const session = getSession()
   return {
@@ -142,8 +164,15 @@ function authHeaders(includeJson = true) {
 
 function formatApiError(data) {
   if (!data || typeof data !== 'object') return 'Request failed.'
-  if (data.detail || data.error) return data.detail || data.error
-  return Object.entries(data)
+  const message = data.detail || data.error || Object.entries(data)
     .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
     .join(' ')
+  if (isSmtpConfigurationError(message)) {
+    return 'Support email account needs SMTP setup. The ticket was not emailed automatically.'
+  }
+  return message
+}
+
+function isSmtpConfigurationError(message) {
+  return /smtp|gmail|5\.7\.0|authentication required|application-specific password|support\.google\.com/i.test(String(message || ''))
 }

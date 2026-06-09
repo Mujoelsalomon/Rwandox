@@ -189,7 +189,7 @@ def run_training(job_id, dataset_path, model_type, target_column):
             model_type=model_type,
         )
         model_path = Path(result["model_path"])
-        model_name = model_path.name
+        model_name = "A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda"
 
         ModelArtifact.objects.update(is_active=False)
         artifact = ModelArtifact.objects.create(

@@ -5,7 +5,7 @@ from django.core.mail import EmailMessage
 def send_support_ticket_email(ticket):
     subject = f"[Support Ticket #{ticket.id}] {ticket.subject}"
     body = "\n".join([
-        "A new support ticket was submitted from the Post-op Oxygen Requirement Prediction system.",
+        "A new support ticket was submitted from A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda.",
         "",
         f"Ticket ID: {ticket.id}",
         f"Full Name: {ticket.full_name}",

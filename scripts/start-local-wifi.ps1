@@ -94,19 +94,17 @@ if ($StartServers) {
         "`$env:LOCAL_PC_IP='$LocalIp'; `$env:LOCAL_WIFI_IP='$LocalIp'; Set-Location '$BackendDir'; ..\.venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000 *> '$BackendLog'"
     ) -WindowStyle Hidden
 
-    Start-Process -FilePath "npm.cmd" -ArgumentList @(
-        "run",
-        "preview",
-        "--",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "5173",
-        "--strictPort"
-    ) -WorkingDirectory $FrontendDir -WindowStyle Hidden
+    $FrontendLog = Join-Path $FrontendDir "vite_local_wifi.log"
+    Start-Process -FilePath "powershell.exe" -ArgumentList @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-Command",
+        "`$env:VITE_API_URL='auto'; `$env:VITE_LOCAL_IP='$LocalIp'; `$env:VITE_LOCAL_FRONTEND_URL='http://$LocalIp`:5173'; Set-Location '$FrontendDir'; npm run build; npm run preview *> '$FrontendLog'"
+    ) -WindowStyle Hidden
 
     Write-Host "Started backend and frontend servers in the background."
     Write-Host "Backend log:  $BackendLog"
+    Write-Host "Frontend log: $FrontendLog"
     Write-Host ""
 } else {
     Write-Host "Open two terminals and run:"
@@ -120,7 +118,7 @@ if ($StartServers) {
     Write-Host "Terminal 2 - Frontend"
     Write-Host "cd `"$FrontendDir`""
     Write-Host "npm run build"
-    Write-Host "npm run preview -- --host 0.0.0.0 --port 5173 --strictPort"
+    Write-Host "npm run preview"
     Write-Host ""
     Write-Host "Or run this script with -StartServers to start both automatically."
 }

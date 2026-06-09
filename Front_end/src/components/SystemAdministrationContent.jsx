@@ -133,8 +133,8 @@ export default function SystemAdministrationContent() {
     const models = stored.length
       ? stored
       : [
-          { id: 'M-001', name: 'postop-o2-v1', version: '1.0.0', uploadedAt: '2026-05-12T10:00:00Z', status: 'active' },
-          { id: 'M-002', name: 'postop-o2-v2', version: '2.0.0', uploadedAt: '2026-05-13T09:12:00Z', status: 'archived' },
+          { id: 'M-001', name: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda', version: '1.0.0', uploadedAt: '2026-05-12T10:00:00Z', status: 'active' },
+          { id: 'M-002', name: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda', version: '2.0.0', uploadedAt: '2026-05-13T09:12:00Z', status: 'archived' },
         ]
 
     function exportCsv() {

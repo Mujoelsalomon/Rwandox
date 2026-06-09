@@ -28,7 +28,7 @@ def fhir_capability_statement_view(request):
         "fhirVersion": FHIR_VERSION,
         "format": ["json"],
         "software": {
-            "name": "Post-op Oxygen Requirement Prediction",
+            "name": "A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda",
             "version": "1.0",
         },
         "implementation": {

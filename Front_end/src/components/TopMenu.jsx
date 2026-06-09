@@ -88,15 +88,16 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-white/70 md:h-14 md:w-14">
             <img
               src={postopO2Logo}
-              alt="PostOp O2 AI"
+              alt="A Machine Learning Model 
+              for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda"
               className="h-full w-full object-cover"
             />
           </div>
           <div className="min-w-0">
-            <span className="card-title block truncate font-extrabold text-[#123000]">
+            <span className="small-text block font-extrabold uppercase tracking-[0.08em] text-[#123000]">
               {t('clinicalML')}
             </span>
-            <span className="card-title block max-w-[320px] truncate font-extrabold text-[#225000] md:max-w-none">
+            <span className="block max-w-[min(62vw,820px)] text-[13px] font-extrabold leading-tight text-[#225000] sm:text-[14px] lg:text-[16px]">
              {t('appName')}
             </span>
           </div>

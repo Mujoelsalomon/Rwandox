@@ -61,6 +61,7 @@ class SupportTicket(models.Model):
     attachment = models.FileField(upload_to="support_attachments/", blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
     admin_response = models.TextField(blank=True)
+    email_delivery_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

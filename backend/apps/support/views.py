@@ -1,5 +1,4 @@
 from rest_framework import viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
@@ -28,14 +27,8 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
         try:
             send_support_ticket_email(ticket)
         except Exception as exc:
-            ticket.delete()
-            raise ValidationError({
-                "email": (
-                    "Support email could not be sent. Configure SMTP email settings "
-                    "and try again."
-                ),
-                "detail": str(exc),
-            })
+            ticket.email_delivery_error = str(exc)
+            ticket.save(update_fields=["email_delivery_error", "updated_at"])
 
     def partial_update(self, request, *args, **kwargs):
         if not (request.user.is_staff or request.user.is_superuser):

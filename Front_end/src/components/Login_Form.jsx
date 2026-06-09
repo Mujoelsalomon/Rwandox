@@ -116,11 +116,8 @@ export default function Login_Form() {
           <div className="text-center">
             <img src={postopO2Logo} alt="PostOp O2 AI logo" className="mx-auto h-20 w-20 object-contain sm:h-24 sm:w-24 lg:h-28 lg:w-28" />
             <h1 className="card-title fw-black mx-auto mt-2 max-w-[560px] text-[22px] font-black leading-tight text-[#071b49] sm:text-[29px] lg:text-[31px]">
-              Clinical ML Post-op Oxygen Requirement Prediction
+              A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda
             </h1>
-            <p className="mt-2 text-[14px] font-semibold text-[#64799e] sm:text-[16px]">
-              Secure access for authorized users
-            </p>
           </div>
 
           <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4">

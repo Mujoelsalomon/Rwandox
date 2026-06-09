@@ -19,7 +19,7 @@ def cors(resp):
     resp["Access-Control-Allow-Origin"] = origin
     resp["Access-Control-Allow-Credentials"] = "true"
     resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    resp["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-User-Email, X-CSRFToken"
+    resp["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-User-Email, X-User-Username, X-CSRFToken"
     return resp
 
 

@@ -287,7 +287,7 @@ def model_status_payload(force_load=False):
             loaded = model is not None
             if not active:
                 active = ModelArtifact(
-                    name=metadata.get("_model_name") or "Default model",
+                    name=metadata.get("_model_name") or "A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda",
                     path=metadata.get("_model_path") or "",
                     model_type=metadata.get("_model_type") or metadata.get("algorithm") or "generic",
                     metrics=metadata.get("_training_metrics") or {},

@@ -29,7 +29,7 @@ def load_model_assets():
     if metadata.get("columns"):
         feature_order = metadata["columns"]
 
-    metadata["_model_name"] = active_artifact.name if active_artifact else model_path.name
+    metadata["_model_name"] = active_artifact.name if active_artifact else "A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda"
     metadata["_model_path"] = str(model_path)
     metadata["_model_type"] = metadata.get("algorithm") or (active_artifact.model_type if active_artifact else "generic")
     metadata["_training_metrics"] = active_artifact.metrics if active_artifact else None

@@ -40,7 +40,7 @@ const personalInformation = [
 const roleInformation = [
   { label: 'Current role', value: 'Clinician' },
   { label: 'Access level', value: 'Prediction entry and clinical review' },
-  { label: 'Workspace', value: 'Post-op Oxygen Requirement Prediction' },
+  { label: 'Workspace', value: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda' },
 ]
 
 const loginSecurity = [
