@@ -6,7 +6,6 @@ export default function Footer() {
       <div className="container-fluid flex min-h-10 flex-col items-center justify-between gap-2 text-center xl:flex-row xl:text-left">
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[13px] font-extrabold text-[#1f3b08] sm:text-[14px] xl:justify-start">
           <span>Developed by Joel Munyaneza</span>
-          <span>Email: munyanezajoel11@gmail.com</span>
           <span>Tel: +250782112057</span>
           <span>Location: Kigali/Kibagabaga L2TH</span>
         </div>

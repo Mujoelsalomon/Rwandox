@@ -91,42 +91,14 @@ export default function PredictionHistoryContent() {
     setPage(1)
   }
 
-  function downloadHistory() {
-    const rows = filteredPredictions.map((prediction) => ({
-      generated: formatDate(prediction.generated_at),
-      patient_id: prediction.patient_id || '',
-      age: prediction.age || '',
-      sex: prediction.sex || '',
-      surgery_type: prediction.surgery_type || '',
-      patient_disposition: prediction.patient_disposition || '',
-      risk_level: prediction.risk_level || '',
-      probability: `${Math.round(Number(prediction.predicted_probability || 0))}%`,
-      model_version: prediction.model_version || '',
-      clinical_note: clinicalNote(prediction),
-    }))
-
-    const csv = toCsv(rows)
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `prediction-history-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-    setExportOpen(false)
-  }
-
-  function shareByEmail() {
-    const subject = 'Postoperative oxygen prediction history'
-    const body = [
-      `Prediction history export`,
-      `Total records: ${filteredPredictions.length}`,
-      `High-risk cases: ${filteredPredictions.filter((prediction) => prediction.risk_level === 'High').length}`,
-      '',
-      'Open the system to review or download the full filtered history.',
-    ].join('\n')
-
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  function downloadHistory(format) {
+    const params = new URLSearchParams({
+      format: format === 'csv' ? 'csv' : 'pdf',
+      search: search.trim(),
+      risk: riskFilter,
+      disposition: dispositionFilter,
+    })
+    window.location.href = `${API_BASE_URL}/prediction-history/report?${params.toString()}`
     setExportOpen(false)
   }
 
@@ -163,16 +135,16 @@ export default function PredictionHistoryContent() {
                   <button
                     className="btn btn-success rounded-4 fw-bold w-100 mb-2 py-2"
                     type="button"
-                    onClick={downloadHistory}
+                    onClick={() => downloadHistory('pdf')}
                   >
-                    {t('downloadCsv')}
+                    Download PDF report
                   </button>
                   <button
                     className="btn btn-warning rounded-4 fw-bold w-100 py-2"
                     type="button"
-                    onClick={shareByEmail}
+                    onClick={() => downloadHistory('csv')}
                   >
-                    {t('shareByEmail')}
+                    Download CSV file
                   </button>
                 </div>
               )}
@@ -590,14 +562,256 @@ function isVeryCriticalPrediction(prediction) {
     || factors.some((factor) => factor.includes('emergency') && factor.includes('asa iii'))
 }
 
-function toCsv(rows) {
-  if (!rows.length) return 'generated,patient_id,age,sex,surgery_type,patient_disposition,risk_level,probability,model_version,clinical_note\n'
-  const headers = Object.keys(rows[0])
-  const lines = rows.map((row) => headers.map((header) => csvCell(row[header])).join(','))
-  return `${headers.join(',')}\n${lines.join('\n')}\n`
+function buildPredictionHistoryReport({ filters, generatedAt, logoDataUrl, predictions, summary, title }) {
+  const rows = predictions.map((prediction) => ({
+    generated: formatDate(prediction.generated_at),
+    patientId: prediction.patient_id || 'Not recorded',
+    age: prediction.age || 'Not recorded',
+    sex: prediction.sex || 'Not recorded',
+    surgery: prediction.surgery_type || 'Not recorded',
+    disposition: prediction.patient_disposition || 'Not recorded',
+    risk: prediction.risk_level || 'Unknown',
+    probability: `${Math.round(Number(prediction.predicted_probability || 0))}%`,
+    model: prediction.model_version || 'v1.0',
+    clinicalNote: clinicalNote(prediction),
+  }))
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)} - Prediction History Report</title>
+  <style>
+    @page { margin: 18mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #071b49;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+      background: #ffffff;
+    }
+    .report {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      border-bottom: 4px solid #84cc16;
+      padding-bottom: 18px;
+    }
+    .logo {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      border: 1px solid #d9e5f3;
+      border-radius: 12px;
+      padding: 6px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+    .subtitle {
+      margin: 8px 0 0;
+      color: #53668a;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .meta, .filters, .summary {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .meta, .filters {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .summary {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .tile {
+      border: 1px solid #d9e5f3;
+      border-radius: 10px;
+      padding: 12px;
+      background: #f8fbff;
+    }
+    .label {
+      color: #64799e;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .value {
+      margin-top: 4px;
+      color: #071b49;
+      font-size: 18px;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+      font-size: 12px;
+    }
+    th {
+      background: #eef5ff;
+      color: #263957;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-align: left;
+      text-transform: uppercase;
+    }
+    th, td {
+      border: 1px solid #d9e5f3;
+      padding: 9px;
+      vertical-align: top;
+    }
+    .risk-high { color: #b91c1c; font-weight: 900; }
+    .risk-moderate { color: #a16207; font-weight: 900; }
+    .risk-low { color: #166534; font-weight: 900; }
+    .empty {
+      margin-top: 24px;
+      border: 1px dashed #cbd8e8;
+      border-radius: 10px;
+      padding: 18px;
+      color: #53668a;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 28px;
+      color: #64799e;
+      font-size: 11px;
+      text-align: center;
+    }
+    @media print {
+      .report { padding: 0; }
+      .tile { break-inside: avoid; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="report">
+    <header class="header">
+      ${logoDataUrl ? `<img class="logo" src="${escapeAttribute(logoDataUrl)}" alt="System logo" />` : ''}
+      <div>
+        <h1>${escapeHtml(title)}</h1>
+        <p class="subtitle">Prediction History Full Report</p>
+      </div>
+    </header>
+
+    <section class="meta">
+      ${reportTile('Generated On', generatedAt.toLocaleString())}
+      ${reportTile('Report Scope', 'Filtered prediction history')}
+      ${reportTile('Rows Included', summary.filteredTotal)}
+    </section>
+
+    <section class="summary">
+      ${reportTile('Total Predictions', summary.total)}
+      ${reportTile('Filtered Predictions', summary.filteredTotal)}
+      ${reportTile('High-Risk Cases', summary.filteredHigh)}
+      ${reportTile('Average Probability', `${summary.average}%`)}
+    </section>
+
+    <section class="filters">
+      ${reportTile('Search Filter', filters.search)}
+      ${reportTile('Risk Filter', filters.risk)}
+      ${reportTile('Disposition Filter', filters.disposition)}
+    </section>
+
+    ${rows.length ? predictionRowsTable(rows) : '<div class="empty">No prediction history matched the selected filters.</div>'}
+
+    <p class="footer">Generated by the postoperative oxygen requirement prediction system.</p>
+  </main>
+</body>
+</html>`
 }
 
-function csvCell(value) {
-  const text = String(value ?? '')
-  return `"${text.replaceAll('"', '""')}"`
+function reportTile(label, value) {
+  return `
+    <div class="tile">
+      <div class="label">${escapeHtml(label)}</div>
+      <div class="value">${escapeHtml(value)}</div>
+    </div>
+  `
+}
+
+function predictionRowsTable(rows) {
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Generated</th>
+          <th>Patient ID</th>
+          <th>Age</th>
+          <th>Sex</th>
+          <th>Surgery</th>
+          <th>Disposition</th>
+          <th>Risk</th>
+          <th>Probability</th>
+          <th>Model</th>
+          <th>Clinical Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((row) => `
+          <tr>
+            <td>${escapeHtml(row.generated)}</td>
+            <td>${escapeHtml(row.patientId)}</td>
+            <td>${escapeHtml(row.age)}</td>
+            <td>${escapeHtml(row.sex)}</td>
+            <td>${escapeHtml(row.surgery)}</td>
+            <td>${escapeHtml(row.disposition)}</td>
+            <td class="${riskClass(row.risk)}">${escapeHtml(row.risk)}</td>
+            <td>${escapeHtml(row.probability)}</td>
+            <td>${escapeHtml(row.model)}</td>
+            <td>${escapeHtml(row.clinicalNote)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `
+}
+
+function riskClass(risk) {
+  const normalized = String(risk || '').toLowerCase()
+  if (normalized.includes('high')) return 'risk-high'
+  if (normalized.includes('moderate') || normalized.includes('medium')) return 'risk-moderate'
+  if (normalized.includes('low')) return 'risk-low'
+  return ''
+}
+
+async function imageToDataUrl(src) {
+  try {
+    const response = await fetch(src)
+    const blob = await response.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return ''
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll('`', '&#96;')
 }

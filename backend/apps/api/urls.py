@@ -1,5 +1,7 @@
 from django.urls import path
 from .views import (
+    audit_logs_export_view,
+    audit_logs_view,
     current_user_view,
     login_view,
     logout_all_view,
@@ -33,10 +35,15 @@ from .views import (
     models_download_view,
     patients_list_view,
     patients_search_view,
+    prediction_history_csv_view,
+    prediction_history_pdf_view,
+    prediction_history_report_view,
     prediction_history_view,
 )
 
 urlpatterns = [
+    path("api/admin/audit-logs/", audit_logs_view, name="api_admin_audit_logs"),
+    path("api/admin/audit-logs/export/", audit_logs_export_view, name="api_admin_audit_logs_export"),
     path("auth/login", login_view, name="api_login"),
     path("auth/register", register_view, name="api_register"),
     path("auth/logout", logout_view, name="api_logout"),
@@ -45,6 +52,9 @@ urlpatterns = [
     path("auth/profile", profile_update_view, name="api_profile_update"),
     path("predict", predict_view, name="api_predict"),
     path("predict-dataset", predict_dataset_view, name="api_predict_dataset"),
+    path("prediction-history/report.pdf", prediction_history_pdf_view, name="api_prediction_history_pdf"),
+    path("prediction-history/report.csv", prediction_history_csv_view, name="api_prediction_history_csv"),
+    path("prediction-history/report", prediction_history_report_view, name="api_prediction_history_report"),
     path("prediction-history", prediction_history_view, name="api_prediction_history"),
     path("patients", patients_list_view, name="api_patients"),
     path("patients/search", patients_search_view, name="api_patients_search"),

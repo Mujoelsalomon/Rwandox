@@ -5,7 +5,6 @@ import SupportTicketForm from './SupportTicketForm.jsx'
 import SupportTicketTable from './SupportTicketTable.jsx'
 
 const SUPPORT_TICKETS_URL = `${API_BASE_URL}/api/support/tickets/`
-const SUPPORT_EMAIL = 'munyanezajoel11@gmail.com'
 
 export default function SupportPortal() {
   const [tickets, setTickets] = useState([])
@@ -63,7 +62,7 @@ export default function SupportPortal() {
       if (data.email_delivery_error) {
         setMessage('Support ticket saved. Email delivery is not configured yet, so the administrator should review it in the support portal.')
       } else {
-        setMessage(`Support ticket sent successfully to ${SUPPORT_EMAIL}.`)
+        setMessage('Support ticket sent successfully.')
       }
       return true
     } catch (error) {
@@ -107,12 +106,6 @@ export default function SupportPortal() {
         <p className="body-text mb-0 mt-2 max-w-[850px] font-semibold text-[#53668a]">
           Submit technical issues, prediction concerns, model feedback, or system support requests.
         </p>
-        <a
-          className="mt-3 inline-flex w-fit rounded-[10px] bg-[#eaf2ff] px-4 py-2 text-[14px] font-extrabold text-[#1768f2] no-underline hover:text-[#0f4eb2]"
-          href={`mailto:${SUPPORT_EMAIL}`}
-        >
-          Email: {SUPPORT_EMAIL}
-        </a>
       </section>
 
       {message && <div className="alert alert-success rounded-4 fw-bold">{message}</div>}

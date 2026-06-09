@@ -88,15 +88,11 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-white/70 md:h-14 md:w-14">
             <img
               src={postopO2Logo}
-              alt="A Machine Learning Model 
-              for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda"
+              alt="A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda"
               className="h-full w-full object-cover"
             />
           </div>
           <div className="min-w-0">
-            <span className="small-text block font-extrabold uppercase tracking-[0.08em] text-[#123000]">
-              {t('clinicalML')}
-            </span>
             <span className="block max-w-[min(62vw,820px)] text-[13px] font-extrabold leading-tight text-[#225000] sm:text-[14px] lg:text-[16px]">
              {t('appName')}
             </span>
@@ -176,22 +172,17 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
             )}
           </div>
 
-          <div ref={profileMenuRef} className="relative">
+          <div ref={profileMenuRef} className="relative flex h-full items-center overflow-visible">
             <button
               type="button"
               aria-expanded={profileMenuOpen}
               aria-haspopup="menu"
               onClick={() => setProfileMenuOpen((open) => !open)}
-              className="btn btn-link text-decoration-none flex min-w-0 items-center gap-2 rounded-2xl px-1 py-1 transition hover:bg-[#f6f9fd] md:gap-3"
+              className="btn btn-link text-decoration-none !flex h-16 min-w-0 items-center gap-2 overflow-visible rounded-2xl px-1 py-1 leading-none transition hover:bg-[#f6f9fd] md:gap-3"
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8] p-2 ring-2 ring-white shadow-sm md:h-12 md:w-12">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8] p-2 ring-2 ring-white shadow-sm md:h-11 md:w-11">
                 <Icon name="user" className="h-full w-full text-[#24334f]" />
               </div>
-              <div className="hidden max-w-[120px] text-left md:block lg:max-w-[170px]">
-                <p className="small-text truncate font-extrabold text-[#0d1c3d]">{session?.name || 'Anesthetist'}</p>
-                <p className="small-text truncate text-[#526383]">{session?.role || 'Clinician'}</p>
-              </div>
-              <Icon name="chevronDown" className="hidden h-5 w-5 shrink-0 text-[#526383] sm:block" />
             </button>
 
             {profileMenuOpen && (
@@ -199,6 +190,10 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
                 role="menu"
                 className="dropdown-menu show fixed left-2 right-2 top-[96px] max-h-[calc(100vh-112px)] overflow-y-auto rounded-[14px] border border-[#e2eaf5] bg-white py-1 shadow-[0_18px_42px_rgba(13,28,61,0.16)] sm:left-4 sm:right-4 md:absolute md:left-auto md:right-0 md:top-[58px] md:w-[260px]"
               >
+                <div className="border-b border-[#edf2f8] px-4 py-3">
+                  <p className="small-text truncate font-extrabold text-[#0d1c3d]">{session?.name || 'Anesthetist'}</p>
+                  <p className="small-text mt-0.5 truncate text-[#526383]">{session?.role || 'Clinician'}</p>
+                </div>
                 <div className="px-4 py-3 lg:hidden">
                   <LanguageSelector />
                 </div>

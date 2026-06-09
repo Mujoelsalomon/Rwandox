@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from apps.predictions.models import PredictionResult
 from ml.model_loader import load_model_assets
 
+from .audit import record_audit
 from .common import cors, require_admin
 from .models import EmrSyncLog, ModelArtifact, TrainingJob
 
@@ -30,6 +31,7 @@ def maintenance_health_view(request):
     storage = storage_status_payload()
     sync = sync_status_payload()
 
+    record_audit(request, "Viewed maintenance health", object_type="Maintenance")
     return cors(JsonResponse({
         "api": api,
         "database": database,
@@ -47,6 +49,7 @@ def maintenance_api_status_view(request):
     auth_error = require_admin(request)
     if auth_error:
         return auth_error
+    record_audit(request, "Checked API status", object_type="Maintenance")
     return cors(JsonResponse(api_status_payload(request)))
 
 
@@ -56,6 +59,7 @@ def maintenance_database_status_view(request):
     auth_error = require_admin(request)
     if auth_error:
         return auth_error
+    record_audit(request, "Checked database status", object_type="Maintenance")
     return cors(JsonResponse(database_status_payload()))
 
 
@@ -65,6 +69,7 @@ def maintenance_model_status_view(request):
     auth_error = require_admin(request)
     if auth_error:
         return auth_error
+    record_audit(request, "Checked model status", object_type="Maintenance")
     return cors(JsonResponse(model_status_payload()))
 
 
@@ -74,6 +79,7 @@ def maintenance_storage_status_view(request):
     auth_error = require_admin(request)
     if auth_error:
         return auth_error
+    record_audit(request, "Checked storage status", object_type="Maintenance")
     return cors(JsonResponse(storage_status_payload()))
 
 
@@ -86,6 +92,7 @@ def maintenance_reload_model_view(request):
         return auth_error
     if request.method != "POST":
         return cors(JsonResponse({"error": "method not allowed"}, status=405))
+    record_audit(request, "Reloaded active model", object_type="Maintenance")
     return cors(JsonResponse(model_status_payload(force_load=True)))
 
 
@@ -118,6 +125,7 @@ def maintenance_clear_temp_files_view(request):
             except OSError:
                 continue
 
+    record_audit(request, "Cleared temporary files", object_type="Maintenance", details={"removed_count": len(removed)})
     return cors(JsonResponse({
         "status": "ok",
         "removed_count": len(removed),
@@ -153,6 +161,7 @@ def maintenance_export_logs_view(request):
 
     response = HttpResponse("\n\n".join(sections), content_type="text/plain; charset=utf-8")
     response["Content-Disposition"] = f'attachment; filename="system-logs-{timezone.now().strftime("%Y%m%d%H%M%S")}.txt"'
+    record_audit(request, "Exported system logs", object_type="Maintenance")
     return cors(response)
 
 
@@ -171,6 +180,7 @@ def maintenance_reset_failed_jobs_view(request):
         error="",
         updated_at=timezone.now(),
     )
+    record_audit(request, "Reset failed training jobs", object_type="TrainingJob", details={"reset_count": count})
     return cors(JsonResponse({
         "status": "ok",
         "reset_count": count,
@@ -201,6 +211,7 @@ def maintenance_backup_database_view(request):
     backup_dir.mkdir(parents=True, exist_ok=True)
     backup_path = backup_dir / f"{source.stem}-{timezone.now().strftime('%Y%m%d%H%M%S')}{source.suffix}"
     shutil.copy2(source, backup_path)
+    record_audit(request, "Backed up database", object_type="Maintenance", details={"backup_path": str(backup_path)})
     return cors(JsonResponse({
         "status": "ok",
         "backup_path": str(backup_path),
@@ -234,6 +245,7 @@ def maintenance_test_prediction_view(request):
         "surgery_duration": 90,
         "anesthesia_type": "General",
     })
+    record_audit(request, "Ran maintenance test prediction", object_type="Maintenance")
     return cors(JsonResponse({
         "status": "ok",
         "prediction": result,

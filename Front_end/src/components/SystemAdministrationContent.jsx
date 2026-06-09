@@ -492,19 +492,51 @@ function formatMetric(value) {
 
   function AuditLogs() {
     const { t } = useTranslation()
-    const stored = JSON.parse(localStorage.getItem('postop_o2_audit') || '[]')
-    const [logs] = useState(stored.length ? stored : [
-      { id: 1, name: 'Joel Munyaneza', userId: 'USR-001', time: '2026-05-13T16:30:00Z', action: 'Logged in' },
-      { id: 2, name: 'Anesthetist', userId: 'USR-002', time: '2026-05-13T16:40:00Z', action: 'Viewed patient record' },
-      { id: 3, name: 'Model Admin', userId: 'USR-004', time: '2026-05-13T16:50:00Z', action: 'Updated model registry' },
-    ])
+    const [logs, setLogs] = useState([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
 
-    function exportCsv() {
-      if (!logs || logs.length === 0) return
-      const header = ['Name', 'User ID', 'Time', 'Action']
-      const rows = logs.map((l) => [l.name, l.userId, l.time, l.action])
-      const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    useEffect(() => {
+      loadAuditLogs()
+    }, [])
+
+    function authHeaders(extra = {}) {
+      const session = getSession()
+      return {
+        Authorization: `Bearer ${session?.token || ''}`,
+        'X-User-Email': session?.email || '',
+        ...extra,
+      }
+    }
+
+    async function loadAuditLogs() {
+      setLoading(true)
+      setError('')
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/admin/audit-logs/`, {
+          credentials: 'include',
+          headers: authHeaders(),
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Could not load audit logs.')
+        setLogs(Array.isArray(data.logs) ? data.logs : [])
+      } catch (error) {
+        setError(error.message || 'Could not load audit logs.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    async function exportCsv() {
+      const response = await fetch(`${API_BASE_URL}/api/admin/audit-logs/export/`, {
+        credentials: 'include',
+        headers: authHeaders(),
+      })
+      if (!response.ok) {
+        setError('Could not export audit logs.')
+        return
+      }
+      const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -522,10 +554,13 @@ function formatMetric(value) {
             <h2 className="section-title font-black text-[#071b49]">{t('auditLogs')}</h2>
             <p className="small-text mt-1 font-semibold text-[#64799e]">{t('auditLogsDetail')}</p>
           </div>
-          <div>
+          <div className="flex gap-2">
+            <button onClick={loadAuditLogs} disabled={loading} className="btn btn-outline-primary fw-bold rounded px-3 py-2">{loading ? 'Refreshing...' : 'Refresh'}</button>
             <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">{t('exportCsv')}</button>
           </div>
         </div>
+
+        {error && <div className="alert alert-warning mt-3 rounded-4 font-semibold">{error}</div>}
 
         <div className="mt-4 overflow-x-auto">
           <table className="table table-hover align-middle mb-0 w-full min-w-[720px] text-left">
@@ -538,14 +573,22 @@ function formatMetric(value) {
               </tr>
             </thead>
             <tbody>
-              {logs.map((l) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">Loading audit logs...</td>
+                </tr>
+              ) : logs.length > 0 ? logs.map((l) => (
                 <tr key={l.id} className="border-t border-[#edf2f8]">
                   <td className="px-4 py-3 text-[14px] font-extrabold text-[#071b49]">{l.name}</td>
                   <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{l.userId}</td>
                   <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{new Date(l.time).toLocaleString()}</td>
                   <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{l.action}</td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="4" className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">No audit activity recorded yet.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

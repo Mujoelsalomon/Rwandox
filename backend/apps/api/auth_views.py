@@ -5,6 +5,7 @@ from django.contrib.sessions.models import Session
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from .audit import record_audit
 from .common import cors, json_body, require_login
 from .serializers import user_payload
 
@@ -74,6 +75,7 @@ def login_view(request):
         return cors(JsonResponse({"error": "Invalid username/email or password."}, status=401))
 
     login(request, user)
+    record_audit(request, "Logged in", object_type="User", object_id=user.id)
     return cors(JsonResponse({"user": user_payload(user)}))
 
 
@@ -106,6 +108,8 @@ def register_view(request):
     user.first_name = name_parts[0]
     user.last_name = name_parts[1] if len(name_parts) > 1 else ""
     user.save(update_fields=["first_name", "last_name"])
+    request.user = user
+    record_audit(request, "Registered user account", object_type="User", object_id=user.id)
     return cors(JsonResponse({"user": user_payload(user)}, status=201))
 
 
@@ -113,6 +117,7 @@ def register_view(request):
 def logout_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
+    record_audit(request, "Logged out", object_type="User", object_id=getattr(request.user, "id", ""))
     logout(request)
     return cors(JsonResponse({"ok": True}))
 
@@ -125,6 +130,7 @@ def logout_all_view(request):
     if auth_error:
         return auth_error
     Session.objects.all().delete()
+    record_audit(request, "Logged out from all devices", object_type="User", object_id=request.user.id)
     logout(request)
     return cors(JsonResponse({"ok": True}))
 
@@ -134,6 +140,7 @@ def current_user_view(request):
         return cors(HttpResponse())
     if not request.user.is_authenticated:
         return cors(JsonResponse({"authenticated": False}, status=401))
+    record_audit(request, "Viewed current profile", object_type="User", object_id=request.user.id)
     return cors(JsonResponse({"authenticated": True, "user": user_payload(request.user)}))
 
 
@@ -189,4 +196,11 @@ def profile_update_view(request):
         target_user.is_superuser = role == "Superuser"
         update_fields.extend(["is_staff", "is_superuser"])
     target_user.save(update_fields=update_fields)
+    record_audit(
+        request,
+        "Updated user profile",
+        object_type="User",
+        object_id=target_user.id,
+        details={"role": role or user_payload(target_user)["role"]},
+    )
     return cors(JsonResponse({"user": user_payload(target_user)}))

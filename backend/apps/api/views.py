@@ -1,3 +1,7 @@
+from .audit_views import (
+    audit_logs_export_view,
+    audit_logs_view,
+)
 from .auth_views import (
     current_user_view,
     login_view,
@@ -37,6 +41,9 @@ from .patient_views import (
 from .prediction_views import (
     predict_dataset_view,
     predict_view,
+    prediction_history_csv_view,
+    prediction_history_pdf_view,
+    prediction_history_report_view,
     prediction_history_view,
 )
 from .training_views import (
@@ -50,6 +57,8 @@ from .training_views import (
 
 __all__ = [
     "current_user_view",
+    "audit_logs_export_view",
+    "audit_logs_view",
     "fhir_capability_statement_view",
     "fhir_observation_view",
     "fhir_patient_view",
@@ -75,6 +84,9 @@ __all__ = [
     "patients_search_view",
     "predict_dataset_view",
     "predict_view",
+    "prediction_history_csv_view",
+    "prediction_history_pdf_view",
+    "prediction_history_report_view",
     "prediction_history_view",
     "profile_update_view",
     "register_view",

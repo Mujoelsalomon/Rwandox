@@ -3,6 +3,7 @@ from pathlib import Path
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from .audit import record_audit
 from .common import cors, json_body, require_admin
 from .models import ModelArtifact
 
@@ -27,6 +28,7 @@ def models_list_view(request):
         }
         for artifact in artifacts
     ]
+    record_audit(request, "Viewed model registry", object_type="ModelArtifact", details={"count": len(models)})
     return cors(JsonResponse({"models": models}))
 
 
@@ -49,6 +51,7 @@ def models_activate_view(request):
     ModelArtifact.objects.update(is_active=False)
     artifact.is_active = True
     artifact.save(update_fields=["is_active"])
+    record_audit(request, "Activated model", object_type="ModelArtifact", object_id=artifact.id, details={"name": artifact.name})
     return cors(JsonResponse({"model": {"id": artifact.id, "name": artifact.name, "is_active": artifact.is_active}}))
 
 
@@ -71,5 +74,6 @@ def models_download_view(request):
     if not candidate.exists():
         return cors(JsonResponse({"error": "file not found on disk"}, status=404))
 
+    record_audit(request, "Downloaded model artifact", object_type="ModelArtifact", object_id=artifact.id, details={"name": artifact.name})
     resp = FileResponse(open(candidate, "rb"), as_attachment=True, filename=candidate.name)
     return cors(resp)
