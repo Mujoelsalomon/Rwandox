@@ -103,3 +103,30 @@ Notes:
 - Users must be connected to the same Wi-Fi as the laptop running Django and Vite.
 - Do not use real patient identifiers or sensitive hospital data during local testing.
   -the dataset usesed to build and develop the model was provided by Kibagabaga L2 teaching hospital
+
+Production readiness checklist:
+
+- Set `DJANGO_DEBUG=0`.
+- Set `DJANGO_SECRET_KEY` to a strong unique value. The app now refuses to start in production with the placeholder `change-me-for-prod`.
+- Do not deploy with `postgres/postgres` database credentials. The app now refuses that known-unsafe default when `DJANGO_DEBUG=0`.
+- Set `DATABASE_URL` to the real PostgreSQL connection string. Locally, `postgres://postgres:postgres@localhost:5432/postop` means the app logs in as user `postgres` and uses database `postop`.
+- Keep `.env` private. Do not commit real SMTP passwords, production database passwords, or secret keys.
+- Run `python manage.py migrate` after deployment and before accepting clinical users.
+- Use admin maintenance to confirm the active database name, table count, and migration status.
+
+PostgreSQL backups:
+
+- The in-app "Backup Database" action can copy SQLite files only. PostgreSQL is not a single database file, so use `pg_dump` or the managed provider backup system.
+- For local PostgreSQL, a typical backup command is:
+
+```powershell
+pg_dump --dbname=postgres://postgres:postgres@localhost:5432/postop --format=custom --file=backups/postop-YYYYMMDDHHMM.dump
+```
+
+- For Render PostgreSQL, use Render's managed database backups or run `pg_dump` against the Render internal/external database URL from a secure environment.
+- Test restore procedures before relying on backups:
+
+```powershell
+createdb postop_restore_test
+pg_restore --dbname=postgres://postgres:postgres@localhost:5432/postop_restore_test backups/postop-YYYYMMDDHHMM.dump
+```

@@ -40,6 +40,8 @@ from .views import (
     prediction_history_report_view,
     prediction_history_view,
 )
+from .auth_views import admin_users_view
+from .auth_views import settings_facility_view
 
 urlpatterns = [
     path("api/admin/audit-logs/", audit_logs_view, name="api_admin_audit_logs"),
@@ -49,7 +51,9 @@ urlpatterns = [
     path("auth/logout", logout_view, name="api_logout"),
     path("auth/logout-all", logout_all_view, name="api_logout_all"),
     path("auth/me", current_user_view, name="api_current_user"),
+    path("api/admin/users/", admin_users_view, name="api_admin_users"),
     path("auth/profile", profile_update_view, name="api_profile_update"),
+    path("api/settings/facility/", settings_facility_view, name="api_settings_facility"),
     path("predict", predict_view, name="api_predict"),
     path("predict-dataset", predict_dataset_view, name="api_predict_dataset"),
     path("prediction-history/report.pdf", prediction_history_pdf_view, name="api_prediction_history_pdf"),

@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LanguageSelector from './LanguageSelector.jsx'
-import { logoutFromAllDevices } from '../authSession.js'
+import { logoutFromAllDevices, API_BASE_URL, getSession, isAdminSession, updateSession } from '../authSession.js'
+import FACILITIES from '../data/rwandaFacilities.js'
 
 const defaultPreferences = {
   'High-risk patient alerts': true,
@@ -34,7 +35,6 @@ const personalInformation = [
   { label: 'Full name', value: 'Anesthetist' },
   { label: 'Email', value: 'anesthetist@hospital.local' },
   { label: 'User ID', value: 'USR-002' },
-  { label: 'Facility', value: 'Kibagabaga Level Two Teaching Hospital' },
 ]
 
 const roleInformation = [
@@ -61,6 +61,73 @@ export default function SettingsContent() {
   const [enabled, setEnabled] = useState(defaultPreferences)
   const [thresholds, setThresholds] = useState(defaultThresholds)
   const [selectedRisk, setSelectedRisk] = useState('amber')
+  const [currentFacility, setCurrentFacility] = useState(null)
+  const [facilityChooserOpen, setFacilityChooserOpen] = useState(false)
+  const [facilitySearch, setFacilitySearch] = useState('')
+  const [selectedFacilityId, setSelectedFacilityId] = useState(null)
+  const [savingFacilityId, setSavingFacilityId] = useState('')
+  const session = getSession()
+  const isAdmin = isAdminSession(session)
+
+  useEffect(() => {
+    loadSelectedFacility()
+  }, [])
+
+  async function loadSelectedFacility() {
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/settings/facility/`, { credentials: 'include' })
+      const data = await resp.json().catch(() => ({}))
+      if (resp.ok) {
+        setCurrentFacility(data.facility || null)
+        setSelectedFacilityId(data.facility?.id || null)
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  function authHeaders() {
+    const s = getSession()
+    return {
+      Accept: 'application/json',
+      Authorization: `Bearer ${s?.token || ''}`,
+      'X-User-Email': s?.email || '',
+      'X-User-Username': s?.username || '',
+    }
+  }
+
+  function filteredFacilities() {
+    const q = String(facilitySearch || '').trim().toLowerCase()
+    if (!q) return FACILITIES
+    return FACILITIES.filter((facility) => {
+      return [facility.name, facility.district, facility.facilityType, facility.provinceOrCity].join(' ').toLowerCase().includes(q)
+    })
+  }
+
+  async function chooseFacility(facilityId) {
+    if (!isAdmin || !facilityId) return
+    setSelectedFacilityId(facilityId)
+    setSavingFacilityId(facilityId)
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/settings/facility/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ facility_id: facilityId }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) throw new Error(data.error || 'Failed to save facility setting')
+      setCurrentFacility(data.facility || null)
+      setSelectedFacilityId(data.facility?.id || facilityId)
+      setFacilityChooserOpen(false)
+      try { updateSession({ selectedFacility: data.facility }) } catch (_) {}
+      notify('Facility setting saved successfully.', 'success')
+    } catch (err) {
+      notify(err.message || 'Failed to save facility setting.', 'error')
+    } finally {
+      setSavingFacilityId('')
+    }
+  }
 
   function toggle(label) {
     setEnabled((current) => ({ ...current, [label]: !current[label] }))
@@ -136,6 +203,47 @@ export default function SettingsContent() {
           {roleInformation.map((item) => (
             <ReadOnlyField key={item.label} {...item} />
           ))}
+        </AccountPanel>
+
+        <AccountPanel title="Facility">
+          <FacilityField
+            currentFacility={currentFacility}
+            isAdmin={isAdmin}
+            isOpen={facilityChooserOpen}
+            onToggle={() => setFacilityChooserOpen((open) => !open)}
+          />
+          {isAdmin && facilityChooserOpen && (
+            <div className="rounded-[12px] border border-[#d9e5f3] bg-[#f8fbff] p-3">
+              <input
+                type="search"
+                value={facilitySearch}
+                onChange={(event) => setFacilitySearch(event.target.value)}
+                placeholder="Search facilities by name, district, facility type..."
+                className="form-control mb-3 w-full rounded-[8px] border border-[#c9d8eb] px-3 py-2"
+              />
+              <div className="max-h-52 overflow-auto rounded-[8px] border border-[#d9e5f3] bg-white p-2">
+                {filteredFacilities().map((facility) => {
+                  const isSelected = selectedFacilityId === facility.id
+                  const isSaving = savingFacilityId === facility.id
+                  return (
+                    <button
+                      key={facility.id}
+                      type="button"
+                      disabled={Boolean(savingFacilityId)}
+                      onClick={() => chooseFacility(facility.id)}
+                      className={`flex w-full items-center justify-between gap-3 rounded-[8px] px-3 py-2 text-left transition disabled:opacity-70 ${isSelected ? 'bg-white ring-2 ring-offset-1 ring-[#1768f2]' : 'hover:bg-[#f8fbff]'}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-extrabold text-[#071b49]">{facility.name}</span>
+                        <span className="block text-[13px] text-[#53668a]">{facility.facilityType} - {facility.district}, {facility.provinceOrCity}</span>
+                      </span>
+                      <span className="shrink-0 text-[13px] font-black text-[#53668a]">{isSaving ? 'Saving...' : isSelected ? 'Selected' : 'Select'}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </AccountPanel>
       </section>
 
@@ -249,6 +357,29 @@ function ReadOnlyField({ label, value }) {
       <p className="small-text card-text text-secondary font-bold">{label}</p>
       <p className="small-text mt-1 break-words font-extrabold text-[#071b49]">{value}</p>
     </div>
+  )
+}
+
+function FacilityField({ currentFacility, isAdmin, isOpen, onToggle }) {
+  const value = currentFacility ? `${currentFacility.name}, ${currentFacility.district}` : 'Not configured'
+
+  if (!isAdmin) return <ReadOnlyField label="Current facility" value={value} />
+
+  return (
+    <button
+      type="button"
+      aria-expanded={isOpen}
+      onClick={onToggle}
+      className="card bg-light btn border-0 rounded-4 flex min-w-0 items-center justify-between gap-3 rounded-[12px] border border-[#d9e5f3] px-4 py-3 text-left transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#1768f2]"
+    >
+      <span className="min-w-0">
+        <span className="small-text card-text block text-secondary font-bold">Current facility</span>
+        <span className="small-text mt-1 block break-words font-extrabold text-[#071b49]">{value}</span>
+      </span>
+      <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[12px] font-black text-[#1768f2] shadow-sm">
+        {isOpen ? 'Close' : 'Change'}
+      </span>
+    </button>
   )
 }
 

@@ -50,6 +50,8 @@ def postgres_env_url():
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me-for-prod")
 IS_RENDER = env_bool("RENDER", False) or bool(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
 DEBUG = env_bool("DJANGO_DEBUG", not IS_RENDER)
+if not DEBUG and SECRET_KEY == "change-me-for-prod":
+    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY to a strong unique value before running in production.")
 LOCAL_PC_IP = os.getenv("LOCAL_PC_IP", "").strip()
 LOCAL_WIFI_IP = os.getenv("LOCAL_WIFI_IP", "").strip()
 LOCAL_LAN_IP = LOCAL_PC_IP or LOCAL_WIFI_IP
@@ -144,6 +146,9 @@ if not DATABASE_URL:
 
     # local dev fallback to SQLite
     DATABASE_URL = f"sqlite:///{(BASE_DIR / 'db.sqlite3').as_posix()}"
+
+if not DEBUG and "postgres:postgres@" in DATABASE_URL:
+    raise ImproperlyConfigured("Do not use the default postgres/postgres database credentials in production.")
 
 DATABASES = {
     "default": dj_database_url.parse(

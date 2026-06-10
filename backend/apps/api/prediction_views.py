@@ -20,7 +20,6 @@ from apps.predictions.services import run_prediction
 
 from .audit import record_audit
 from .common import bool_value, cors, float_value, int_or_none, int_value, json_body, require_login
-from .dataset_history import dataset_prediction_history_payloads
 from .models import ModelArtifact
 from .serializers import prediction_history_payload
 from .training_views import validate_uploaded_dataset_path
@@ -107,10 +106,22 @@ def predict_dataset_view(request):
             errors.append({"row_index": int(index), "error": str(exc)})
 
     risk_counts = {"High": 0, "Moderate": 0, "Low": 0}
+    probabilities = []
+    oxygen_required_count = 0
     for prediction in predictions:
         risk = prediction.get("risk_level")
         if risk in risk_counts:
             risk_counts[risk] += 1
+        probability = percentage_probability(prediction.get("predicted_probability"))
+        probabilities.append(probability)
+        if oxygen_required_prediction(prediction):
+            oxygen_required_count += 1
+
+    predicted_count = len(predictions)
+    oxygen_not_required_count = max(0, predicted_count - oxygen_required_count)
+    average_probability = round(sum(probabilities) / len(probabilities)) if probabilities else 0
+    minimum_probability = min(probabilities) if probabilities else 0
+    maximum_probability = max(probabilities) if probabilities else 0
 
     record_audit(request, "Predicted uploaded dataset", object_type="PredictionResult", details={"rows": len(predictions)})
     return cors(JsonResponse({
@@ -118,11 +129,22 @@ def predict_dataset_view(request):
         "errors": errors[:25],
         "summary": {
             "total_rows": int(len(dataframe)),
-            "predicted_rows": len(predictions),
+            "predicted_rows": predicted_count,
             "failed_rows": len(errors),
+            "oxygen_required_rows": oxygen_required_count,
+            "oxygen_not_required_rows": oxygen_not_required_count,
+            "oxygen_required_percentage": percentage(oxygen_required_count, predicted_count),
             "high_risk_rows": risk_counts["High"],
             "moderate_risk_rows": risk_counts["Moderate"],
             "low_risk_rows": risk_counts["Low"],
+            "high_risk_percentage": percentage(risk_counts["High"], predicted_count),
+            "moderate_risk_percentage": percentage(risk_counts["Moderate"], predicted_count),
+            "low_risk_percentage": percentage(risk_counts["Low"], predicted_count),
+            "average_probability": average_probability,
+            "minimum_probability": minimum_probability,
+            "maximum_probability": maximum_probability,
+            "first_row_probability": probabilities[0] if probabilities else 0,
+            "first_row_risk_level": predictions[0].get("risk_level") if predictions else None,
             "active_model": predictions[0].get("active_model") if predictions else None,
             "model_type": predictions[0].get("model_type") if predictions else None,
             "training_metrics": predictions[0].get("training_metrics") if predictions else {},
@@ -139,8 +161,6 @@ def prediction_history_view(request):
 
     records = PredictionResult.objects.select_related("record", "record__patient").all()[:250]
     predictions = [prediction_history_payload(item) for item in records]
-    if not predictions:
-        predictions = dataset_prediction_history_payloads()
     record_audit(request, "Viewed prediction history", object_type="PredictionResult", details={"count": len(predictions)})
     return cors(JsonResponse({"predictions": predictions}))
 
@@ -253,10 +273,7 @@ def filtered_prediction_history_from_request(request):
 
 def prediction_history_records():
     records = PredictionResult.objects.select_related("record", "record__patient").all()[:250]
-    predictions = [prediction_history_payload(item) for item in records]
-    if not predictions:
-        predictions = dataset_prediction_history_payloads()
-    return predictions
+    return [prediction_history_payload(item) for item in records]
 
 
 def filter_prediction_history(predictions, search="", risk="All", disposition="All"):
@@ -989,6 +1006,28 @@ def clean_dataset_value(value):
     if isinstance(value, float) and value != value:
         return None
     return value
+
+
+def percentage_probability(value):
+    number = float_value(value) or 0
+    if number <= 1:
+        number *= 100
+    return max(0, min(100, round(number)))
+
+
+def percentage(count, total):
+    if not total:
+        return 0
+    return round((int(count or 0) / int(total)) * 100)
+
+
+def oxygen_required_prediction(prediction):
+    predicted_class = str(prediction.get("predicted_class") or "").strip().lower()
+    if predicted_class in {"yes", "true", "1", "required", "oxygen required"}:
+        return True
+    if predicted_class in {"no", "false", "0", "not required", "oxygen not required"}:
+        return False
+    return percentage_probability(prediction.get("predicted_probability")) >= 50
 
 
 def prediction_response_payload(result):

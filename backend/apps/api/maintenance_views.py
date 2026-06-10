@@ -5,6 +5,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -201,10 +202,16 @@ def maintenance_backup_database_view(request):
     database_name = connection.settings_dict.get("NAME")
     source = Path(str(database_name)) if database_name else None
     if connection.vendor != "sqlite" or not source or not source.exists():
+        message = (
+            "PostgreSQL backups must be created with pg_dump or the managed database provider backup system."
+            if connection.vendor == "postgresql"
+            else "Automatic file backup is available for SQLite databases only."
+        )
         return cors(JsonResponse({
             "status": "warning",
-            "message": "Automatic file backup is available for SQLite databases only.",
+            "message": message,
             "database_type": connection.vendor,
+            "database_name": database_name,
         }, status=400))
 
     backup_dir = Path(settings.BASE_DIR) / "backups"
@@ -273,10 +280,19 @@ def database_status_payload():
             cursor.execute("SELECT 1")
             cursor.fetchone()
         response_time_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        database_settings = connection.settings_dict
+        table_names = connection.introspection.table_names()
+        pending_migrations = pending_migration_count()
         return {
             "status": "ok",
             "database_type": connection.vendor,
+            "database_name": database_settings.get("NAME") or "Not available",
+            "database_host": database_settings.get("HOST") or "local file",
+            "database_port": database_settings.get("PORT") or "default",
             "connection_result": "Connected",
+            "table_count": len(table_names),
+            "pending_migrations": pending_migrations,
+            "migration_status": "Up to date" if pending_migrations == 0 else f"{pending_migrations} pending",
             "response_time_ms": response_time_ms,
             "last_successful_connection": timezone.now().isoformat(),
         }
@@ -284,6 +300,7 @@ def database_status_payload():
         return {
             "status": "failed",
             "database_type": connection.vendor,
+            "database_name": connection.settings_dict.get("NAME") or "Not available",
             "connection_result": str(exc),
             "last_successful_connection": None,
         }
@@ -378,3 +395,8 @@ def format_bytes(value):
         if size < 1024 or unit == "TB":
             return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
         size /= 1024
+
+
+def pending_migration_count():
+    executor = MigrationExecutor(connection)
+    return len(executor.migration_plan(executor.loader.graph.leaf_nodes()))

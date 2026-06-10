@@ -198,6 +198,7 @@
   "training": "Entraînement...",
   "refreshModels": "Actualiser les modèles",
   "availableModels": "Modèles disponibles",
+  "facilityNotConfigured": "Installation non configurée",
   "view": "Voir",
   "available": "Disponible",
   "active": "Actif",
@@ -257,5 +258,8 @@
   "riskThresholds": "Seuils de risque",
   "riskThresholdsIntro": "Ajuster les bandes de probabilité utilisées dans les vues de prédiction.",
   "discardChanges": "Annuler les changements",
-  "saveChanges": "Enregistrer les changements"
+  "saveChanges": "Enregistrer les changements",
+  "footerLocationLabel": "Localisation:",
+  "footerLocationLabelShort": "Loc:",
+  "hospitalNotConfigured": "Installation non configurée"
 }

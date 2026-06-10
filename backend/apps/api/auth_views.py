@@ -8,6 +8,11 @@ from django.views.decorators.csrf import csrf_exempt
 from .audit import record_audit
 from .common import cors, json_body, require_login
 from .serializers import user_payload
+from .models import SystemSetting
+from .hospitals import HOSPITALS_BY_ID
+import json as _json
+from django.utils import timezone
+from .common import require_admin
 
 
 DEFAULT_USERNAME = "anesthetist"
@@ -204,3 +209,69 @@ def profile_update_view(request):
         details={"role": role or user_payload(target_user)["role"]},
     )
     return cors(JsonResponse({"user": user_payload(target_user)}))
+
+
+def admin_users_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+    if not (request.user.is_staff or request.user.is_superuser):
+        return cors(JsonResponse({"error": "Only administrators can view user accounts."}, status=403))
+    if request.method != "GET":
+        return cors(JsonResponse({"error": "method not allowed"}, status=405))
+
+    users = list(User.objects.all())
+    payload = [user_payload(u) for u in users]
+    record_audit(request, "Viewed user list", object_type="UserList")
+    return cors(JsonResponse({"users": payload}))
+
+
+@csrf_exempt
+def settings_facility_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+
+    # Anyone authenticated may view the selected hospital; only admins may modify it
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+
+    if request.method == "GET":
+        setting = SystemSetting.objects.filter(setting_key="selected_facility").first()
+        if not setting:
+            return cors(JsonResponse({"facility": None}))
+        try:
+            value = _json.loads(setting.setting_value)
+        except Exception:
+            value = None
+        facility = value.get("facility") if isinstance(value, dict) else None
+        return cors(JsonResponse({"facility": facility}))
+
+    if request.method == "POST":
+        # only admin/superuser may change system facility
+        admin_error = require_admin(request)
+        if admin_error:
+            return admin_error
+        payload = json_body(request)
+        facility_id = payload.get("facility_id") or payload.get("id")
+        if not facility_id:
+            return cors(JsonResponse({"error": "facility_id is required"}, status=400))
+        facility = HOSPITALS_BY_ID.get(facility_id)
+        if not facility:
+            return cors(JsonResponse({"error": "Unknown facility id"}, status=400))
+
+        stored = {
+            "facility": facility,
+            "updated_by": getattr(request.user, "id", None),
+            "updated_at": timezone.now().isoformat(),
+        }
+        setting, _created = SystemSetting.objects.update_or_create(
+            setting_key="selected_facility",
+            defaults={"setting_value": _json.dumps(stored), "description": "Selected facility for system footer"},
+        )
+        record_audit(request, "Updated selected facility", object_type="SystemSetting", object_id=setting.id, details={"facility_id": facility_id})
+        return cors(JsonResponse({"facility": facility}))
+
+    return cors(JsonResponse({"error": "method not allowed"}, status=405))

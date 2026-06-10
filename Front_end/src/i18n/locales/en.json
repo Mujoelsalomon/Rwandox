@@ -198,6 +198,7 @@
   "training": "Training...",
   "refreshModels": "Refresh models",
   "availableModels": "Available models",
+  "facilityNotConfigured": "Facility not configured",
   "view": "View",
   "available": "Available",
   "active": "Active",
@@ -258,4 +259,8 @@
   "riskThresholdsIntro": "Adjust probability bands used across prediction views.",
   "discardChanges": "Discard changes",
   "saveChanges": "Save changes"
+  ,
+  "footerLocationLabel": "Location:",
+  "footerLocationLabelShort": "Loc:",
+  "hospitalNotConfigured": "Facility not configured"
 }

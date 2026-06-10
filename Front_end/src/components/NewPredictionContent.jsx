@@ -451,23 +451,14 @@ export default function NewPredictionContent() {
       }
 
       const summary = predictionData.summary || {}
-      const firstPrediction = Array.isArray(predictionData.predictions) ? predictionData.predictions[0] : null
+      const rowPredictions = Array.isArray(predictionData.predictions) ? predictionData.predictions : []
       setStatusMessage(`Prediction complete for ${summary.predicted_rows || 0} rows in ${datasetName}.`)
-      setDatasetPredictionReport({
+      setDatasetPredictionReport(buildDatasetPredictionReport({
         datasetName,
         targetColumn: selectedTargetColumn,
-        activeModel: summary.active_model || firstPrediction?.active_model,
-        modelType: summary.model_type || firstPrediction?.model_type,
-        trainingMetrics: summary.training_metrics || firstPrediction?.training_metrics || {},
-        predictionStatus: 'Prediction complete',
-        rowCount: summary.total_rows,
-        predictedRows: summary.predicted_rows,
-        highRiskRows: summary.high_risk_rows,
-        moderateRiskRows: summary.moderate_risk_rows,
-        lowRiskRows: summary.low_risk_rows,
-        probability: firstPrediction?.predicted_probability,
-        riskLevel: firstPrediction?.risk_level,
-      })
+        summary,
+        predictions: rowPredictions,
+      }))
     } catch (error) {
       console.error(error)
       setStatusMessage('Could not upload and predict from dataset.')
@@ -934,40 +925,300 @@ function DatasetPanel({
   )
 }
 
+function buildDatasetPredictionReport({ datasetName, predictions, summary, targetColumn }) {
+  const normalizedPredictions = predictions.map((prediction, index) => {
+    const probability = normalizeProbability(prediction.predicted_probability)
+    const riskLevel = prediction.risk_level || classifyRisk(probability).replace(' Risk', '')
+    const oxygenRequired = isOxygenRequiredPrediction(prediction)
+    return {
+      rowId: Number(prediction.row_index ?? index) + 1,
+      probability,
+      riskLevel,
+      oxygenRequired,
+      oxygenRequiredLabel: oxygenRequired ? 'Yes' : 'No',
+      recommendation: firstRecommendation(prediction, riskLevel, oxygenRequired),
+    }
+  })
+  const probabilities = normalizedPredictions.map((prediction) => prediction.probability)
+  const predictedRows = Number(summary.predicted_rows ?? normalizedPredictions.length) || 0
+  const rowCount = Number(summary.total_rows ?? predictedRows) || 0
+  const oxygenRequiredRows = normalizedPredictions.filter((prediction) => prediction.oxygenRequired).length
+  const oxygenNotRequiredRows = Math.max(0, predictedRows - oxygenRequiredRows)
+  const highRiskRows = Number(summary.high_risk_rows ?? normalizedPredictions.filter((prediction) => prediction.riskLevel === 'High').length) || 0
+  const moderateRiskRows = Number(summary.moderate_risk_rows ?? normalizedPredictions.filter((prediction) => prediction.riskLevel === 'Moderate').length) || 0
+  const lowRiskRows = Number(summary.low_risk_rows ?? normalizedPredictions.filter((prediction) => prediction.riskLevel === 'Low').length) || 0
+  const averageProbability = probabilities.length
+    ? Math.round(probabilities.reduce((sum, value) => sum + value, 0) / probabilities.length)
+    : 0
+  const minimumProbability = probabilities.length ? Math.min(...probabilities) : 0
+  const maximumProbability = probabilities.length ? Math.max(...probabilities) : 0
+  const firstPrediction = normalizedPredictions[0]
+
+  return {
+    datasetName,
+    targetColumn,
+    predictionStatus: 'Prediction complete',
+    predictionDate: new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }),
+    rowCount,
+    predictedRows,
+    oxygenRequiredRows,
+    oxygenNotRequiredRows,
+    oxygenRequiredPercentage: percentage(oxygenRequiredRows, predictedRows),
+    highRiskRows,
+    moderateRiskRows,
+    lowRiskRows,
+    riskPercentages: {
+      high: percentage(highRiskRows, predictedRows),
+      moderate: percentage(moderateRiskRows, predictedRows),
+      low: percentage(lowRiskRows, predictedRows),
+    },
+    averageProbability,
+    minimumProbability,
+    maximumProbability,
+    firstRowProbability: firstPrediction?.probability ?? 0,
+    firstRowRiskLevel: firstPrediction?.riskLevel || '',
+    clinicalInterpretation: clinicalDatasetInterpretation({
+      predictedRows,
+      highRiskRows,
+      moderateRiskRows,
+      lowRiskRows,
+      oxygenRequiredRows,
+    }),
+    recommendations: datasetRecommendationSummary({ highRiskRows, moderateRiskRows, oxygenRequiredRows, predictedRows }),
+    predictions: normalizedPredictions,
+  }
+}
+
 function DatasetPredictionReport({ report }) {
   const { t } = useTranslation()
-  const probability = report.probability === undefined || report.probability === null
-    ? t('notGenerated')
-    : `${normalizeProbability(report.probability)}%`
 
   return (
     <section className="card border-0 shadow-sm rounded-4 mb-3 rounded-[16px] border border-[#c7d8eb] bg-white px-5 py-5 md:px-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="small-text text-primary fw-bold text-uppercase mb-2 font-extrabold tracking-[0.14em]">{t('datasetPredictionReport')}</p>
-          <h2 className="section-title font-black text-[#071b49]">{t('predictionSummary')}</h2>
+          <h2 className="section-title font-black text-[#071b49]">Dataset Prediction Summary</h2>
+          <p className="small-text mt-1 font-semibold text-[#53668a]">
+            Prediction date: {report.predictionDate}
+          </p>
         </div>
         <span className="rounded-[10px] bg-[#dcfce7] px-4 py-2 text-[13px] font-extrabold text-[#166534]">
           {report.predictionStatus}
         </span>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <ReportSection title="Dataset Prediction Summary">
         <ReportMetric label={t('dataset')} value={report.datasetName || t('notSelected')} />
-        <ReportMetric label={t('targetColumn')} value={report.targetColumn || t('notSelected')} />
-        <ReportMetric label={t('activeTrainedModel')} value={report.activeModel || t('noActiveModel')} />
-        <ReportMetric label={t('modelType')} value={report.modelType || t('notAvailable')} />
-        <ReportMetric label={t('trainingAccuracy')} value={formatTrainingMetric(report.trainingMetrics?.val_accuracy)} />
-        <ReportMetric label={t('trainingF1Score')} value={formatTrainingMetric(report.trainingMetrics?.val_f1_score ?? report.trainingMetrics?.f1_score)} />
-        <ReportMetric label={t('rowsInDataset')} value={report.rowCount ?? t('notAvailable')} />
+        <ReportMetric label="Prediction date" value={report.predictionDate} />
+        <ReportMetric label="Total rows uploaded" value={report.rowCount ?? t('notAvailable')} />
         <ReportMetric label={t('predictedRows')} value={report.predictedRows ?? t('notAvailable')} />
+      </ReportSection>
+
+      <ReportSection title="Overall Prediction Summary">
+        <ReportMetric label="Total predicted patients" value={report.predictedRows ?? t('notAvailable')} />
+        <ReportMetric label="Patients predicted to require oxygen" value={report.oxygenRequiredRows} />
+        <ReportMetric label="Patients predicted not to require oxygen" value={report.oxygenNotRequiredRows} />
+        <ReportMetric label="High-risk patients" value={report.highRiskRows ?? 0} />
+        <ReportMetric label="Moderate-risk patients" value={report.moderateRiskRows ?? 0} />
+        <ReportMetric label="Low-risk patients" value={report.lowRiskRows ?? 0} />
+        <ReportMetric label="Average prediction probability" value={`${report.averageProbability}%`} />
+        <ReportMetric label="Highest prediction probability" value={`${report.maximumProbability}%`} />
+        <ReportMetric label="Lowest prediction probability" value={`${report.minimumProbability}%`} />
+      </ReportSection>
+
+      <ReportSection title="Oxygen Requirement Results">
+        <ReportMetric label="Predicted Oxygen Required" value={report.oxygenRequiredRows} />
+        <ReportMetric label="Predicted Oxygen Not Required" value={report.oxygenNotRequiredRows} />
+        <ReportMetric label="Percentage Requiring Oxygen" value={`${report.oxygenRequiredPercentage}%`} />
+      </ReportSection>
+
+      <ReportSection title="Risk Classification Results">
         <ReportMetric label={t('highRiskRows')} value={report.highRiskRows ?? 0} />
         <ReportMetric label={t('moderateRiskRows')} value={report.moderateRiskRows ?? 0} />
         <ReportMetric label={t('lowRiskRows')} value={report.lowRiskRows ?? 0} />
-        <ReportMetric label={t('firstRowProbability')} value={probability} />
-        <ReportMetric label={t('firstRowRiskLevel')} value={report.riskLevel || t('notGenerated')} />
+      </ReportSection>
+
+      <RiskDistributionTable report={report} />
+
+      <ReportSection title="Probability Summary">
+        <ReportMetric label="Average Probability" value={`${report.averageProbability}%`} />
+        <ReportMetric label="Minimum Probability" value={`${report.minimumProbability}%`} />
+        <ReportMetric label="Maximum Probability" value={`${report.maximumProbability}%`} />
+        <ReportMetric label={t('firstRowProbability')} value={`${report.firstRowProbability}%`} />
+        <ReportMetric label={t('firstRowRiskLevel')} value={report.firstRowRiskLevel || t('notGenerated')} />
+      </ReportSection>
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+        <InterpretationCard title="Clinical Interpretation" text={report.clinicalInterpretation} />
+        <div className="rounded-[14px] border border-[#d7e4f4] bg-[#f8fbff] p-4">
+          <h3 className="text-[14px] font-black uppercase tracking-[0.12em] text-[#071b49]">Recommendation Summary</h3>
+          <div className="mt-3 grid gap-3">
+            <RecommendationItem label={t('oxygenTherapyRecommendation')} value={report.recommendations.oxygen} />
+            <RecommendationItem label={t('monitoringRecommendation')} value={report.recommendations.monitoring} />
+            <RecommendationItem label={t('dispositionRecommendation')} value={report.recommendations.disposition} />
+            <RecommendationItem label="Clinical Safety Note" value={report.recommendations.safety} />
+          </div>
+        </div>
+      </div>
+
+      <RowPredictionTable predictions={report.predictions} />
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button type="button" onClick={() => exportDatasetPredictionCsv(report)} className="btn btn-primary fw-bold rounded-[10px] px-4 py-2 text-white">
+          Export CSV
+        </button>
+        <button type="button" onClick={() => window.print()} className="btn btn-outline-primary fw-bold rounded-[10px] px-4 py-2">
+          Download PDF
+        </button>
+        <button type="button" onClick={() => window.print()} className="btn btn-light fw-bold rounded-[10px] border border-[#c7d8eb] px-4 py-2">
+          Print Report
+        </button>
       </div>
     </section>
+  )
+}
+
+function ReportSection({ children, title }) {
+  return (
+    <section className="mt-5">
+      <h3 className="text-[14px] font-black uppercase tracking-[0.14em] text-[#1768f2]">{title}</h3>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function RiskDistributionTable({ report }) {
+  const rows = [
+    ['High risk', report.highRiskRows, report.riskPercentages.high],
+    ['Moderate risk', report.moderateRiskRows, report.riskPercentages.moderate],
+    ['Low risk', report.lowRiskRows, report.riskPercentages.low],
+  ]
+
+  return (
+    <section className="mt-5">
+      <h3 className="text-[14px] font-black uppercase tracking-[0.14em] text-[#1768f2]">Risk Level Distribution</h3>
+      <div className="mt-3 overflow-x-auto rounded-[14px] border border-[#d7e4f4]">
+        <table className="table mb-0 min-w-[620px] align-middle">
+          <thead className="bg-[#f8fbff]">
+            <tr>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Risk level</th>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Number</th>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([label, count, percentage]) => (
+              <tr key={label}>
+                <td className="px-4 py-3 text-[14px] font-extrabold text-[#071b49]">{label}</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{count}</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{percentage}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+function InterpretationCard({ text, title }) {
+  return (
+    <div className="rounded-[14px] border border-[#d7e4f4] bg-white p-4">
+      <h3 className="text-[14px] font-black uppercase tracking-[0.12em] text-[#071b49]">{title}</h3>
+      <p className="mt-3 text-[15px] font-semibold leading-7 text-[#20365f]">{text}</p>
+    </div>
+  )
+}
+
+function RecommendationItem({ label, value }) {
+  return (
+    <div className="rounded-[12px] bg-white px-4 py-3">
+      <p className="text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">{label}</p>
+      <p className="mt-2 text-[14px] font-semibold leading-6 text-[#20365f]">{value}</p>
+    </div>
+  )
+}
+
+function RowPredictionTable({ predictions }) {
+  const [selectedPrediction, setSelectedPrediction] = useState(null)
+
+  return (
+    <section className="mt-5">
+      <h3 className="text-[14px] font-black uppercase tracking-[0.14em] text-[#1768f2]">Row-Level Prediction Table</h3>
+      <div className="mt-3 overflow-x-auto rounded-[14px] border border-[#d7e4f4]">
+        <table className="table table-hover mb-0 min-w-[860px] align-middle">
+          <thead className="bg-[#f8fbff]">
+            <tr>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Row ID</th>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">{'Probability'}</th>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Risk level</th>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Oxygen required</th>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Recommendation</th>
+              <th className="px-4 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {predictions.map((prediction) => (
+              <tr key={prediction.rowId}>
+                <td className="px-4 py-3 text-[14px] font-black text-[#071b49]">{prediction.rowId}</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{prediction.probability}%</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{prediction.riskLevel}</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{prediction.oxygenRequiredLabel}</td>
+                <td className="px-4 py-3 text-[14px] font-semibold text-[#20365f]">{prediction.recommendation}</td>
+                <td className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPrediction(prediction)}
+                    className="btn btn-light rounded-[10px] border border-[#c7d8eb] px-3 py-2 text-[13px] font-extrabold text-[#071b49]"
+                  >
+                    View Details
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {selectedPrediction && (
+        <RowPredictionDetails prediction={selectedPrediction} onClose={() => setSelectedPrediction(null)} />
+      )}
+    </section>
+  )
+}
+
+function RowPredictionDetails({ onClose, prediction }) {
+  return (
+    <div className="mt-4 rounded-[14px] border border-[#b8d3ff] bg-[#f8fbff] p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h4 className="text-[15px] font-black uppercase tracking-[0.12em] text-[#1768f2]">
+            Row {prediction.rowId} Prediction Details
+          </h4>
+          <p className="mt-2 text-[14px] font-semibold text-[#20365f]">
+            This row was predicted as {prediction.riskLevel} risk with {prediction.probability}% probability.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="btn btn-light rounded-[10px] border border-[#c7d8eb] px-3 py-2 text-[13px] font-extrabold text-[#071b49]"
+        >
+          Close
+        </button>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <ReportMetric label="Row ID" value={prediction.rowId} />
+        <ReportMetric label="Probability" value={`${prediction.probability}%`} />
+        <ReportMetric label="Risk level" value={prediction.riskLevel} />
+        <ReportMetric label="Oxygen required" value={prediction.oxygenRequiredLabel} />
+      </div>
+      <div className="mt-3 rounded-[12px] bg-white px-4 py-3">
+        <p className="text-[12px] font-black uppercase tracking-[0.1em] text-[#53668a]">Recommendation</p>
+        <p className="mt-2 text-[14px] font-semibold leading-6 text-[#20365f]">{prediction.recommendation}</p>
+      </div>
+    </div>
   )
 }
 
@@ -1242,6 +1493,93 @@ function formatTrainingMetric(value) {
   if (!Number.isFinite(numericValue)) return 'Not available'
   const percentValue = numericValue <= 1 ? numericValue * 100 : numericValue
   return `${Math.round(percentValue * 10) / 10}%`
+}
+
+function percentage(count, total) {
+  if (!total) return 0
+  return Math.round((Number(count || 0) / Number(total)) * 100)
+}
+
+function isOxygenRequiredPrediction(prediction) {
+  const predictedClass = String(prediction?.predicted_class || '').toLowerCase()
+  if (['yes', 'true', '1', 'required', 'oxygen required'].includes(predictedClass)) return true
+  if (['no', 'false', '0', 'not required', 'oxygen not required'].includes(predictedClass)) return false
+  return normalizeProbability(prediction?.predicted_probability) >= 50
+}
+
+function firstRecommendation(prediction, riskLevel, oxygenRequired) {
+  const recommendations = Array.isArray(prediction?.recommendations) ? prediction.recommendations : []
+  if (recommendations.length > 0) return String(recommendations[0])
+  if (riskLevel === 'High') return 'Prepare oxygen and monitor closely'
+  if (riskLevel === 'Moderate') return oxygenRequired ? 'Prepare oxygen and reassess in recovery room' : 'Close postoperative SpO2 monitoring'
+  return oxygenRequired ? 'Oxygen available if clinically indicated' : 'Routine postoperative monitoring'
+}
+
+function clinicalDatasetInterpretation({ highRiskRows, lowRiskRows, moderateRiskRows, oxygenRequiredRows, predictedRows }) {
+  if (!predictedRows) return 'No predicted records are available for interpretation.'
+  const highPercent = percentage(highRiskRows, predictedRows)
+  const oxygenPercent = percentage(oxygenRequiredRows, predictedRows)
+  if (highPercent >= 70) {
+    return `The uploaded dataset contains ${predictedRows} predicted records. Most records were classified as high risk for postoperative oxygen requirement. ${oxygenPercent}% were predicted to require oxygen, indicating a need for close postoperative oxygen monitoring and oxygen therapy readiness.`
+  }
+  if (moderateRiskRows >= highRiskRows && moderateRiskRows >= lowRiskRows) {
+    return `The uploaded dataset contains ${predictedRows} predicted records. Most records were classified as moderate risk, so patients may need repeated SpO2 assessment and oxygen readiness during early postoperative recovery.`
+  }
+  if (lowRiskRows > highRiskRows && lowRiskRows > moderateRiskRows) {
+    return `The uploaded dataset contains ${predictedRows} predicted records. Most records were classified as low risk, supporting routine postoperative monitoring while still reassessing if clinical status changes.`
+  }
+  return `The uploaded dataset contains ${predictedRows} predicted records with a mixed risk profile. Review high and moderate risk rows first and prepare oxygen support according to clinical judgment.`
+}
+
+function datasetRecommendationSummary({ highRiskRows, moderateRiskRows, oxygenRequiredRows, predictedRows }) {
+  const highPercent = percentage(highRiskRows, predictedRows)
+  const moderateOrHighPercent = percentage(highRiskRows + moderateRiskRows, predictedRows)
+  const oxygenPercent = percentage(oxygenRequiredRows, predictedRows)
+  if (highPercent >= 50 || oxygenPercent >= 50) {
+    return {
+      oxygen: 'Prepare oxygen sources before transfer from theatre or recovery room.',
+      monitoring: 'Use continuous SpO2 monitoring and arrange early clinical review for high-risk patients.',
+      disposition: 'Consider HDU or ICU readiness for patients with high probability or unstable postoperative observations.',
+      safety: 'Use these predictions to support clinical judgment; reassess patients if their condition changes.',
+    }
+  }
+  if (moderateOrHighPercent >= 50) {
+    return {
+      oxygen: 'Keep oxygen equipment ready and initiate oxygen if saturation falls or respiratory work increases.',
+      monitoring: 'Repeat SpO2 and respiratory-rate assessment during early recovery.',
+      disposition: 'Use enhanced ward or HDU observation according to patient condition and local protocol.',
+      safety: 'Prediction results should be reviewed together with bedside clinical assessment.',
+    }
+  }
+  return {
+    oxygen: 'Oxygen may be used if clinically indicated by saturation or respiratory status.',
+    monitoring: 'Continue routine postoperative monitoring and reassess if clinical condition changes.',
+    disposition: 'Ward disposition is likely appropriate for stable low-risk patients.',
+    safety: 'Low risk does not replace clinical review; monitor according to local recovery standards.',
+  }
+}
+
+function exportDatasetPredictionCsv(report) {
+  const header = ['Row ID', 'Probability', 'Risk level', 'Oxygen required', 'Recommendation']
+  const rows = report.predictions.map((prediction) => [
+    prediction.rowId,
+    `${prediction.probability}%`,
+    prediction.riskLevel,
+    prediction.oxygenRequiredLabel,
+    prediction.recommendation,
+  ])
+  const csv = [header, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `dataset_prediction_report_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')}.csv`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }
 
 function classifyRisk(probability) {

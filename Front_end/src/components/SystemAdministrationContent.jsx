@@ -21,6 +21,32 @@ export default function SystemAdministrationContent() {
   const [activeAdminPanel, setActiveAdminPanel] = useState(null)
   const [users, setUsers] = useState(defaultUsers)
   const [editingUserId, setEditingUserId] = useState(null)
+  const [originalRole, setOriginalRole] = useState(null)
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    async function loadUsers() {
+      setLoadingUsers(true)
+      try {
+        const resp = await fetch(`${API_BASE_URL}/api/admin/users/`, { credentials: 'include' })
+        if (!active) return
+        if (!resp.ok) throw new Error('Could not load users')
+        const data = await resp.json()
+        setUsers(data.users || defaultUsers)
+        setError('')
+      } catch (e) {
+        console.error(e)
+        setError('Could not load users from backend. Using local defaults.')
+        setUsers(defaultUsers)
+      } finally {
+        if (active) setLoadingUsers(false)
+      }
+    }
+    loadUsers()
+    return () => { active = false }
+  }, [])
 
   function openAdminPanel(title) {
     if (title === 'User access') {
@@ -48,10 +74,56 @@ export default function SystemAdministrationContent() {
     notify(`${title} administration opened.`, 'info')
   }
 
-  function updateUserRole(userId, role) {
+  function draftUserRole(userId, role) {
     setUsers((current) => current.map((user) => (user.id === userId ? { ...user, role } : user)))
+  }
+
+  function handleEdit(userId) {
+    if (editingUserId === userId) {
+      setEditingUserId(null)
+      setOriginalRole(null)
+      return
+    }
+    const user = users.find((u) => u.id === userId)
+    setOriginalRole(user ? user.role : null)
+    setEditingUserId(userId)
+  }
+
+  function saveUserRole(userId) {
+    const user = users.find((u) => u.id === userId)
+    if (!user) {
+      notify('Could not find user to save.', 'danger')
+      return
+    }
+
+    ;(async () => {
+      try {
+        const resp = await fetch(`${API_BASE_URL}/auth/profile`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role }),
+        })
+        const data = await resp.json()
+        if (!resp.ok) throw new Error(data.error || 'Save failed')
+        setUsers((current) => current.map((u) => (u.id === data.user.id ? data.user : u)))
+        setEditingUserId(null)
+        setOriginalRole(null)
+        notify('User role updated.', 'success')
+      } catch (e) {
+        console.error(e)
+        notify('Could not save user role to backend.', 'danger')
+      }
+    })()
+  }
+
+  function discardUserRole(userId) {
+    if (originalRole !== null) {
+      setUsers((current) => current.map((user) => (user.id === userId ? { ...user, role: originalRole } : user)))
+    }
     setEditingUserId(null)
-    notify('User role updated.', 'success')
+    setOriginalRole(null)
+    notify('User role changes discarded.', 'warning')
   }
 
   return (
@@ -106,8 +178,10 @@ export default function SystemAdministrationContent() {
           <UsersTable
             users={users}
             editingUserId={editingUserId}
-            onEdit={setEditingUserId}
-            onRoleChange={updateUserRole}
+            onEdit={handleEdit}
+            onRoleChange={draftUserRole}
+            onSave={saveUserRole}
+            onDiscard={discardUserRole}
           />
         )}
         {activeAdminPanel === 'audit' && (
@@ -344,7 +418,12 @@ export default function SystemAdministrationContent() {
             rows={[
               ['Status', statusLabel(database.status)],
               ['Database type', database.database_type || 'Not available'],
+              ['Database name', database.database_name || 'Not available'],
+              ['Host', database.database_host || 'Not available'],
+              ['Port', database.database_port || 'Not available'],
               ['Connection result', database.connection_result || 'Not checked'],
+              ['Tables', database.table_count ?? 'Not available'],
+              ['Migrations', database.migration_status || 'Not available'],
               ['Last successful connection', formatDateTime(database.last_successful_connection)],
             ]}
             buttonLabel="Test Database Connection"
@@ -613,7 +692,7 @@ function AdminAction({ title, detail, isActive = false, onClick }) {
   )
 }
 
-function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
+function UsersTable({ users, editingUserId, onEdit, onRoleChange, onSave, onDiscard }) {
   const { t } = useTranslation()
   return (
     <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
@@ -645,8 +724,11 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
                   {editingUserId === user.id ? (
                     <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
                   ) : (
-                    <span className="badge rounded-pill bg-[#eef5ff] px-3 py-2 text-[13px] font-extrabold text-[#1768f2]">
-                      {user.role}
+                    <span className="badge rounded-pill bg-[#1768f2] px-3 py-2 text-[13px] font-extrabold text-white opacity-100 inline-flex items-center">
+                      <svg className="hidden sm:inline-block mr-2 h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                      </svg>
+                      <span>{user.role}</span>
                     </span>
                   )}
                 </td>
@@ -690,14 +772,55 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange }) {
               {editingUserId === user.id ? (
                 <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
               ) : (
-                <span className="badge rounded-pill bg-[#eef5ff] px-3 py-2 text-[13px] font-extrabold text-[#1768f2]">
-                  {user.role}
+                <span className="badge rounded-pill bg-[#1768f2] px-3 py-2 text-[13px] font-extrabold text-white opacity-100 inline-flex items-center">
+                  <svg className="hidden sm:inline-block mr-2 h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  </svg>
+                  <span>{user.role}</span>
                 </span>
               )}
             </div>
+            {editingUserId === user.id && (
+              <div className="mt-3 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => onDiscard(user.id)}
+                  className="btn btn-light fw-bold min-h-10 rounded-full px-3 py-2 text-[#172a53]"
+                >
+                  {t('discardChanges')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSave(user.id)}
+                  className="btn btn-success fw-bold min-h-10 rounded-full px-3 py-2 text-white"
+                >
+                  {t('saveChanges')}
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
+      {editingUserId && (
+        <div className="border-t border-[#e5edf7] bg-white px-4 py-4 sm:flex sm:items-center sm:justify-end">
+          <div className="mt-2 sm:mt-0 inline-flex gap-3">
+            <button
+              type="button"
+              onClick={() => onDiscard(editingUserId)}
+              className="btn btn-light fw-bold min-h-12 rounded-full px-4 py-2 text-[#172a53]"
+            >
+              {t('discardChanges')}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(editingUserId)}
+              className="btn btn-success fw-bold min-h-12 rounded-full px-4 py-2 text-white"
+            >
+              {t('saveChanges')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

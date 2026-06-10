@@ -4,35 +4,39 @@ import { useTranslation } from 'react-i18next'
 import { API_BASE_URL } from '../config/api.js'
 import { PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents'
 
-function dashboardMetrics(activeModel, t) {
+function dashboardMetrics(activeModel, t, predictions) {
   const modelMetrics = activeModel?.metrics || {}
-  const aucValue = formatModelMetric(modelMetrics.val_auc ?? modelMetrics.auc, '0.84')
-  const f1Value = formatModelMetric(modelMetrics.val_f1_score ?? modelMetrics.f1_score, '0.81')
+  const aucValue = formatModelMetric(modelMetrics.val_auc ?? modelMetrics.auc)
+  const f1Value = formatModelMetric(modelMetrics.val_f1_score ?? modelMetrics.f1_score)
+  const todayPredictions = predictions.filter(isTodayPrediction)
+  const highRiskToday = todayPredictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
+  const highRiskTotal = predictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
+  const averageRisk = averageProbability(predictions)
 
   return [
   {
     label: t('predictionsToday'),
-    value: '24',
-    sub: t('highRiskCasesCount', { count: 4 }),
-    chip: '14%',
+    value: String(todayPredictions.length),
+    sub: t('highRiskCasesCount', { count: highRiskToday }),
+    chip: predictions.length ? t('total') : t('noRecentPredictions'),
     chipTone: 'blue',
     icon: 'trendUp',
     iconTone: 'blue',
   },
   {
     label: t('averageRiskScore'),
-    value: '41%',
-    sub: t('acrossAllAssessedPatients'),
-    chip: '5%',
+    value: averageRisk === null ? 'No data' : `${averageRisk}%`,
+    sub: predictions.length ? t('acrossAllAssessedPatients') : t('noRecentPredictions'),
+    chip: `${predictions.length}`,
     chipTone: 'green',
     icon: 'users',
     iconTone: 'green',
   },
   {
     label: t('highRiskAlerts'),
-    value: '6',
+    value: String(highRiskTotal),
     sub: t('requireCloseOxygenReview'),
-    chip: t('critical'),
+    chip: highRiskTotal ? t('critical') : t('stable'),
     chipTone: 'orange',
     icon: 'warning',
     iconTone: 'orange',
@@ -65,12 +69,6 @@ const workflowSteps = [
   { titleKey: 'clinicalDecision', subKey: 'planOxygenManagement', tone: 'purple', icon: 'clipboard' },
 ]
 
-const riskRows = [
-  { label: 'High Risk', value: '6 (25%)', color: '#fb2d2d' },
-  { label: 'Medium Risk', value: '10 (42%)', color: '#ff9f12' },
-  { label: 'Low Risk', value: '8 (33%)', color: '#31b966' },
-]
-
 const recentPredictionsPageSize = 10
 
 export default function DashboardContent({
@@ -82,8 +80,50 @@ export default function DashboardContent({
   riskLabel = 'High',
 }) {
   const { t } = useTranslation()
-  const riskScore = Math.round(probability * 100)
-  const metrics = dashboardMetrics(activeModel, t)
+  const [predictions, setPredictions] = useState([])
+  const [predictionsLoading, setPredictionsLoading] = useState(true)
+  const [predictionsStatus, setPredictionsStatus] = useState('')
+  const latestPrediction = predictions[0] || null
+  const riskScore = latestPrediction ? normalizeProbability(latestPrediction.predicted_probability) : 0
+  const currentRiskLabel = latestPrediction?.risk_level || riskLabel
+  const latestFactors = normalizeList(latestPrediction?.contributing_factors)
+  const currentFactors = latestFactors.length ? latestFactors : normalizeList(factorChips)
+  const metrics = dashboardMetrics(activeModel, t, predictions)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadDashboardPredictions({ showLoading = false } = {}) {
+      if (showLoading) setPredictionsLoading(true)
+      try {
+        const resp = await fetch(`${API_BASE_URL}/prediction-history`, { credentials: 'include' })
+        const data = await resp.json()
+        if (!active) return
+        if (!resp.ok) throw new Error(data.error || 'Could not load recent predictions.')
+        setPredictions(sortPredictionsByDate(Array.isArray(data.predictions) ? data.predictions : []))
+        setPredictionsStatus('')
+      } catch (error) {
+        console.error(error)
+        if (active) {
+          setPredictions([])
+          setPredictionsStatus('Could not load recent predictions from the backend.')
+        }
+      } finally {
+        if (active) setPredictionsLoading(false)
+      }
+    }
+
+    loadDashboardPredictions()
+    function handlePredictionHistoryUpdated() {
+      loadDashboardPredictions({ showLoading: true })
+    }
+
+    window.addEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
+    return () => {
+      active = false
+      window.removeEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
+    }
+  }, [])
 
   return (
     <div className="container-fluid min-w-0 space-y-4 px-0 pb-4">
@@ -96,17 +136,20 @@ export default function DashboardContent({
       </section>
 
       <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
-        <RiskDistribution t={t} />
-        <RiskTrend riskScore={riskScore} />
+        <RiskDistribution predictions={predictions} />
+        <RiskTrend predictions={predictions} riskScore={riskScore} />
       </section>
 
       <WorkflowPanel t={t} />
 
       <AssessmentPredictionPanel
-        factorChips={factorChips}
+        factorChips={currentFactors}
         handleGenerate={handleGenerate}
         loading={loading}
-        riskLabel={riskLabel}
+        predictions={predictions}
+        predictionsLoading={predictionsLoading}
+        predictionsStatus={predictionsStatus}
+        riskLabel={currentRiskLabel}
         riskScore={riskScore}
       />
     </div>
@@ -125,7 +168,6 @@ function HeroCard() {
 }
 
 function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
-  const { t } = useTranslation()
   return (
     <article className="card shadow-sm rounded-4 min-w-0 rounded-[14px] border border-[#cbd8e8] bg-white px-4 py-4">
       <div className="flex gap-4">
@@ -144,29 +186,33 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
           {chipTone === 'blue' && <span className="mr-1">↑</span>}
           {chip}
         </span>
-        {(chipTone === 'blue' || chipTone === 'green') && (
-          <span className="text-[12px] font-black text-[#334766]">{t('vsYesterday')}</span>
-        )}
       </div>
     </article>
   )
 }
 
-function RiskDistribution() {
+function RiskDistribution({ predictions }) {
   const { t } = useTranslation()
+  const rows = riskDistributionRows(predictions)
+  const total = predictions.length
+  const gradient = riskDistributionGradient(rows)
+
   return (
     <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-5 md:px-6">
       <h2 className="section-title h4 fw-bold font-black text-[#071b49]">{t('riskDistribution')}</h2>
       <div className="mt-3 flex flex-col items-center gap-8 md:flex-row md:justify-center">
-        <div className="relative flex h-[170px] w-[170px] shrink-0 items-center justify-center rounded-full bg-[conic-gradient(#fb2d2d_0_25%,#ff9f12_25%_67%,#31b966_67%_100%)]">
+        <div
+          className="relative flex h-[170px] w-[170px] shrink-0 items-center justify-center rounded-full"
+          style={{ background: gradient }}
+        >
           <div className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full bg-white shadow-inner">
-            <span className="text-[28px] font-black leading-none text-[#071b49]">24</span>
+            <span className="text-[28px] font-black leading-none text-[#071b49]">{total}</span>
             <span className="text-[14px] text-[#53668a]">{t('total')}</span>
           </div>
         </div>
 
         <div className="w-full max-w-[340px] space-y-5">
-          {riskRows.map((row) => (
+          {rows.map((row) => (
             <div key={row.label} className="grid grid-cols-[16px_1fr_auto] items-center gap-3 text-[16px]">
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
               <span className="font-semibold text-[#334766]">{translateRiskLabel(row.label, t)}</span>
@@ -179,17 +225,12 @@ function RiskDistribution() {
   )
 }
 
-function RiskTrend({ riskScore }) {
+function RiskTrend({ predictions, riskScore }) {
   const { t } = useTranslation()
-  const points = [
-    [8, 50],
-    [22, 36],
-    [37, 56],
-    [52, 68],
-    [67, 54],
-    [82, 63],
-    [94, 54],
-  ]
+  const trend = riskTrendPoints(predictions)
+  const points = trend.points
+  const path = points.length ? `M${points.map(([x, y]) => `${x} ${y}`).join(' L')}` : ''
+  const fillPath = points.length ? `${path} L94 80 L8 80 Z` : ''
 
   return (
     <section className="card shadow-sm rounded-4 mb-3 min-w-0 overflow-hidden rounded-[16px] border border-[#cbd8e8] bg-white px-5 py-5 md:px-6">
@@ -214,8 +255,8 @@ function RiskTrend({ riskScore }) {
               <stop offset="100%" stopColor="#1c64f2" stopOpacity="0.02" />
             </linearGradient>
           </defs>
-          <path d="M8 50 L22 36 L37 56 L52 68 L67 54 L82 63 L94 54 L94 80 L8 80 Z" fill="url(#riskFill)" />
-          <polyline points={points.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke="#1768f2" strokeWidth="2.2" vectorEffect="non-scaling-stroke" />
+          {fillPath && <path d={fillPath} fill="url(#riskFill)" />}
+          {points.length > 0 && <polyline points={points.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke="#1768f2" strokeWidth="2.2" vectorEffect="non-scaling-stroke" />}
           {points.map(([x, y]) => (
             <circle key={`${x}-${y}`} cx={x} cy={y} r="1.9" fill="#1768f2" vectorEffect="non-scaling-stroke" />
           ))}
@@ -224,13 +265,7 @@ function RiskTrend({ riskScore }) {
           {riskScore}%
         </div>
         <div className="absolute bottom-0 left-12 right-3 grid grid-cols-7 text-center text-[11px] font-semibold text-[#334766] sm:text-[14px]">
-          <span>May 6</span>
-          <span>May 7</span>
-          <span>May 8</span>
-          <span>May 9</span>
-          <span>May 10</span>
-          <span>May 11</span>
-          <span>May 12</span>
+          {trend.labels.map((label) => <span key={label}>{label}</span>)}
         </div>
       </div>
     </section>
@@ -274,13 +309,14 @@ function WorkflowStep({ index, titleKey, subKey, tone, icon }) {
   )
 }
 
-function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskLabel, riskScore }) {
+function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, predictions, predictionsLoading, predictionsStatus, riskLabel, riskScore }) {
   const { t } = useTranslation()
+  const hasPredictions = predictions.length > 0
   const riskTone = getRiskTone(riskLabel)
 
   return (
     <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.75fr)]">
-      <RecentPredictionsTable />
+      <RecentPredictionsTable loading={predictionsLoading} predictions={predictions} status={predictionsStatus} />
 
       <div className="min-w-0 space-y-5">
         <section className="card shadow rounded-4 rounded-[20px] border border-[#cbd8e8] bg-white px-6 py-6 text-[#071b49]">
@@ -288,11 +324,13 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
             <h2 className="section-title max-w-[170px] font-black tracking-wide">
               {t('currentPrediction')}
             </h2>
-            <RiskStatusCard risk={riskLabel} />
+            {hasPredictions ? <RiskStatusCard risk={riskLabel} /> : null}
           </div>
-          <p className={`prediction-value mt-7 ${riskTone.text}`}>{riskScore}%</p>
+          <p className={`prediction-value mt-7 ${hasPredictions ? riskTone.text : 'text-[#64748b]'}`}>
+            {hasPredictions ? `${riskScore}%` : 'No data'}
+          </p>
           <p className="body-text mt-5 max-w-[340px] font-extrabold text-[#20365f]">
-            {t('probabilityExplanation')}
+            {hasPredictions ? t('probabilityExplanation') : t('noRecentPredictions')}
           </p>
         </section>
 
@@ -301,14 +339,16 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
             {t('keyContributingFactors')}
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
-            {factorChips.map((chip) => (
+            {hasPredictions && factorChips.length > 0 ? factorChips.map((chip) => (
               <span
                 key={chip}
                 className="risk-badge-text badge rounded-pill border border-[#fecaca] bg-[#dc2626] px-3 py-2 font-extrabold text-white shadow-sm"
               >
                 {chip}
               </span>
-            ))}
+            )) : (
+              <span className="small-text font-bold text-[#64748b]">{t('noRecentPredictions')}</span>
+            )}
           </div>
         </section>
       </div>
@@ -316,48 +356,13 @@ function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, riskL
   )
 }
 
-function RecentPredictionsTable() {
+function RecentPredictionsTable({ loading, predictions, status }) {
   const { t } = useTranslation()
-  const [predictions, setPredictions] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
 
   useEffect(() => {
-    let active = true
-
-    async function loadRecentPredictions({ showLoading = false } = {}) {
-      if (showLoading) setLoading(true)
-      try {
-        const resp = await fetch(`${API_BASE_URL}/prediction-history`, { credentials: 'include' })
-        const data = await resp.json()
-        if (!active) return
-        if (!resp.ok) throw new Error(data.error || 'Could not load recent predictions.')
-        setPredictions(sortPredictionsByDate(data.predictions || []))
-        setPage(1)
-        setStatus('')
-      } catch (error) {
-        console.error(error)
-        if (active) {
-          setPredictions([])
-          setStatus('Could not load recent predictions from the backend.')
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    loadRecentPredictions()
-    function handlePredictionHistoryUpdated() {
-      loadRecentPredictions({ showLoading: true })
-    }
-
-    window.addEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
-    return () => {
-      active = false
-      window.removeEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
-    }
-  }, [])
+    setPage(1)
+  }, [predictions.length])
 
   const totalPages = Math.max(1, Math.ceil(predictions.length / recentPredictionsPageSize))
   const currentPage = Math.min(page, totalPages)
@@ -470,6 +475,127 @@ function sortPredictionsByDate(items) {
     if (Number.isNaN(right)) return -1
     return right - left
   })
+}
+
+function normalizeProbability(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 0
+  const percent = numeric <= 1 ? numeric * 100 : numeric
+  return Math.min(100, Math.max(0, Math.round(percent)))
+}
+
+function normalizeList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (!item) return ''
+        if (typeof item === 'object') return item.display || item.feature || item.label || JSON.stringify(item)
+        return String(item)
+      })
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(/[;,]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  }
+  return []
+}
+
+function averageProbability(predictions) {
+  if (!predictions.length) return null
+  const total = predictions.reduce((sum, prediction) => sum + normalizeProbability(prediction.predicted_probability), 0)
+  return Math.round(total / predictions.length)
+}
+
+function riskBucket(risk) {
+  const normalized = String(risk || '').toLowerCase()
+  if (normalized.includes('high')) return 'High'
+  if (normalized.includes('moderate') || normalized.includes('medium')) return 'Moderate'
+  if (normalized.includes('low')) return 'Low'
+  return 'Unknown'
+}
+
+function isTodayPrediction(prediction) {
+  const date = new Date(prediction?.generated_at || '')
+  if (Number.isNaN(date.getTime())) return false
+  const today = new Date()
+  return date.getFullYear() === today.getFullYear()
+    && date.getMonth() === today.getMonth()
+    && date.getDate() === today.getDate()
+}
+
+function riskDistributionRows(predictions) {
+  const counts = { High: 0, Moderate: 0, Low: 0 }
+  predictions.forEach((prediction) => {
+    const bucket = riskBucket(prediction.risk_level)
+    if (counts[bucket] !== undefined) counts[bucket] += 1
+  })
+  const total = predictions.length
+  return [
+    { label: 'High Risk', count: counts.High, color: '#fb2d2d' },
+    { label: 'Moderate Risk', count: counts.Moderate, color: '#ff9f12' },
+    { label: 'Low Risk', count: counts.Low, color: '#31b966' },
+  ].map((row) => ({
+    ...row,
+    percent: total ? Math.round((row.count / total) * 100) : 0,
+    value: total ? `${row.count} (${Math.round((row.count / total) * 100)}%)` : '0 (0%)',
+  }))
+}
+
+function riskDistributionGradient(rows) {
+  if (rows.every((row) => row.count === 0)) return 'conic-gradient(#e2e8f0 0 100%)'
+  let cursor = 0
+  const segments = rows
+    .filter((row) => row.percent > 0)
+    .map((row) => {
+      const start = cursor
+      cursor += row.percent
+      return `${row.color} ${start}% ${cursor}%`
+    })
+  return `conic-gradient(${segments.join(',')})`
+}
+
+function riskTrendPoints(predictions) {
+  const days = lastSevenDays()
+  const grouped = new Map(days.map((day) => [day.key, []]))
+  predictions.forEach((prediction) => {
+    const date = new Date(prediction.generated_at || '')
+    if (Number.isNaN(date.getTime())) return
+    const key = dateKey(date)
+    if (grouped.has(key)) grouped.get(key).push(normalizeProbability(prediction.predicted_probability))
+  })
+  const xPositions = [8, 22, 37, 52, 67, 82, 94]
+  const points = days
+    .map((day, index) => {
+      const values = grouped.get(day.key) || []
+      if (!values.length) return null
+      const average = values.reduce((sum, value) => sum + value, 0) / values.length
+      return [xPositions[index], 80 - (average * 0.8)]
+    })
+    .filter(Boolean)
+  return {
+    labels: days.map((day) => day.label),
+    points,
+  }
+}
+
+function lastSevenDays() {
+  const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date()
+    date.setDate(date.getDate() - (6 - index))
+    return {
+      key: dateKey(date),
+      label: formatter.format(date),
+    }
+  })
+}
+
+function dateKey(date) {
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
 }
 
 function RiskBadge({ risk }) {
@@ -585,7 +711,7 @@ function formatDate(value) {
   })
 }
 
-function formatModelMetric(value, fallback) {
+function formatModelMetric(value, fallback = 'No data') {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return fallback
   const normalized = numeric > 1 ? numeric / 100 : numeric

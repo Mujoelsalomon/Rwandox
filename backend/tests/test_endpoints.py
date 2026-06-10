@@ -88,6 +88,9 @@ class EndpointsTest(TestCase):
         self.assertIn('sync', data)
         self.assertIn('backend_url', data['api'])
         self.assertIn('connection_result', data['database'])
+        self.assertIn('database_name', data['database'])
+        self.assertIn('table_count', data['database'])
+        self.assertIn('migration_status', data['database'])
 
     def test_clinician_cannot_access_maintenance_endpoints(self):
         clinician = User.objects.create_user(
@@ -207,6 +210,14 @@ class EndpointsTest(TestCase):
         self.assertEqual(data['summary']['predicted_rows'], 2)
         self.assertEqual(data['summary']['high_risk_rows'], 1)
         self.assertEqual(data['summary']['low_risk_rows'], 1)
+        self.assertEqual(data['summary']['oxygen_required_rows'], 1)
+        self.assertEqual(data['summary']['oxygen_not_required_rows'], 1)
+        self.assertEqual(data['summary']['oxygen_required_percentage'], 50)
+        self.assertEqual(data['summary']['average_probability'], 51)
+        self.assertEqual(data['summary']['minimum_probability'], 20)
+        self.assertEqual(data['summary']['maximum_probability'], 82)
+        self.assertEqual(data['summary']['first_row_probability'], 82)
+        self.assertEqual(data['summary']['first_row_risk_level'], 'High')
         self.assertEqual(mocked_prediction.call_count, 2)
 
     @override_settings(DEBUG=True)
@@ -268,6 +279,10 @@ class EndpointsTest(TestCase):
         search_resp = self.client.get('/patients/search?q=KBH-PREVIEW-001')
         self.assertEqual(search_resp.status_code, 200)
         self.assertEqual(search_resp.json()['patients'], [])
+
+        history_resp = self.client.get('/prediction-history')
+        self.assertEqual(history_resp.status_code, 200)
+        self.assertEqual(history_resp.json()['predictions'], [])
 
     def test_patient_search_and_prediction_history(self):
         payload = {'features': {'patient_coded_id': 'KBH-TEST-002', 'age': 52, 'sex': 'Male', 'postop_spo2': 91}}
