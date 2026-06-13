@@ -216,6 +216,7 @@ def run_training(job_id, dataset_path, model_type, target_column):
             "numeric_feature_count": metadata.get("numeric_feature_count"),
             "categorical_feature_count": metadata.get("categorical_feature_count"),
             "dropped_columns": metadata.get("dropped_columns") or [],
+            "top_predictors": metadata.get("top_predictors") or result.get("metrics", {}).get("top_predictors") or [],
             "dataset_cleaning": metadata.get("dataset_cleaning") or result.get("metrics", {}).get("dataset_cleaning") or {},
             "numeric_columns": metadata.get("numeric_columns") or [],
             "categorical_columns": metadata.get("categorical_columns") or [],

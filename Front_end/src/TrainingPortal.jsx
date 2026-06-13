@@ -426,6 +426,10 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
           </div>
 
           <ClinicalInterpretation metrics={metrics} />
+          <DeterminantsRankingTable
+            predictors={result.top_predictors || metrics.top_predictors}
+            fallbackColumns={[...(result.numeric_columns || []), ...(result.categorical_columns || [])]}
+          />
           <DatasetCleaningReport report={result.dataset_cleaning || metrics.dataset_cleaning} />
 
           <div className="mt-6 grid gap-5 xl:grid-cols-3">
@@ -516,6 +520,7 @@ function SavedModelReport({ model, activatingId, onActivate }) {
           </div>
 
           <ClinicalInterpretation metrics={metrics} />
+          <DeterminantsRankingTable predictors={metrics.top_predictors} />
           <DatasetCleaningReport report={metrics.dataset_cleaning} />
           <ClassificationReport report={metrics.classification_report} />
         </>
@@ -644,6 +649,92 @@ function ClinicalInterpretation({ metrics }) {
       </p>
     </div>
   )
+}
+
+function DeterminantsRankingTable({ fallbackColumns = [], predictors }) {
+  const rows = normalizeDeterminantRows(predictors, fallbackColumns)
+  if (!rows.length) {
+    return (
+      <div className="mt-7 rounded-[12px] border border-[#d9e5f3] bg-white px-6 py-5">
+        <h3 className="section-title font-black text-[#0b63ce]">Determinants Ranking</h3>
+        <p className="body-text mt-3 font-semibold text-[#53668a]">
+          Determinant contribution is not available for this training result.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <section className="mt-7 rounded-[12px] border border-[#d9e5f3] bg-white p-5">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="section-title font-black text-[#0b63ce]">Determinants Ranking</h3>
+          <p className="small-text mt-1 font-semibold text-[#53668a]">
+            Top 10 determinants ranked by normalized contribution probability.
+          </p>
+        </div>
+        <span className="risk-badge-text w-fit rounded-full bg-[#eaf2ff] px-4 py-2 text-[#0b63ce]">
+          Ranked
+        </span>
+      </div>
+
+      <div className="mt-5 overflow-x-auto">
+        <table className="table-body min-w-full text-left">
+          <thead className="bg-[#f8fbff] text-[#263957]">
+            <tr>
+              <th className="px-4 py-3">Rank</th>
+              <th className="px-4 py-3">Predictor</th>
+              <th className="px-4 py-3">Contribution Probability</th>
+              <th className="px-4 py-3">Contribution</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const probability = Number(row.contribution_probability)
+              const percent = Number.isFinite(probability) ? probability * 100 : Number(row.contribution_percent)
+              return (
+                <tr key={`${row.predictor || 'predictor'}-${index}`} className="border-t border-[#edf2f8]">
+                  <td className="px-4 py-4 font-black text-[#071b49]">{row.rank || index + 1}</td>
+                  <td className="px-4 py-4 font-extrabold text-[#24334f]">{row.predictor || 'Unknown predictor'}</td>
+                  <td className="px-4 py-4 font-bold text-[#24334f]">
+                    {Number.isFinite(probability) ? probability.toFixed(4) : 'Not available'}
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex min-w-[180px] items-center gap-3">
+                      <div className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-[#e5edf7]">
+                        <div
+                          className="h-full rounded-full bg-[#1768f2]"
+                          style={{ width: `${Math.max(0, Math.min(100, percent || 0))}%` }}
+                        />
+                      </div>
+                      <span className="w-[74px] text-right font-black text-[#0b63ce]">
+                        {Number.isFinite(percent) ? `${percent.toFixed(2)}%` : 'N/A'}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+function normalizeDeterminantRows(predictors, fallbackColumns) {
+  const rows = Array.isArray(predictors) ? predictors.filter(Boolean).slice(0, 10) : []
+  if (rows.length) return rows
+
+  const columns = Array.isArray(fallbackColumns) ? fallbackColumns.filter(Boolean).slice(0, 10) : []
+  if (!columns.length) return []
+  const contribution = 1 / columns.length
+  return columns.map((column, index) => ({
+    rank: index + 1,
+    predictor: String(column),
+    contribution_probability: contribution,
+    contribution_percent: contribution * 100,
+  }))
 }
 
 function DatasetCleaningReport({ report }) {

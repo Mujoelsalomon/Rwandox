@@ -21,6 +21,7 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.impute import SimpleImputer
+from sklearn.inspection import permutation_importance
 
 # Import common sklearn estimators
 from sklearn.ensemble import RandomForestClassifier
@@ -383,6 +384,13 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         preds=preds,
         labels=labels,
     )
+    metrics["top_predictors"] = top_predictor_contributions(
+        pipeline,
+        numeric_columns,
+        categorical_columns,
+        X_val=X_val,
+        y_val=y_val,
+    )
     metrics["dataset_cleaning"] = dataset_cleaning
 
     os.makedirs(os.path.join(os.path.dirname(__file__), "models"), exist_ok=True)
@@ -410,6 +418,7 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         "high_cardinality_limit": MAX_CATEGORICAL_UNIQUE_VALUES,
         "row_limit": MAX_LOCAL_TRAINING_ROWS or None,
         "model_parameters": json_safe(model.get_params()),
+        "top_predictors": metrics["top_predictors"],
         "dataset_cleaning": dataset_cleaning,
     }
     meta_path = model_path + ".meta.json"
@@ -506,6 +515,111 @@ def build_training_metrics(pipeline, X_val, y_val, preds, labels) -> dict:
             )
 
     return metrics
+
+
+def top_predictor_contributions(pipeline, numeric_columns, categorical_columns, X_val=None, y_val=None, limit=10) -> list:
+    """Return normalized model importance aggregated to original dataset columns."""
+    try:
+        model = pipeline.named_steps["model"]
+        importances = raw_model_importances(model)
+        grouped = built_in_predictor_contributions(importances, pipeline, numeric_columns, categorical_columns)
+        if not grouped:
+            grouped = permutation_predictor_contributions(pipeline, X_val, y_val)
+
+        total = sum(grouped.values())
+        if total <= 0:
+            grouped = equal_predictor_contributions(X_val.columns if X_val is not None else [])
+            total = sum(grouped.values())
+        if total <= 0:
+            return []
+
+        predictors = [
+            {
+                "rank": rank,
+                "predictor": predictor,
+                "importance": safe_float(score),
+                "contribution_probability": safe_float(score / total),
+                "contribution_percent": safe_float((score / total) * 100),
+            }
+            for rank, (predictor, score) in enumerate(
+                sorted(grouped.items(), key=lambda item: item[1], reverse=True)[:limit],
+                start=1,
+            )
+        ]
+        return json_safe(predictors)
+    except Exception:
+        return []
+
+
+def built_in_predictor_contributions(importances, pipeline, numeric_columns, categorical_columns):
+    if importances is None:
+        return {}
+
+    preprocessor = pipeline.named_steps["preprocessor"]
+    transformed_names = [str(name) for name in preprocessor.get_feature_names_out()]
+    if len(transformed_names) != len(importances):
+        return {}
+
+    grouped = {}
+    for transformed_name, importance in zip(transformed_names, importances):
+        original_column = original_column_from_transformed_name(
+            transformed_name,
+            numeric_columns=numeric_columns,
+            categorical_columns=categorical_columns,
+        )
+        if not original_column:
+            continue
+        grouped[original_column] = grouped.get(original_column, 0.0) + abs(float(importance))
+    return grouped
+
+
+def permutation_predictor_contributions(pipeline, X_val, y_val):
+    if X_val is None or y_val is None or len(X_val) == 0:
+        return {}
+    result = permutation_importance(
+        pipeline,
+        X_val,
+        y_val,
+        n_repeats=3,
+        random_state=42,
+        n_jobs=1,
+    )
+    return {
+        str(column): max(0.0, float(importance))
+        for column, importance in zip(X_val.columns, result.importances_mean)
+        if importance > 0
+    }
+
+
+def equal_predictor_contributions(columns):
+    return {str(column): 1.0 for column in list(columns)[:10] if str(column)}
+
+
+def raw_model_importances(model):
+    if hasattr(model, "feature_importances_"):
+        return np.asarray(model.feature_importances_, dtype=float)
+    if hasattr(model, "coef_"):
+        coefficients = np.asarray(model.coef_, dtype=float)
+        if coefficients.ndim == 1:
+            return np.abs(coefficients)
+        return np.mean(np.abs(coefficients), axis=0)
+    return None
+
+
+def original_column_from_transformed_name(transformed_name, numeric_columns, categorical_columns):
+    if "__" in transformed_name:
+        _, feature_name = transformed_name.split("__", 1)
+    else:
+        feature_name = transformed_name
+
+    numeric_lookup = {str(column): str(column) for column in numeric_columns}
+    if feature_name in numeric_lookup:
+        return numeric_lookup[feature_name]
+
+    for column in sorted([str(item) for item in categorical_columns], key=len, reverse=True):
+        if feature_name == column or feature_name.startswith(f"{column}_"):
+            return column
+    return feature_name
 
 
 def calculate_specificity(matrix):

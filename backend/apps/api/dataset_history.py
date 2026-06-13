@@ -1,83 +1,86 @@
-import csv
 from pathlib import Path
 
+import pandas as pd
 from django.conf import settings
 
 
-VIRTUAL_DATASET_PATH = Path(settings.BASE_DIR) / "datasets" / "oxygen_ml_virtual_dataset_100.csv"
+DATASET_PATH = Path(settings.BASE_DIR) / "datasets" / "kibagabaga_oxygen_dataset_cleaned_dataset.xlsx"
 
 
 def dataset_prediction_history_payloads(limit=250):
-    if not VIRTUAL_DATASET_PATH.exists():
+    if not DATASET_PATH.exists():
         return []
 
     predictions = []
-    with open(VIRTUAL_DATASET_PATH, newline="", encoding="utf-8") as dataset:
-        for index, row in enumerate(csv.DictReader(dataset), start=1):
-            oxygen_required = _bool(_get(row, "postoperative_oxygen_required", "oxygen_required"))
-            probability = _dataset_probability(row, oxygen_required)
-            risk_level = _risk_level(probability)
-            predictions.append({
-                "id": f"dataset-{index}",
-                "patient_id": _get(row, "patient_coded_id", "hospital_id") or f"DATASET-{index:04d}",
-                "age": _int(_get(row, "age_years", "age"), 0),
-                "sex": row.get("sex") or "Unknown",
-                "surgery_type": _get(row, "type_of_surgery_performed", "surgery_type") or "Not recorded",
-                "patient_disposition": _get(row, "postoperative_destination", "ward") or _disposition(risk_level),
-                "predicted_probability": probability,
-                "risk_level": risk_level,
-                "model_version": "oxygen-virtual-dataset",
-                "generated_at": _dataset_generated_at(index),
-                "recommendations": _dataset_recommendations(risk_level, oxygen_required),
-                "contributing_factors": _dataset_contributing_factors(row),
-            })
-            if len(predictions) >= limit:
-                break
+    for index, row in enumerate(_dataset_rows(limit), start=1):
+        oxygen_required = _bool(_get(row, "postoperative_oxygen_required", "oxygen_required"))
+        probability = _dataset_probability(row, oxygen_required)
+        risk_level = _risk_level(probability)
+        predictions.append({
+            "id": f"dataset-{index}",
+            "patient_id": _get(row, "patient_coded_id", "hospital_id") or f"DATASET-{index:04d}",
+            "age": _int(_get(row, "age_years", "age"), 0),
+            "sex": row.get("sex") or "Unknown",
+            "surgery_type": _get(row, "type_of_surgery_performed", "surgery_type") or "Not recorded",
+            "patient_disposition": _get(row, "postoperative_destination", "ward") or _disposition(risk_level),
+            "predicted_probability": probability,
+            "risk_level": risk_level,
+            "model_version": "kibagabaga-cleaned-dataset",
+            "generated_at": _dataset_generated_at(index),
+            "recommendations": _dataset_recommendations(risk_level, oxygen_required),
+            "contributing_factors": _dataset_contributing_factors(row),
+        })
 
     return predictions
 
 
 def dataset_patient_payloads(limit=250):
-    if not VIRTUAL_DATASET_PATH.exists():
+    if not DATASET_PATH.exists():
         return []
 
     patients = []
-    with open(VIRTUAL_DATASET_PATH, newline="", encoding="utf-8") as dataset:
-        for index, row in enumerate(csv.DictReader(dataset), start=1):
-            oxygen_required = _bool(_get(row, "postoperative_oxygen_required", "oxygen_required"))
-            probability = _dataset_probability(row, oxygen_required)
-            risk_level = _risk_level(probability)
-            generated_at = _dataset_generated_at(index)
-            patients.append({
-                "id": f"dataset-patient-{index}",
-                "hospital_id": _get(row, "patient_coded_id", "hospital_id") or f"DATASET-{index:04d}",
-                "name": f"Patient {_get(row, 'patient_coded_id', 'hospital_id') or index}",
-                "age": _int(_get(row, "age_years", "age"), 0),
-                "sex": row.get("sex") or "Unknown",
-                "bmi": _float(_get(row, "body_mass_index", "bmi")),
-                "smoking_history": _bool(row.get("smoking_history")),
-                "comorbidities": row.get("comorbidities") or "",
-                "baseline_spo2": _float(_get(row, "baseline_room_air_spo2_percent", "baseline_spo2")),
-                "ward": _get(row, "postoperative_destination", "ward") or _disposition(risk_level),
+    for index, row in enumerate(_dataset_rows(limit), start=1):
+        oxygen_required = _bool(_get(row, "postoperative_oxygen_required", "oxygen_required"))
+        probability = _dataset_probability(row, oxygen_required)
+        risk_level = _risk_level(probability)
+        generated_at = _dataset_generated_at(index)
+        patients.append({
+            "id": f"dataset-patient-{index}",
+            "hospital_id": _get(row, "patient_coded_id", "hospital_id") or f"DATASET-{index:04d}",
+            "name": f"Patient {_get(row, 'patient_coded_id', 'hospital_id') or index}",
+            "age": _int(_get(row, "age_years", "age"), 0),
+            "sex": row.get("sex") or "Unknown",
+            "bmi": _float(_get(row, "body_mass_index", "bmi")),
+            "smoking_history": _bool(row.get("smoking_history")),
+            "comorbidities": row.get("comorbidities") or "",
+            "baseline_spo2": _float(_get(row, "baseline_room_air_spo2_percent", "baseline_spo2")),
+            "ward": _get(row, "postoperative_destination", "ward") or _disposition(risk_level),
+            "surgery_type": _get(row, "type_of_surgery_performed", "surgery_type") or "Not recorded",
+            "risk_level": risk_level,
+            "predicted_probability": probability,
+            "last_assessment": generated_at,
+            "latest_record": {
                 "surgery_type": _get(row, "type_of_surgery_performed", "surgery_type") or "Not recorded",
-                "risk_level": risk_level,
-                "predicted_probability": probability,
-                "last_assessment": generated_at,
-                "latest_record": {
-                    "surgery_type": _get(row, "type_of_surgery_performed", "surgery_type") or "Not recorded",
-                    "urgency": _get(row, "surgery_status", "urgency") or "",
-                    "surgery_duration": _int(_get(row, "duration_of_surgery_minutes", "surgery_duration"), 0),
-                    "blood_loss": _get(row, "estimated_blood_loss_ml", "blood_loss") or "",
-                    "ward": _get(row, "postoperative_destination", "ward") or "",
-                    "procedure_date": generated_at[:10],
-                    "anesthesia_type": row.get("anesthesia_type") or "",
-                    "asa_class": row.get("asa_class") or "",
-                },
-            })
-            if len(patients) >= limit:
-                break
+                "urgency": _get(row, "surgery_status", "urgency") or "",
+                "surgery_duration": _int(_get(row, "duration_of_surgery_minutes", "surgery_duration"), 0),
+                "blood_loss": _get(row, "estimated_blood_loss_ml", "blood_loss") or "",
+                "ward": _get(row, "postoperative_destination", "ward") or "",
+                "procedure_date": generated_at[:10],
+                "anesthesia_type": row.get("anesthesia_type") or "",
+                "asa_class": row.get("asa_class") or "",
+            },
+        })
 
     return patients
+
+
+def _dataset_rows(limit):
+    if DATASET_PATH.suffix.lower() in {".xlsx", ".xls"}:
+        dataframe = pd.read_excel(DATASET_PATH, engine="openpyxl", nrows=limit)
+    else:
+        dataframe = pd.read_csv(DATASET_PATH, nrows=limit)
+    dataframe = dataframe.where(pd.notna(dataframe), "")
+    return dataframe.to_dict("records")
 
 
 def _dataset_probability(row, oxygen_required):
