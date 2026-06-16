@@ -3,12 +3,7 @@ import { useTranslation } from 'react-i18next'
 import LocalAccessQRCode from './LocalAccessQRCode.jsx'
 import { API_BASE_URL, getSession } from '../authSession.js'
 
-const defaultUsers = [
-  { id: 'USR-001', name: 'Joel Munyaneza', email: 'munyanezajoel3@gmail.com', role: 'Super user' },
-  { id: 'USR-002', name: 'Anesthetist', email: 'anesthetist@hospital.local', role: 'Clinician' },
-  { id: 'USR-003', name: 'Nurse Supervisor', email: 'nurse.supervisor@hospital.local', role: 'Reviewer' },
-  { id: 'USR-004', name: 'Model Admin', email: 'model.admin@hospital.local', role: 'Administrator' },
-]
+const defaultUsers = []
 
 const roleOptions = ['Super user', 'Administrator', 'Clinician', 'Reviewer', 'Viewer']
 
@@ -34,7 +29,7 @@ export default function SystemAdministrationContent() {
         if (!active) return
         if (!resp.ok) throw new Error('Could not load users')
         const data = await resp.json()
-        setUsers(data.users || defaultUsers)
+        setUsers(Array.isArray(data.users) ? data.users : defaultUsers)
         setError('')
       } catch (e) {
         console.error(e)
@@ -201,15 +196,57 @@ export default function SystemAdministrationContent() {
   )
 }
 
+function normalizeRegistryModel(model) {
+  const id = model.id ?? model.artifact_id ?? model.pk ?? model.model_id ?? ''
+  const name = model.name || model.model_name || model.algorithm || model.model_type || 'Model artifact'
+  const version = model.version || model.model_version || model.training_run_id || String(id || '')
+  const uploadedAt = model.uploaded_at || model.created_at || model.trained_at || model.updated_at || ''
+  const status = model.is_active ? 'active' : (model.status || 'available')
+
+  return {
+    id: String(id || version || name),
+    name,
+    version,
+    uploadedAt,
+    status,
+  }
+}
+
+function formatRegistryDate(value) {
+  const date = new Date(value || '')
+  return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleString()
+}
+
   function ModelRegistry() {
     const { t } = useTranslation()
-    const stored = JSON.parse(localStorage.getItem('postop_o2_models') || '[]')
-    const models = stored.length
-      ? stored
-      : [
-          { id: 'M-001', name: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda', version: '1.0.0', uploadedAt: '2026-05-12T10:00:00Z', status: 'active' },
-          { id: 'M-002', name: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda', version: '2.0.0', uploadedAt: '2026-05-13T09:12:00Z', status: 'archived' },
-        ]
+    const [models, setModels] = useState([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+      let active = true
+
+      async function loadModels() {
+        setLoading(true)
+        try {
+          const resp = await fetch(`${API_BASE_URL}/models`, { credentials: 'include' })
+          if (!active) return
+          if (!resp.ok) throw new Error('Could not load model registry')
+          const data = await resp.json()
+          const registry = Array.isArray(data.models) ? data.models.map(normalizeRegistryModel) : []
+          setModels(registry)
+        } catch (e) {
+          console.error(e)
+          if (active) setModels([])
+        } finally {
+          if (active) setLoading(false)
+        }
+      }
+
+      loadModels()
+      return () => {
+        active = false
+      }
+    }, [])
 
     function exportCsv() {
       const header = ['Model ID', 'Name', 'Version', 'Uploaded At', 'Status']
@@ -234,7 +271,7 @@ export default function SystemAdministrationContent() {
             <p className="small-text mt-1 font-semibold text-[#64799e]">{t('modelRegistryDetail')}</p>
           </div>
           <div>
-            <button onClick={exportCsv} className="btn btn-primary fw-bold rounded px-3 py-2 text-white">{t('exportCsv')}</button>
+            <button onClick={exportCsv} disabled={!models.length} className="btn btn-primary fw-bold rounded px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60">{t('exportCsv')}</button>
           </div>
         </div>
 
@@ -250,15 +287,25 @@ export default function SystemAdministrationContent() {
               </tr>
             </thead>
             <tbody>
-              {models.map((m) => (
-                <tr key={m.id} className="border-t border-[#edf2f8]">
-                  <td className="px-4 py-3 text-[14px] font-extrabold text-[#071b49]">{m.id}</td>
-                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.name}</td>
-                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.version}</td>
-                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{new Date(m.uploadedAt).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.status}</td>
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="px-4 py-6 text-center text-[14px] font-semibold text-[#64799e]">Loading model registry...</td>
                 </tr>
-              ))}
+              ) : models.length ? (
+                models.map((m) => (
+                  <tr key={m.id} className="border-t border-[#edf2f8]">
+                    <td className="px-4 py-3 text-[14px] font-extrabold text-[#071b49]">{m.id}</td>
+                    <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.name}</td>
+                    <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.version}</td>
+                    <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{formatRegistryDate(m.uploadedAt)}</td>
+                    <td className="px-4 py-3 text-[14px] font-semibold text-[#53668a]">{m.status}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-4 py-6 text-center text-[14px] font-semibold text-[#64799e]">No model artifacts available.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

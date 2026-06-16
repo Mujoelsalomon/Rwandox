@@ -42,16 +42,34 @@ export default function PredictionHistoryContent() {
       }
     }
 
-    loadHistory()
-    function handlePredictionHistoryUpdated() {
-      loadHistory({ showLoading: true })
+    function refreshHistory({ showLoading = false } = {}) {
+      loadHistory({ showLoading })
       setPage(1)
     }
 
+    function handlePredictionHistoryUpdated() {
+      refreshHistory({ showLoading: true })
+    }
+
+    function handleWindowFocus() {
+      refreshHistory({ showLoading: false })
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        refreshHistory({ showLoading: false })
+      }
+    }
+
+    refreshHistory()
     window.addEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       active = false
       window.removeEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
@@ -223,7 +241,7 @@ export default function PredictionHistoryContent() {
                     <td className="table-body px-4 py-3">{prediction.patient_disposition || t('notRecorded')}</td>
                     <td className="table-body px-4 py-3"><RiskBadge risk={prediction.risk_level} /></td>
                     <td className="table-body px-4 py-3 fw-bold" style={{ color: '#071b49' }}>{Math.round(Number(prediction.predicted_probability || 0))}%</td>
-                    <td className="table-body px-4 py-3">{prediction.model_version || 'v1.0'}</td>
+                    <td className="table-body px-4 py-3">{prediction.model_version || t('notRecorded')}</td>
                     <td className="table-body px-4 py-3 text-secondary" style={{ minWidth: 280 }}>
                       <ClinicalNote prediction={prediction} onOpen={() => setSelectedPrediction(prediction)} />
                     </td>
@@ -572,7 +590,7 @@ function buildPredictionHistoryReport({ filters, generatedAt, logoDataUrl, predi
     disposition: prediction.patient_disposition || 'Not recorded',
     risk: prediction.risk_level || 'Unknown',
     probability: `${Math.round(Number(prediction.predicted_probability || 0))}%`,
-    model: prediction.model_version || 'v1.0',
+    model: prediction.model_version || 'Not recorded',
     clinicalNote: clinicalNote(prediction),
   }))
 

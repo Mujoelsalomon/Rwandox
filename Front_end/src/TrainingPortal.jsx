@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getSession } from './authSession.js'
 import { API_BASE_URL } from './config/api.js'
+import { notifyModelRegistryUpdated } from './predictionEvents.js'
 
 const LONG_TRAINING_SECONDS = 10 * 60
 const LONG_TRAINING_CHECKS = [
@@ -138,6 +139,9 @@ export default function TrainingPortal() {
         setTrainingNotice(message)
         notify(message, j.status === 'completed' ? 'success' : 'error')
         fetchModels()
+        if (j.status === 'completed') {
+          notifyModelRegistryUpdated({ id: j.result?.artifact_id })
+        }
       }
     }, 1000)
   }
@@ -157,6 +161,7 @@ export default function TrainingPortal() {
         return
       }
       await fetchModels()
+      notifyModelRegistryUpdated({ id })
       notify('Model is now active for new predictions.', 'success')
     } catch (e) {
       console.error(e)

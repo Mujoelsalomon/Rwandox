@@ -42,7 +42,9 @@ except Exception:
     lgb = None
 
 MAX_CATEGORICAL_UNIQUE_VALUES = int(os.getenv("TRAINING_MAX_CATEGORICAL_UNIQUE_VALUES", "80"))
-MAX_LOCAL_TRAINING_ROWS = int(os.getenv("TRAINING_MAX_ROWS", "2500"))
+# Set TRAINING_MAX_ROWS to a positive number only when local training needs an
+# explicit cap. By default, every cleaned dataset row is available for training.
+MAX_LOCAL_TRAINING_ROWS = int(os.getenv("TRAINING_MAX_ROWS", "0"))
 
 
 def read_dataset(dataset_path: str, **kwargs) -> pd.DataFrame:
@@ -314,7 +316,7 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         sparse_threshold=0.0,
     )
 
-    validation_size = 0.2
+    validation_size = 0.3
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=validation_size, random_state=42)
 
     model = None

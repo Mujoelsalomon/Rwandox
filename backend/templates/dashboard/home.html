@@ -18,7 +18,7 @@ content %}
   </div>
   <div class="card">
     <h3>Model AUC</h3>
-    <div class="value">{{ model_auc }}</div>
+    <div class="value">{{ model_auc|default:"No data" }}</div>
     <div class="muted">Latest validated version</div>
   </div>
 </div>

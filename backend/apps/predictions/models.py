@@ -13,7 +13,7 @@ class PredictionResult(models.Model):
     risk_level = models.CharField(max_length=20)
     recommendations = models.JSONField(default=list, blank=True)
     contributing_factors = models.JSONField(default=list, blank=True)
-    model_version = models.CharField(max_length=50, default="v1.0")
+    model_version = models.CharField(max_length=50, default="Not recorded")
     generated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -3,6 +3,7 @@ from django.db.models import Avg
 from django.shortcuts import render
 from django.utils.timezone import now
 
+from apps.api.models import ModelArtifact
 from apps.predictions.models import PredictionResult
 
 
@@ -22,12 +23,20 @@ def dashboard_view(request):
     recent_predictions = PredictionResult.objects.select_related(
         "record", "record__patient"
     ).order_by("-generated_at")[:5]
+    active_model = ModelArtifact.objects.filter(is_active=True).first()
+    model_metrics = active_model.metrics if active_model and isinstance(active_model.metrics, dict) else {}
+    model_auc = (
+        model_metrics.get("val_roc_auc")
+        or model_metrics.get("val_roc_auc_weighted_ovr")
+        or model_metrics.get("val_auc")
+        or model_metrics.get("auc")
+    )
 
     context = {
         "predictions_today": predictions_today,
         "high_risk_today": high_risk_today,
         "avg_probability": round(avg_probability * 100, 1) if avg_probability <= 1 else round(avg_probability, 1),
         "recent_predictions": recent_predictions,
-        "model_auc": 0.84,
+        "model_auc": model_auc,
     }
     return render(request, "dashboard/home.html", context)

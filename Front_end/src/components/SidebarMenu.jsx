@@ -74,27 +74,6 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
             )
           ))}
         </nav>
-
-        <div className={`mt-3 shrink-0 rounded-[8px] border border-white/10 bg-[#0c438c] p-0 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] ${isOpen ? 'lg:block' : 'lg:hidden'}`}>
-          <Link
-            to="/support"
-            onClick={onNavigate}
-            className="block w-full p-3 text-left text-white no-underline hover:text-white"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 overflow-hidden rounded-full bg-[#dbe6f5]">
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-[#eef3fa] to-[#cdd8e8]">
-                  <Icon name="mail" className="h-7 w-7 text-[#24334f]" />
-                </div>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="card-title truncate font-extrabold text-white">{t('supportPortal')}</p>
-                <p className="small-text truncate font-bold text-[#d7e8ff]">{t('writeEmailMessage')}</p>
-              </div>
-              <Icon name="chevronRight" className="h-5 w-5" />
-            </div>
-          </Link>
-        </div>
       </div>
     </aside>
   )

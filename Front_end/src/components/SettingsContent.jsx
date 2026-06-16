@@ -31,28 +31,17 @@ const notificationItems = [
   },
 ]
 
-const personalInformation = [
-  { label: 'Full name', value: 'Anesthetist' },
-  { label: 'Email', value: 'anesthetist@hospital.local' },
-  { label: 'User ID', value: 'USR-002' },
-]
-
-const roleInformation = [
-  { label: 'Current role', value: 'Clinician' },
-  { label: 'Access level', value: 'Prediction entry and clinical review' },
-  { label: 'Workspace', value: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda' },
-]
-
-const loginSecurity = [
-  { label: 'Change password', value: 'Update the password used to access this account.', action: true },
-  { label: 'Two-factor authentication', value: 'Not enabled', action: true },
-  { label: 'Last login date', value: '11 May 2026, 08:35' },
-  { label: 'Login activity', value: 'Current browser session, Kigali timezone' },
-  { label: 'Logout from all devices', value: 'End active sessions on other devices.', action: true, danger: true },
-]
-
 function notify(message, type = 'info') {
   window.dispatchEvent(new CustomEvent('app-notification', { detail: { message, type } }))
+}
+
+function recorded(value) {
+  return value === undefined || value === null || value === '' ? 'Not recorded' : value
+}
+
+function formatSessionDate(value) {
+  const date = new Date(value || '')
+  return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleString()
 }
 
 export default function SettingsContent() {
@@ -68,6 +57,23 @@ export default function SettingsContent() {
   const [savingFacilityId, setSavingFacilityId] = useState('')
   const session = getSession()
   const isAdmin = isAdminSession(session)
+  const personalInformation = [
+    { label: 'Full name', value: recorded(session?.name || session?.full_name || session?.username) },
+    { label: 'Email', value: recorded(session?.email) },
+    { label: 'User ID', value: recorded(session?.id || session?.user_id || session?.username) },
+  ]
+  const roleInformation = [
+    { label: 'Current role', value: recorded(session?.role) },
+    { label: 'Access level', value: recorded(session?.access_level || session?.permissions) },
+    { label: 'Workspace', value: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda' },
+  ]
+  const loginSecurity = [
+    { label: 'Change password', value: 'Update the password used to access this account.', action: true },
+    { label: 'Two-factor authentication', value: recorded(session?.two_factor_status) },
+    { label: 'Last login date', value: formatSessionDate(session?.last_login || session?.loggedInAt) },
+    { label: 'Login activity', value: recorded(session?.login_activity || 'Current browser session') },
+    { label: 'Logout from all devices', value: 'End active sessions on other devices.', action: true, danger: true },
+  ]
 
   useEffect(() => {
     loadSelectedFacility()

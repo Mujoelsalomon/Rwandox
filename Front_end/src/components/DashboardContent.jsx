@@ -2,11 +2,16 @@
 import { useTranslation } from 'react-i18next'
 
 import { API_BASE_URL } from '../config/api.js'
-import { PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents'
+import { MODEL_REGISTRY_UPDATED_EVENT, PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents'
 
 function dashboardMetrics(activeModel, t, predictions) {
   const modelMetrics = activeModel?.metrics || {}
-  const aucValue = formatModelMetric(modelMetrics.val_auc ?? modelMetrics.auc)
+  const aucValue = formatModelMetric(
+    modelMetrics.val_roc_auc
+      ?? modelMetrics.val_roc_auc_weighted_ovr
+      ?? modelMetrics.val_auc
+      ?? modelMetrics.auc
+  )
   const f1Value = formatModelMetric(modelMetrics.val_f1_score ?? modelMetrics.f1_score)
   const todayPredictions = predictions.filter(isTodayPrediction)
   const highRiskToday = todayPredictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
@@ -45,7 +50,7 @@ function dashboardMetrics(activeModel, t, predictions) {
     label: t('modelAuc'),
     value: aucValue,
     sub: t('latestValidatedVersion'),
-    chip: t('excellent'),
+    chip: aucValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : t('excellent'),
     chipTone: 'purple',
     icon: 'shield',
     iconTone: 'purple',
@@ -54,7 +59,7 @@ function dashboardMetrics(activeModel, t, predictions) {
     label: t('modelF1Score'),
     value: f1Value,
     sub: t('balancePrecisionRecall'),
-    chip: t('strong'),
+    chip: f1Value === 'No data' ? t('noData', { defaultValue: 'No data' }) : t('strong'),
     chipTone: 'teal',
     icon: 'checkCircle',
     iconTone: 'teal',
@@ -76,6 +81,7 @@ export default function DashboardContent({
   factorChips = [],
   handleGenerate,
   loading,
+  onRefreshModel,
   probability,
   riskLabel = 'High',
 }) {
@@ -113,17 +119,42 @@ export default function DashboardContent({
       }
     }
 
-    loadDashboardPredictions()
-    function handlePredictionHistoryUpdated() {
-      loadDashboardPredictions({ showLoading: true })
+    function refreshDashboard({ showLoading = false } = {}) {
+      loadDashboardPredictions({ showLoading })
+      if (typeof onRefreshModel === 'function') onRefreshModel()
     }
 
+    function handlePredictionHistoryUpdated() {
+      refreshDashboard({ showLoading: true })
+    }
+
+    function handleModelRegistryUpdated() {
+      refreshDashboard({ showLoading: false })
+    }
+
+    function handleWindowFocus() {
+      refreshDashboard({ showLoading: false })
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        refreshDashboard({ showLoading: false })
+      }
+    }
+
+    refreshDashboard()
     window.addEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
+    window.addEventListener(MODEL_REGISTRY_UPDATED_EVENT, handleModelRegistryUpdated)
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       active = false
       window.removeEventListener(PREDICTION_HISTORY_UPDATED_EVENT, handlePredictionHistoryUpdated)
+      window.removeEventListener(MODEL_REGISTRY_UPDATED_EVENT, handleModelRegistryUpdated)
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [])
+  }, [onRefreshModel])
 
   return (
     <div className="container-fluid min-w-0 space-y-4 px-0 pb-4">
@@ -422,7 +453,7 @@ function RecentPredictionsTable({ loading, predictions, status }) {
                   <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.patient_disposition || t('notRecorded')}</td>
                   <td className="min-w-[150px] px-5 py-4"><RiskBadge risk={prediction.risk_level} /></td>
                   <td className="table-body px-5 py-4 font-black text-[#071b49]">{Math.round(Number(prediction.predicted_probability || 0))}%</td>
-                  <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.model_version || 'v1.0'}</td>
+                  <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.model_version || t('notRecorded')}</td>
                 </tr>
               ))
             ) : (

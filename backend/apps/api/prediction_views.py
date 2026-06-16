@@ -499,7 +499,7 @@ def prediction_report_row(prediction):
           <td>{escape(str(prediction.get("patient_disposition") or "Not recorded"))}</td>
           <td class="{risk_class(risk)}">{escape(str(risk))}</td>
           <td>{probability}%</td>
-          <td>{escape(str(prediction.get("model_version") or "v1.0"))}</td>
+          <td>{escape(str(prediction.get("model_version") or "Not recorded"))}</td>
           <td>{escape(clinical_note_text(prediction))}</td>
         </tr>
     """
@@ -515,7 +515,7 @@ def prediction_export_row(prediction):
         prediction.get("patient_disposition") or "Not recorded",
         prediction.get("risk_level") or "Unknown",
         f"{round(float(prediction.get('predicted_probability') or 0))}%",
-        prediction.get("model_version") or "v1.0",
+        prediction.get("model_version") or "Not recorded",
         clinical_note_text(prediction),
     ]
 
@@ -1082,7 +1082,7 @@ def persist_prediction(features, payload, result):
             risk_level=str(result.get("risk_level") or ""),
             recommendations=result.get("recommendations") or [],
             contributing_factors=result.get("contributing_factors") or result.get("factors") or [],
-            model_version=active_model.name if active_model else str(payload.get("model_type") or "v1.0"),
+            model_version=active_model.name if active_model else str(payload.get("model_type") or "Not recorded"),
         )
 
     result["id"] = prediction.id

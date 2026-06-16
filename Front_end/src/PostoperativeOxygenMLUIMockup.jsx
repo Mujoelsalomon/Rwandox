@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isSessionActive, SESSION_EVENT, SESSION_KEY, SESSION_REVOKED_AT_KEY } from './authSession.js'
 import DashboardContent from './components/DashboardContent.jsx'
@@ -7,9 +7,12 @@ import SidebarMenu from './components/SidebarMenu.jsx'
 import TopMenu from './components/TopMenu.jsx'
 import { useResizableSidebar } from './components/useResizableSidebar.js'
 import { API_BASE_URL } from './config/api.js'
+import { MODEL_REGISTRY_UPDATED_EVENT, notifyPredictionHistoryUpdated } from './predictionEvents.js'
 
 function normalizePredictionResponse(res) {
-  const probability = Number(res?.predicted_probability ?? res?.probability ?? 0)
+  const rawProbability = res?.predicted_probability ?? res?.probability
+  const hasProbability = rawProbability !== undefined && rawProbability !== null && rawProbability !== ''
+  const probability = Number(rawProbability ?? 0)
   const riskLevel = String(res?.risk_level ?? '')
   const factors = Array.isArray(res?.contributing_factors)
     ? res.contributing_factors.map((item) => item.display || item.feature || String(item))
@@ -22,9 +25,9 @@ function normalizePredictionResponse(res) {
     probability,
     factors,
     recommendations,
-    riskLabel: riskLevel || (probability >= 0.5 ? 'High' : 'Low'),
+    riskLabel: riskLevel || (hasProbability ? (probability >= 0.5 ? 'High' : 'Low') : ''),
     usedTrainedModel: Boolean(res?.used_trained_model),
-    activeModel: res?.active_model || null,
+    activeModel: res?.active_model && typeof res.active_model === 'object' ? res.active_model : null,
   }
 }
 
@@ -42,22 +45,10 @@ export default function PostoperativeOxygenMLUIMockup() {
     sidebarWidth,
     sidebarWidthStyle,
   } = useResizableSidebar(setSidebarOpen)
-  const [probability, setProbability] = useState(0.82)
-  const [riskLabel, setRiskLabel] = useState('High')
-  const [factorChips, setFactorChips] = useState([
-    'Post-op SpO2 90%',
-    'ASA III',
-    'Emergency surgery',
-    'Duration 210 min',
-    'BMI 31.2',
-  ])
-  const [recommendations, setRecommendations] = useState([
-    'Start close oxygen monitoring immediately.',
-    'Book an ICU or HDU bed for closer postoperative monitoring.',
-    'Prepare supplemental oxygen in PACU or ward.',
-    'Repeat SpO2 and respiratory rate within 15 minutes.',
-    'Escalate clinical review if saturation remains below target.',
-  ])
+  const [probability, setProbability] = useState(0)
+  const [riskLabel, setRiskLabel] = useState('')
+  const [factorChips, setFactorChips] = useState([])
+  const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(false)
   const [activeModel, setActiveModel] = useState(null)
 
@@ -83,20 +74,7 @@ export default function PostoperativeOxygenMLUIMockup() {
     }
   }, [navigate])
 
-  useEffect(() => {
-    fetchActiveModel()
-  }, [])
-
-  useEffect(() => {
-    function handleResize() {
-      setSidebarOpen(window.innerWidth >= 1024)
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  async function fetchActiveModel() {
+  const fetchActiveModel = useCallback(async () => {
     try {
       const resp = await fetch(`${API_BASE_URL}/models`, { credentials: 'include' })
       if (!resp.ok) return
@@ -106,7 +84,27 @@ export default function PostoperativeOxygenMLUIMockup() {
     } catch (e) {
       console.error(e)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchActiveModel()
+
+    function handleModelRegistryUpdated() {
+      fetchActiveModel()
+    }
+
+    window.addEventListener(MODEL_REGISTRY_UPDATED_EVENT, handleModelRegistryUpdated)
+    return () => window.removeEventListener(MODEL_REGISTRY_UPDATED_EVENT, handleModelRegistryUpdated)
+  }, [fetchActiveModel])
+
+  useEffect(() => {
+    function handleResize() {
+      setSidebarOpen(window.innerWidth >= 1024)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   async function requestPrediction() {
     try {
@@ -143,23 +141,19 @@ export default function PostoperativeOxygenMLUIMockup() {
         }),
       })
       if (resp.ok) {
-        return normalizePredictionResponse(await resp.json())
+        const data = await resp.json()
+        notifyPredictionHistoryUpdated(data)
+        return normalizePredictionResponse(data)
       }
     } catch (e) {
       console.error(e)
     }
 
     return {
-      probability: 0.82,
-      factors: ['Post-op SpO2 90%', 'ASA III', 'Emergency surgery', 'Duration 210 min', 'BMI 31.2'],
-      recommendations: [
-        'Start close oxygen monitoring immediately.',
-        'Book an ICU or HDU bed for closer postoperative monitoring.',
-        'Prepare supplemental oxygen in PACU or ward.',
-        'Repeat SpO2 and respiratory rate within 15 minutes.',
-        'Escalate clinical review if saturation remains below target.',
-      ],
-      riskLabel: 'High',
+      probability: 0,
+      factors: [],
+      recommendations: [],
+      riskLabel: '',
       usedTrainedModel: false,
       activeModel: null,
     }
@@ -173,7 +167,11 @@ export default function PostoperativeOxygenMLUIMockup() {
       setFactorChips(res.factors)
       setRecommendations(res.recommendations)
       setRiskLabel(res.riskLabel)
-      setActiveModel(res.activeModel)
+      if (res.activeModel) {
+        setActiveModel(res.activeModel)
+      } else {
+        fetchActiveModel()
+      }
     } finally {
       setLoading(false)
     }
@@ -212,6 +210,7 @@ export default function PostoperativeOxygenMLUIMockup() {
               factorChips={factorChips}
               handleGenerate={handleGenerate}
               loading={loading}
+              onRefreshModel={fetchActiveModel}
               probability={probability}
               recommendations={recommendations}
               riskLabel={riskLabel}
