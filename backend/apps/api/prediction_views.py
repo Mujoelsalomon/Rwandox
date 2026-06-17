@@ -45,6 +45,12 @@ def predict_view(request):
         record_audit(request, "Generated preview prediction", object_type="PredictionResult")
         return cors(JsonResponse(prediction_response_payload(result)))
 
+    hospital_id = str(features.get("patient_coded_id") or features.get("hospital_id") or "").strip()
+    if not hospital_id:
+        return cors(JsonResponse({
+            "error": "A real patient hospital ID is required before saving a prediction.",
+        }, status=400))
+
     result = persist_prediction(features, payload, result)
     record_audit(
         request,
@@ -82,8 +88,9 @@ def predict_dataset_view(request):
         return cors(JsonResponse({"error": str(exc)}, status=400))
 
     feature_columns = list(dataframe.columns)
-    if target_column and target_column in feature_columns:
-        feature_columns.remove(target_column)
+    resolved_target_column = trainer.resolve_target_column(feature_columns, target_column or "postop oxygen required")
+    if resolved_target_column in feature_columns:
+        feature_columns.remove(resolved_target_column)
 
     predictions = []
     errors = []
@@ -1037,7 +1044,9 @@ def prediction_response_payload(result):
 
 
 def persist_prediction(features, payload, result):
-    hospital_id = str(features.get("patient_coded_id") or features.get("hospital_id") or "KBH-UNKNOWN").strip() or "KBH-UNKNOWN"
+    hospital_id = str(features.get("patient_coded_id") or features.get("hospital_id") or "").strip()
+    if not hospital_id:
+        raise ValueError("A real patient hospital ID is required before saving a prediction.")
     urgency = str(features.get("urgency") or "elective").lower()
     if urgency not in {"elective", "emergency"}:
         urgency = "emergency" if "emerg" in urgency else "elective"

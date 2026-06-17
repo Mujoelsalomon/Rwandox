@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import joblib
 import json
@@ -88,6 +89,7 @@ def dataset_columns(dataset_path: str) -> list[str]:
 
 def default_target_column(columns) -> str:
     preferred_targets = {
+        "postop_oxygen_required",
         "postoperative_oxygen_required",
         "oxygen_required",
         "oxygen_requirement",
@@ -97,7 +99,7 @@ def default_target_column(columns) -> str:
         "outcome",
     }
     for column in columns:
-        if str(column).lower() in preferred_targets:
+        if normalize_column_name(column) in preferred_targets:
             return column
     return columns[-1]
 
@@ -220,10 +222,31 @@ def resolve_target_column(columns, requested):
     if requested in column_list:
         return requested
     lowered = requested.lower()
+    normalized_requested = normalize_column_name(requested)
     for column in column_list:
         if str(column).lower() == lowered:
             return column
+        if normalize_column_name(column) == normalized_requested:
+            return column
+    preferred_target_names = {
+        "postop_oxygen_required",
+        "postoperative_oxygen_required",
+        "oxygen_required",
+        "oxygen_requirement",
+        "requires_oxygen",
+        "target",
+        "label",
+        "outcome",
+    }
+    if normalized_requested in preferred_target_names:
+        for column in column_list:
+            if normalize_column_name(column) in preferred_target_names:
+                return column
     return requested
+
+
+def normalize_column_name(value):
+    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
 
 
 def numeric_text_series(series):

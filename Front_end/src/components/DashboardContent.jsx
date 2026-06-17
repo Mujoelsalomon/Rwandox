@@ -78,12 +78,7 @@ const recentPredictionsPageSize = 10
 
 export default function DashboardContent({
   activeModel,
-  factorChips = [],
-  handleGenerate,
-  loading,
   onRefreshModel,
-  probability,
-  riskLabel = 'High',
 }) {
   const { t } = useTranslation()
   const [predictions, setPredictions] = useState([])
@@ -91,9 +86,8 @@ export default function DashboardContent({
   const [predictionsStatus, setPredictionsStatus] = useState('')
   const latestPrediction = predictions[0] || null
   const riskScore = latestPrediction ? normalizeProbability(latestPrediction.predicted_probability) : 0
-  const currentRiskLabel = latestPrediction?.risk_level || riskLabel
+  const currentRiskLabel = latestPrediction?.risk_level || ''
   const latestFactors = normalizeList(latestPrediction?.contributing_factors)
-  const currentFactors = latestFactors.length ? latestFactors : normalizeList(factorChips)
   const metrics = dashboardMetrics(activeModel, t, predictions)
 
   useEffect(() => {
@@ -174,9 +168,7 @@ export default function DashboardContent({
       <WorkflowPanel t={t} />
 
       <AssessmentPredictionPanel
-        factorChips={currentFactors}
-        handleGenerate={handleGenerate}
-        loading={loading}
+        factorChips={latestFactors}
         predictions={predictions}
         predictionsLoading={predictionsLoading}
         predictionsStatus={predictionsStatus}
@@ -340,7 +332,7 @@ function WorkflowStep({ index, titleKey, subKey, tone, icon }) {
   )
 }
 
-function AssessmentPredictionPanel({ factorChips, handleGenerate, loading, predictions, predictionsLoading, predictionsStatus, riskLabel, riskScore }) {
+function AssessmentPredictionPanel({ factorChips, predictions, predictionsLoading, predictionsStatus, riskLabel, riskScore }) {
   const { t } = useTranslation()
   const hasPredictions = predictions.length > 0
   const riskTone = getRiskTone(riskLabel)

@@ -7,29 +7,7 @@ import SidebarMenu from './components/SidebarMenu.jsx'
 import TopMenu from './components/TopMenu.jsx'
 import { useResizableSidebar } from './components/useResizableSidebar.js'
 import { API_BASE_URL } from './config/api.js'
-import { MODEL_REGISTRY_UPDATED_EVENT, notifyPredictionHistoryUpdated } from './predictionEvents.js'
-
-function normalizePredictionResponse(res) {
-  const rawProbability = res?.predicted_probability ?? res?.probability
-  const hasProbability = rawProbability !== undefined && rawProbability !== null && rawProbability !== ''
-  const probability = Number(rawProbability ?? 0)
-  const riskLevel = String(res?.risk_level ?? '')
-  const factors = Array.isArray(res?.contributing_factors)
-    ? res.contributing_factors.map((item) => item.display || item.feature || String(item))
-    : Array.isArray(res?.factors)
-      ? res.factors.map((item) => item.display || item.feature || String(item))
-      : []
-  const recommendations = Array.isArray(res?.recommendations) ? res.recommendations : []
-
-  return {
-    probability,
-    factors,
-    recommendations,
-    riskLabel: riskLevel || (hasProbability ? (probability >= 0.5 ? 'High' : 'Low') : ''),
-    usedTrainedModel: Boolean(res?.used_trained_model),
-    activeModel: res?.active_model && typeof res.active_model === 'object' ? res.active_model : null,
-  }
-}
+import { MODEL_REGISTRY_UPDATED_EVENT } from './predictionEvents.js'
 
 export default function PostoperativeOxygenMLUIMockup() {
   const navigate = useNavigate()
@@ -45,11 +23,6 @@ export default function PostoperativeOxygenMLUIMockup() {
     sidebarWidth,
     sidebarWidthStyle,
   } = useResizableSidebar(setSidebarOpen)
-  const [probability, setProbability] = useState(0)
-  const [riskLabel, setRiskLabel] = useState('')
-  const [factorChips, setFactorChips] = useState([])
-  const [recommendations, setRecommendations] = useState([])
-  const [loading, setLoading] = useState(false)
   const [activeModel, setActiveModel] = useState(null)
 
   useEffect(() => {
@@ -106,77 +79,6 @@ export default function PostoperativeOxygenMLUIMockup() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  async function requestPrediction() {
-    try {
-      const resp = await fetch(`${API_BASE_URL}/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          features: {
-            age: 62,
-            sex: 'Female',
-            bmi: 31.2,
-            smoking_history: false,
-            comorbidities: 'Hypertension, asthma',
-            baseline_spo2: 95,
-            surgery_type: 'Abdominal surgery',
-            urgency: 'emergency',
-            surgery_duration: 210,
-            blood_loss: 'Moderate',
-            ward: 'PACU',
-            anesthesia_type: 'General',
-            asa_class: 'III',
-            residual_effects: true,
-            opioid_use: true,
-            airway_event: 'None',
-            recovery_status: 'Monitored',
-            postop_spo2: 90,
-            respiratory_rate: 26,
-            pain_status: 'Severe',
-            consciousness: 'Drowsy',
-            time_since_surgery: 30,
-            oxygen_before_prediction: false,
-          },
-        }),
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        notifyPredictionHistoryUpdated(data)
-        return normalizePredictionResponse(data)
-      }
-    } catch (e) {
-      console.error(e)
-    }
-
-    return {
-      probability: 0,
-      factors: [],
-      recommendations: [],
-      riskLabel: '',
-      usedTrainedModel: false,
-      activeModel: null,
-    }
-  }
-
-  async function handleGenerate() {
-    setLoading(true)
-    try {
-      const res = await requestPrediction()
-      setProbability(res.probability)
-      setFactorChips(res.factors)
-      setRecommendations(res.recommendations)
-      setRiskLabel(res.riskLabel)
-      if (res.activeModel) {
-        setActiveModel(res.activeModel)
-      } else {
-        fetchActiveModel()
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="container-fluid flex h-screen flex-col overflow-hidden bg-[#f6f9fd] pb-[72px] pt-[88px] text-slate-900 px-0">
       <TopMenu
@@ -207,13 +109,7 @@ export default function PostoperativeOxygenMLUIMockup() {
           <div className="container-fluid mx-auto min-w-0 max-w-[1540px] px-0">
             <DashboardContent
               activeModel={activeModel}
-              factorChips={factorChips}
-              handleGenerate={handleGenerate}
-              loading={loading}
               onRefreshModel={fetchActiveModel}
-              probability={probability}
-              recommendations={recommendations}
-              riskLabel={riskLabel}
             />
           </div>
         </main>

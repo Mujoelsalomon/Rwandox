@@ -46,6 +46,7 @@ const requiredPredictionFields = [
   ['vasopressorUsed', 'Expected vasopressor use'],
 ]
 const requiredPredictionFieldMap = new Map(requiredPredictionFields)
+const DEFAULT_TARGET_COLUMN = 'postop oxygen required'
 
 const initialForm = {
   wardService: '',
@@ -391,6 +392,8 @@ export default function NewPredictionContent() {
     if (columns.length > 0) {
       setTargetColumn(defaultTargetColumn(columns))
       setStatusMessage('')
+    } else {
+      setTargetColumn(DEFAULT_TARGET_COLUMN)
     }
     if (columns.length === 0) setStatusMessage('Columns will be detected by the backend after upload. Excel files require backend openpyxl support.')
   }
@@ -425,7 +428,7 @@ export default function NewPredictionContent() {
 
       const uploadedColumns = Array.isArray(uploadData.columns) ? uploadData.columns : []
       if (uploadedColumns.length > 0) setDatasetColumns(uploadedColumns)
-      const selectedTargetColumn = targetColumn || defaultTargetColumn(uploadedColumns)
+      const selectedTargetColumn = resolveTargetColumn(uploadedColumns, targetColumn) || defaultTargetColumn(uploadedColumns)
       if (!selectedTargetColumn) {
         setStatusMessage(uploadData.column_error || 'Select the target column from the dataset.')
         return
@@ -1243,6 +1246,7 @@ function ReadOnlyDatasetField({ label, value }) {
 }
 
 function SimpleSelect({ label, options, onChange, placeholder, value }) {
+  const hasSelectedOption = options.some((option) => option === value)
   return (
     <label className="block">
       <span className="form-label mb-2 block text-[14px] font-bold text-[#49617f]">{label}</span>
@@ -1252,6 +1256,7 @@ function SimpleSelect({ label, options, onChange, placeholder, value }) {
         onChange={(event) => onChange(event.target.value)}
       >
         {placeholder && <option value="">{placeholder}</option>}
+        {value && !hasSelectedOption && <option value={value}>{value}</option>}
         {options.map((option) => (
           <option key={option} value={option}>{option}</option>
         ))}
@@ -1262,6 +1267,8 @@ function SimpleSelect({ label, options, onChange, placeholder, value }) {
 
 async function extractDatasetColumns(file) {
   const extension = file.name.split('.').pop()?.toLowerCase()
+  if (extension === 'xlsx' || extension === 'xls') return []
+
   const text = await file.text()
 
   if (extension === 'json') return extractJsonColumns(text)
@@ -1321,19 +1328,46 @@ function splitDelimitedLine(line, delimiter) {
 }
 
 function defaultTargetColumn(columns) {
-  if (!columns.length) return ''
+  if (!columns.length) return DEFAULT_TARGET_COLUMN
+  const resolved = resolveTargetColumn(columns, DEFAULT_TARGET_COLUMN)
+  if (resolved) return resolved
+  return columns[columns.length - 1]
+}
+
+function resolveTargetColumn(columns, requested) {
+  if (!requested || !columns.length) return requested || ''
   const preferredTargets = [
+    DEFAULT_TARGET_COLUMN,
+    'postop_oxygen_required',
+    'postop oxygen requirement',
     'postoperative_oxygen_required',
+    'postoperative oxygen required',
+    'postoperative oxygen requirement',
     'oxygen_required',
+    'oxygen required',
     'oxygen_requirement',
+    'oxygen requirement',
     'requires_oxygen',
+    'requires oxygen',
     'target',
     'label',
     'outcome',
   ]
-  const normalizedColumns = columns.map((column) => String(column).toLowerCase())
-  const preferredIndex = normalizedColumns.findIndex((column) => preferredTargets.includes(column))
-  return preferredIndex >= 0 ? columns[preferredIndex] : columns[columns.length - 1]
+  const normalizedRequested = normalizeColumnName(requested)
+  const normalizedTargets = preferredTargets.map(normalizeColumnName)
+  const requestedCandidates = normalizedTargets.includes(normalizedRequested)
+    ? normalizedTargets
+    : [normalizedRequested]
+  const preferredIndex = columns.findIndex((column) => requestedCandidates.includes(normalizeColumnName(column)))
+  return preferredIndex >= 0 ? columns[preferredIndex] : requested
+}
+
+function normalizeColumnName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
 }
 
 function buildPredictionPayload(form, bmi) {

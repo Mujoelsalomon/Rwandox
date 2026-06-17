@@ -30,7 +30,7 @@ function authHeaders(extraHeaders = {}) {
 export default function TrainingPortal() {
   const { t } = useTranslation()
   const [file, setFile] = useState(null)
-  const [target, setTarget] = useState('')
+  const [target, setTarget] = useState('postop oxygen required')
   const [modelType, setModelType] = useState('random_forest')
   const [jobId, setJobId] = useState(null)
   const [status, setStatus] = useState(null)

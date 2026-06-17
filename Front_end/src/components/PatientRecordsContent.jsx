@@ -207,7 +207,7 @@ export default function PatientRecordsContent() {
 function normalizePatient(patient) {
   return {
     id: patient.hospital_id || String(patient.id || ''),
-    name: patient.name || `Patient ${patient.hospital_id || patient.id || ''}`,
+    name: patient.name || 'Not recorded',
     age: patient.age || '',
     sex: patient.sex || '',
     ward: patient.ward || patient.latest_record?.ward || 'Not recorded',
