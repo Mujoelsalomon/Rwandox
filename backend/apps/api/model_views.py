@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .audit import record_audit
 from .common import cors, json_body, require_admin
 from .models import ModelArtifact
+from metric_benchmarks import enrich_metric_benchmarks
 
 
 def models_list_view(request):
@@ -16,20 +17,34 @@ def models_list_view(request):
         return auth_error
 
     artifacts = ModelArtifact.objects.all()
-    models = [
-        {
-            "id": artifact.id,
-            "name": artifact.name,
-            "model_type": artifact.model_type,
-            "path": artifact.path,
-            "metrics": artifact.metrics,
-            "is_active": artifact.is_active,
-            "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
-        }
-        for artifact in artifacts
-    ]
+    models = [model_payload(artifact) for artifact in artifacts]
     record_audit(request, "Viewed model registry", object_type="ModelArtifact", details={"count": len(models)})
     return cors(JsonResponse({"models": models}))
+
+
+def model_payload(artifact):
+    metrics = enrich_metric_benchmarks(artifact.metrics or {})
+    duration_seconds = metrics.get("training_duration_seconds")
+    duration_display = metrics.get("training_duration_display")
+    dataset_path = metrics.get("dataset_path")
+    dataset_name = metrics.get("dataset_name") or (Path(dataset_path).name if dataset_path else None)
+    return {
+        "id": artifact.id,
+        "name": artifact.name,
+        "model_type": artifact.model_type,
+        "path": artifact.path,
+        "metrics": metrics,
+        "is_active": artifact.is_active,
+        "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
+        "training_duration_seconds": duration_seconds,
+        "training_duration_display": duration_display,
+        "training_job_id": metrics.get("training_job_id"),
+        "dataset_path": dataset_path,
+        "dataset_name": dataset_name,
+        "feature_count": metrics.get("feature_count"),
+        "training_row_count": metrics.get("training_row_count"),
+        "validation_row_count": metrics.get("validation_row_count"),
+    }
 
 
 @csrf_exempt

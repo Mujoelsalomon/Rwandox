@@ -6,13 +6,15 @@ import { MODEL_REGISTRY_UPDATED_EVENT, PREDICTION_HISTORY_UPDATED_EVENT } from '
 
 function dashboardMetrics(activeModel, t, predictions) {
   const modelMetrics = activeModel?.metrics || {}
+  const aucMetric = modelMetrics.val_roc_auc
+    ?? modelMetrics.val_roc_auc_weighted_ovr
+    ?? modelMetrics.val_auc
+    ?? modelMetrics.auc
   const aucValue = formatModelMetric(
-    modelMetrics.val_roc_auc
-      ?? modelMetrics.val_roc_auc_weighted_ovr
-      ?? modelMetrics.val_auc
-      ?? modelMetrics.auc
+    aucMetric
   )
-  const f1Value = formatModelMetric(modelMetrics.val_f1_score ?? modelMetrics.f1_score)
+  const f1Metric = modelMetrics.val_f1_score ?? modelMetrics.f1_score
+  const f1Value = formatModelMetric(f1Metric)
   const todayPredictions = predictions.filter(isTodayPrediction)
   const highRiskToday = todayPredictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
   const highRiskTotal = predictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
@@ -50,7 +52,7 @@ function dashboardMetrics(activeModel, t, predictions) {
     label: t('modelAuc'),
     value: aucValue,
     sub: t('latestValidatedVersion'),
-    chip: aucValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : t('excellent'),
+    chip: aucValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : aucClassification(aucMetric),
     chipTone: 'purple',
     icon: 'shield',
     iconTone: 'purple',
@@ -59,7 +61,7 @@ function dashboardMetrics(activeModel, t, predictions) {
     label: t('modelF1Score'),
     value: f1Value,
     sub: t('balancePrecisionRecall'),
-    chip: f1Value === 'No data' ? t('noData', { defaultValue: 'No data' }) : t('strong'),
+    chip: f1Value === 'No data' ? t('noData', { defaultValue: 'No data' }) : f1Classification(f1Metric),
     chipTone: 'teal',
     icon: 'checkCircle',
     iconTone: 'teal',
@@ -154,7 +156,7 @@ export default function DashboardContent({
     <div className="container-fluid min-w-0 space-y-4 px-0 pb-4">
       <HeroCard t={t} />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-5">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}
@@ -192,8 +194,8 @@ function HeroCard() {
 
 function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
   return (
-    <article className="card shadow-sm rounded-4 min-w-0 rounded-[14px] border border-[#cbd8e8] bg-white px-4 py-4">
-      <div className="flex gap-4">
+    <article className="card shadow-sm rounded-4 flex h-full min-w-0 flex-col rounded-[14px] border border-[#cbd8e8] bg-white px-4 py-4">
+      <div className="flex flex-1 gap-4">
         <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] ${toneClass(iconTone, 'iconSoft')}`}>
           <Icon name={icon} className={`h-6 w-6 ${toneClass(iconTone, 'text')}`} />
         </div>
@@ -204,7 +206,7 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
         </div>
       </div>
       <div className="mt-3 flex items-center gap-3 pl-16">
-        <span className={`badge rounded-pill rounded-[7px] px-2.5 py-1 text-[12px] font-extrabold ${toneClass(chipTone, 'chip')}`}>
+        <span className={`badge inline-flex max-w-full items-center justify-center whitespace-normal rounded-pill rounded-[7px] px-2.5 py-1 text-center text-[12px] font-extrabold leading-4 ${toneClass(chipTone, 'chip')}`}>
           {chipTone === 'green' && <span className="mr-1">↓</span>}
           {chipTone === 'blue' && <span className="mr-1">↑</span>}
           {chip}
@@ -739,6 +741,28 @@ function formatModelMetric(value, fallback = 'No data') {
   if (!Number.isFinite(numeric)) return fallback
   const normalized = numeric > 1 ? numeric / 100 : numeric
   return normalized.toFixed(2)
+}
+
+function aucClassification(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 'No data'
+  const normalized = numeric > 1 ? numeric / 100 : numeric
+  if (normalized >= 0.9 && normalized < 1) return 'Outstanding'
+  if (normalized >= 0.8 && normalized < 0.9) return 'Excellent'
+  if (normalized >= 0.7 && normalized < 0.8) return 'Acceptable/Good'
+  if (normalized >= 0.5 && normalized < 0.7) return 'Poor'
+  return 'No data'
+}
+
+function f1Classification(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 'No data'
+  const normalized = numeric > 1 ? numeric / 100 : numeric
+  if (normalized >= 0.9 && normalized <= 1) return 'Outstanding/Perfect'
+  if (normalized >= 0.8 && normalized < 0.9) return 'Very Good/Excellent'
+  if (normalized >= 0.7 && normalized < 0.8) return 'Good'
+  if (normalized >= 0.5 && normalized < 0.7) return 'Acceptable/Fair'
+  return 'Needs Review'
 }
 
 function toneClass(tone, kind) {

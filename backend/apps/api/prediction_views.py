@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 import trainer
+from metric_benchmarks import enrich_metric_benchmarks
 
 from apps.patients.models import Patient
 from apps.perioperative.models import PerioperativeRecord
@@ -107,7 +108,7 @@ def predict_dataset_view(request):
                 "contributing_factors": result.get("contributing_factors") or [],
                 "active_model": result.get("active_model"),
                 "model_type": result.get("model_type"),
-                "training_metrics": result.get("training_metrics") or {},
+                "training_metrics": enrich_metric_benchmarks(result.get("training_metrics") or {}),
             })
         except Exception as exc:
             errors.append({"row_index": int(index), "error": str(exc)})
@@ -154,7 +155,7 @@ def predict_dataset_view(request):
             "first_row_risk_level": predictions[0].get("risk_level") if predictions else None,
             "active_model": predictions[0].get("active_model") if predictions else None,
             "model_type": predictions[0].get("model_type") if predictions else None,
-            "training_metrics": predictions[0].get("training_metrics") if predictions else {},
+            "training_metrics": enrich_metric_benchmarks(predictions[0].get("training_metrics")) if predictions else {},
         },
     }))
 
@@ -1039,6 +1040,7 @@ def oxygen_required_prediction(prediction):
 
 def prediction_response_payload(result):
     payload = dict(result)
+    payload["training_metrics"] = enrich_metric_benchmarks(payload.get("training_metrics") or {})
     payload.pop("risk_level", None)
     return payload
 

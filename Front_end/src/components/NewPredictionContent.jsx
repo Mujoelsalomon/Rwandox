@@ -956,10 +956,31 @@ function buildDatasetPredictionReport({ datasetName, predictions, summary, targe
   const minimumProbability = probabilities.length ? Math.min(...probabilities) : 0
   const maximumProbability = probabilities.length ? Math.max(...probabilities) : 0
   const firstPrediction = normalizedPredictions[0]
+  const trainingMetrics = summary.training_metrics || {}
+  const aucMetric = trainingMetrics.val_roc_auc
+    ?? trainingMetrics.val_roc_auc_weighted_ovr
+    ?? trainingMetrics.val_auc
+    ?? trainingMetrics.auc
+  const f1Metric = trainingMetrics.val_f1_score ?? trainingMetrics.f1_score
 
   return {
     datasetName,
     targetColumn,
+    activeModel: summary.active_model || '',
+    modelType: summary.model_type || '',
+    trainingMetrics,
+    aucMetric,
+    aucClassification: trainingMetrics.auc_classification
+      || trainingMetrics.val_roc_auc_classification
+      || trainingMetrics.val_roc_auc_weighted_ovr_classification
+      || trainingMetrics.val_auc_classification
+      || trainingMetrics.auc_classification
+      || aucClassification(aucMetric),
+    f1Metric,
+    f1Classification: trainingMetrics.f1_classification
+      || trainingMetrics.val_f1_score_classification
+      || trainingMetrics.f1_score_classification
+      || f1Classification(f1Metric),
     predictionStatus: 'Prediction complete',
     predictionDate: new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }),
     rowCount,
@@ -1015,6 +1036,13 @@ function DatasetPredictionReport({ report }) {
         <ReportMetric label="Prediction date" value={report.predictionDate} />
         <ReportMetric label="Total rows uploaded" value={report.rowCount ?? t('notAvailable')} />
         <ReportMetric label={t('predictedRows')} value={report.predictedRows ?? t('notAvailable')} />
+      </ReportSection>
+
+      <ReportSection title="Active Model Performance">
+        <ReportMetric label={t('activeTrainedModel')} value={report.activeModel || t('noActiveModel')} />
+        <ReportMetric label={t('modelType')} value={report.modelType || t('notSelected')} />
+        <ReportMetric label="AUC Benchmark" value={metricWithClassification(report.aucMetric, report.aucClassification)} />
+        <ReportMetric label="F1 Benchmark" value={metricWithClassification(report.f1Metric, report.f1Classification)} />
       </ReportSection>
 
       <ReportSection title="Overall Prediction Summary">
@@ -1527,6 +1555,36 @@ function formatTrainingMetric(value) {
   if (!Number.isFinite(numericValue)) return 'Not available'
   const percentValue = numericValue <= 1 ? numericValue * 100 : numericValue
   return `${Math.round(percentValue * 10) / 10}%`
+}
+
+function metricWithClassification(value, classification) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return 'Not available'
+  const normalized = numericValue > 1 ? numericValue / 100 : numericValue
+  const label = classification || 'Not available'
+  return `${normalized.toFixed(2)} - ${label}`
+}
+
+function aucClassification(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return ''
+  const normalized = numericValue > 1 ? numericValue / 100 : numericValue
+  if (normalized >= 0.9 && normalized < 1) return 'Outstanding'
+  if (normalized >= 0.8 && normalized < 0.9) return 'Excellent'
+  if (normalized >= 0.7 && normalized < 0.8) return 'Acceptable/Good'
+  if (normalized >= 0.5 && normalized < 0.7) return 'Poor'
+  return ''
+}
+
+function f1Classification(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return ''
+  const normalized = numericValue > 1 ? numericValue / 100 : numericValue
+  if (normalized >= 0.9 && normalized <= 1) return 'Outstanding/Perfect'
+  if (normalized >= 0.8 && normalized < 0.9) return 'Very Good/Excellent'
+  if (normalized >= 0.7 && normalized < 0.8) return 'Good'
+  if (normalized >= 0.5 && normalized < 0.7) return 'Acceptable/Fair'
+  return 'Needs Review'
 }
 
 function percentage(count, total) {

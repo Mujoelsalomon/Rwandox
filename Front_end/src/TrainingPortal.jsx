@@ -381,10 +381,11 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
     ['AUC Score', metrics.val_roc_auc ?? metrics.val_roc_auc_weighted_ovr, 'decimal'],
   ]
   const details = {
+    modelName: formatModelType(result.model_type || latestModel?.model_type || selectedModelType || 'Not selected'),
     modelType: result.model_type || latestModel?.model_type || selectedModelType || 'Not selected',
     status: status?.status || 'Not trained',
     activeModel: latestModel?.is_active ? 'Yes' : result.artifact_id ? 'Yes' : 'No',
-    trainingDate: status?.updated_at ? formatDate(status.updated_at) : 'Not available',
+    trainingTime: status?.updated_at ? formatDate(status.updated_at) : 'Not available',
     dataset: file?.name || datasetNameFromPath(status?.dataset) || 'Not available',
     accuracy: formatMetric(metrics.val_accuracy, 'percent'),
     sensitivity: formatMetric(metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'),
@@ -421,7 +422,7 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
         <>
           <div className="mt-7 grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
             {metricCards.map(([label, value, format]) => (
-              <MetricCard key={label} label={label} value={formatMetric(value, format)} rating={metricRating(value)} />
+              <MetricCard key={label} label={label} value={formatMetric(value, format)} rating={metricRating(value, label)} />
             ))}
           </div>
 
@@ -464,11 +465,12 @@ function SavedModelReport({ model, activatingId, onActivate }) {
   ]
   const hasMetrics = Object.keys(metrics).length > 0
   const details = {
+    modelName: formatModelType(model.model_type || 'Not selected'),
     modelType: model.model_type || 'Not selected',
     status: hasMetrics ? 'Completed' : 'Saved',
     activeModel: model.is_active ? 'Yes' : 'No',
-    trainingDate: formatDate(model.created_at),
-    dataset: 'Not available',
+    trainingTime: formatDate(model.created_at),
+    dataset: model.dataset_name || datasetNameFromPath(model.dataset_path) || 'Not available',
     accuracy: formatMetric(metrics.val_accuracy, 'percent'),
     sensitivity: formatMetric(metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'),
     specificity: formatMetric(metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'),
@@ -515,12 +517,19 @@ function SavedModelReport({ model, activatingId, onActivate }) {
         <>
           <div className="mt-7 grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
             {metricCards.map(([label, value, format]) => (
-              <MetricCard key={label} label={label} value={formatMetric(value, format)} rating={metricRating(value)} />
+              <MetricCard key={label} label={label} value={formatMetric(value, format)} rating={metricRating(value, label)} />
             ))}
           </div>
 
           <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
-            <ModelDetails details={details} result={{}} />
+            <ModelDetails
+              details={details}
+              result={{
+                feature_count: model.feature_count,
+                training_row_count: model.training_row_count,
+                validation_row_count: model.validation_row_count,
+              }}
+            />
             <ConfusionMatrix metrics={metrics} />
           </div>
 
@@ -558,10 +567,11 @@ function MetricCard({ label, rating, value }) {
 function ModelDetails({ details, result }) {
   const { t } = useTranslation()
   const rows = [
+    ['Model Name', details.modelName],
     ['Model Type', formatModelType(details.modelType)],
     ['Training Status', details.status],
     ['Active Model', details.activeModel],
-    ['Training Date', details.trainingDate],
+    ['Training Time', details.trainingTime || 'Not available'],
     ['Dataset Used', details.dataset],
     ['Validation Accuracy', details.accuracy],
     ['Sensitivity', details.sensitivity],
@@ -925,13 +935,33 @@ function calculateSpecificity(metrics) {
   return denominator > 0 ? trueNegative / denominator : null
 }
 
-function metricRating(value) {
+function metricRating(value, label = '') {
   const number = Number(value)
   if (!Number.isFinite(number)) return 'Pending'
+  if (String(label).toLowerCase().includes('f1')) return f1Rating(number)
+  if (String(label).toLowerCase().includes('auc')) return aucRating(number)
   if (number >= 0.85) return 'Very Good'
   if (number >= 0.7) return 'Good'
   if (number >= 0.55) return 'Fair'
   return 'Needs Review'
+}
+
+function f1Rating(value) {
+  const number = value > 1 ? value / 100 : value
+  if (number >= 0.9 && number <= 1) return 'Outstanding/Perfect'
+  if (number >= 0.8 && number < 0.9) return 'Very Good/Excellent'
+  if (number >= 0.7 && number < 0.8) return 'Good'
+  if (number >= 0.5 && number < 0.7) return 'Acceptable/Fair'
+  return 'Needs Review'
+}
+
+function aucRating(value) {
+  const number = value > 1 ? value / 100 : value
+  if (number >= 0.9 && number < 1) return 'Outstanding'
+  if (number >= 0.8 && number < 0.9) return 'Excellent'
+  if (number >= 0.7 && number < 0.8) return 'Acceptable/Good'
+  if (number >= 0.5 && number < 0.7) return 'Poor'
+  return 'Pending'
 }
 
 function matrixCellLabel(rowIndex, colIndex) {

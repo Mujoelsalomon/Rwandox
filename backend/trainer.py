@@ -7,6 +7,7 @@ import math
 import pandas as pd
 import numpy as np
 from sklearn.compose import ColumnTransformer
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score,
@@ -20,9 +21,11 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.inspection import permutation_importance
+
+from metric_benchmarks import enrich_metric_benchmarks
 
 # Import common sklearn estimators
 from sklearn.ensemble import RandomForestClassifier
@@ -42,10 +45,18 @@ try:
 except Exception:
     lgb = None
 
+try:
+    import torch
+    import torch.nn as nn
+except Exception:
+    torch = None
+    nn = None
+
 MAX_CATEGORICAL_UNIQUE_VALUES = int(os.getenv("TRAINING_MAX_CATEGORICAL_UNIQUE_VALUES", "80"))
 # Set TRAINING_MAX_ROWS to a positive number only when local training needs an
 # explicit cap. By default, every cleaned dataset row is available for training.
 MAX_LOCAL_TRAINING_ROWS = int(os.getenv("TRAINING_MAX_ROWS", "0"))
+TAB_TRANSFORMER_MAX_ROWS = int(os.getenv("TRAINING_TAB_TRANSFORMER_MAX_ROWS", "5000"))
 
 
 def read_dataset(dataset_path: str, **kwargs) -> pd.DataFrame:
@@ -269,6 +280,149 @@ def dense_one_hot_encoder():
         return OneHotEncoder(handle_unknown="ignore", sparse=False)
 
 
+def categorical_ordinal_encoder():
+    return OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
+
+
+class TabularTransformerNet(nn.Module if nn is not None else object):
+    def __init__(self, n_features, n_classes, d_model=32, n_heads=4, n_layers=2, dropout=0.1):
+        super().__init__()
+        self.token_projection = nn.Linear(1, d_model)
+        self.feature_embedding = nn.Parameter(torch.zeros(1, n_features, d_model))
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=n_heads,
+            dim_feedforward=d_model * 4,
+            dropout=dropout,
+            batch_first=True,
+            activation="gelu",
+        )
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
+        self.head = nn.Sequential(
+            nn.LayerNorm(d_model),
+            nn.Linear(d_model, n_classes),
+        )
+
+    def forward(self, values):
+        tokens = self.token_projection(values.unsqueeze(-1)) + self.feature_embedding
+        encoded = self.encoder(tokens)
+        return self.head(encoded.mean(dim=1))
+
+
+class TabTransformerClassifier(BaseEstimator, ClassifierMixin):
+    def __init__(
+        self,
+        max_epochs=4,
+        batch_size=2048,
+        learning_rate=0.001,
+        d_model=8,
+        n_heads=2,
+        n_layers=1,
+        dropout=0.1,
+        random_state=42,
+    ):
+        self.max_epochs = max_epochs
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.n_layers = n_layers
+        self.dropout = dropout
+        self.random_state = random_state
+
+    def fit(self, X, y):
+        if torch is None or nn is None:
+            raise RuntimeError("PyTorch is required for Tab Transformer training. Install torch and restart the backend.")
+
+        X_array = np.asarray(X, dtype=np.float32)
+        if X_array.ndim != 2 or X_array.shape[1] == 0:
+            raise ValueError("Tab Transformer training requires at least one feature column.")
+
+        self.label_encoder_ = LabelEncoder()
+        y_array = self.label_encoder_.fit_transform(pd.Series(y).astype(str))
+        self.classes_ = self.label_encoder_.classes_
+        if len(self.classes_) < 2:
+            raise ValueError("Tab Transformer training requires at least two target classes.")
+
+        torch.manual_seed(int(self.random_state))
+        self.device_ = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model_ = TabularTransformerNet(
+            n_features=X_array.shape[1],
+            n_classes=len(self.classes_),
+            d_model=int(self.d_model),
+            n_heads=int(self.n_heads),
+            n_layers=int(self.n_layers),
+            dropout=float(self.dropout),
+        ).to(self.device_)
+
+        features = torch.as_tensor(X_array, dtype=torch.float32, device=self.device_)
+        targets = torch.as_tensor(y_array, dtype=torch.long, device=self.device_)
+        class_counts = np.bincount(y_array, minlength=len(self.classes_)).astype(np.float32)
+        class_weights = np.sqrt(class_counts.sum() / np.maximum(class_counts, 1.0))
+        class_weights = class_weights / class_weights.mean()
+        weights = torch.as_tensor(class_weights, dtype=torch.float32, device=self.device_)
+        optimizer = torch.optim.AdamW(self.model_.parameters(), lr=float(self.learning_rate))
+        criterion = nn.CrossEntropyLoss(weight=weights)
+        batch_size = max(1, int(self.batch_size))
+
+        self.model_.train()
+        for _epoch in range(max(1, int(self.max_epochs))):
+            order = torch.randperm(features.shape[0], device=self.device_)
+            for start in range(0, features.shape[0], batch_size):
+                batch_index = order[start:start + batch_size]
+                optimizer.zero_grad(set_to_none=True)
+                loss = criterion(self.model_(features[batch_index]), targets[batch_index])
+                loss.backward()
+                optimizer.step()
+
+        self.threshold_ = 0.5
+        if len(self.classes_) == 2:
+            train_probabilities = self.predict_proba(X_array)
+            positive_index = self._positive_index()
+            positive_scores = train_probabilities[:, positive_index]
+            best_score = -1.0
+            best_threshold = 0.5
+            for threshold in np.linspace(0.2, 0.8, 25):
+                candidate = (positive_scores >= threshold).astype(int)
+                score = balanced_accuracy_score(y_array == positive_index, candidate)
+                if score > best_score:
+                    best_score = score
+                    best_threshold = float(threshold)
+            self.threshold_ = best_threshold
+
+        return self
+
+    def predict_proba(self, X):
+        self.model_.eval()
+        X_array = np.asarray(X, dtype=np.float32)
+        features = torch.as_tensor(X_array, dtype=torch.float32, device=self.device_)
+        probabilities = []
+        batch_size = max(1, int(self.batch_size))
+        with torch.no_grad():
+            for start in range(0, features.shape[0], batch_size):
+                logits = self.model_(features[start:start + batch_size])
+                probabilities.append(torch.softmax(logits, dim=1).cpu().numpy())
+        return np.vstack(probabilities)
+
+    def predict(self, X):
+        probabilities = self.predict_proba(X)
+        if len(self.classes_) == 2:
+            positive_index = self._positive_index()
+            negative_index = 1 - positive_index
+            encoded = np.where(probabilities[:, positive_index] >= self.threshold_, positive_index, negative_index)
+        else:
+            encoded = np.argmax(probabilities, axis=1)
+        return self.label_encoder_.inverse_transform(encoded)
+
+    def _positive_index(self):
+        normalized = [str(label).strip().lower() for label in self.classes_]
+        positive_labels = {"1", "yes", "true", "required", "oxygen required", "postoperative oxygen required"}
+        for index, label in enumerate(normalized):
+            if label in positive_labels:
+                return index
+        return len(self.classes_) - 1
+
+
 def train_model(dataset_path: str, target_column: str = None, model_type: str = "random_forest", output_path: str = None) -> dict:
     """Train a model from the requested algorithm on a tabular dataset.
 
@@ -304,6 +458,24 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         y = y_series.loc[sampled_index].copy()
 
     algo = model_type.lower()
+    is_tab_transformer = algo in {"tab_transformer", "tabtransformer"}
+    if is_tab_transformer and TAB_TRANSFORMER_MAX_ROWS > 0 and len(X) > TAB_TRANSFORMER_MAX_ROWS:
+        sample_state = 42
+        y_series = pd.Series(y)
+        try:
+            sampled_index = (
+                X.assign(__target=y_series)
+                .groupby("__target", group_keys=False)
+                .sample(frac=TAB_TRANSFORMER_MAX_ROWS / len(X), random_state=sample_state)
+                .index
+            )
+            if len(sampled_index) < min(TAB_TRANSFORMER_MAX_ROWS, len(X) // 2):
+                sampled_index = X.sample(n=TAB_TRANSFORMER_MAX_ROWS, random_state=sample_state).index
+        except Exception:
+            sampled_index = X.sample(n=TAB_TRANSFORMER_MAX_ROWS, random_state=sample_state).index
+        X = X.loc[sampled_index].copy()
+        y = y_series.loc[sampled_index].copy()
+
     label_encoder = None
     class_labels = None
     if algo == "xgboost":
@@ -321,6 +493,7 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         dropped_columns += high_cardinality_columns
         categorical_columns = [column for column in categorical_columns if column not in high_cardinality_columns]
 
+    categorical_encoder = categorical_ordinal_encoder() if is_tab_transformer else dense_one_hot_encoder()
     preprocessor = ColumnTransformer(
         transformers=[
             ("numeric", SimpleImputer(strategy="median"), numeric_columns),
@@ -329,7 +502,7 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
                 Pipeline(
                     steps=[
                         ("imputer", SimpleImputer(strategy="most_frequent")),
-                        ("encoder", dense_one_hot_encoder()),
+                        ("encoder", categorical_encoder),
                     ]
                 ),
                 categorical_columns,
@@ -340,7 +513,14 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
     )
 
     validation_size = 0.3
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=validation_size, random_state=42)
+    stratify_target = y if pd.Series(y).nunique(dropna=True) > 1 else None
+    X_train, X_val, y_train, y_val = train_test_split(
+        X,
+        y,
+        test_size=validation_size,
+        random_state=42,
+        stratify=stratify_target,
+    )
 
     model = None
 
@@ -360,6 +540,8 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         model = SVC(probability=True)
     elif algo == 'mlp' or algo == 'mlp_classifier' or algo == 'neural_network':
         model = MLPClassifier(hidden_layer_sizes=(100,), max_iter=300)
+    elif algo == 'tab_transformer' or algo == 'tabtransformer':
+        model = TabTransformerClassifier()
     elif algo == 'naive_bayes' or algo == 'nb':
         model = GaussianNB()
     elif algo == 'xgboost':
@@ -379,18 +561,14 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         if lgb is None:
             raise RuntimeError('lightgbm is not installed')
         model = lgb.LGBMClassifier()
-    elif algo == 'tab_transformer' or algo == 'tabtransformer':
-        # Placeholder: Tab Transformer requires deep learning stack; not implemented here
-        raise RuntimeError('Tab Transformer training is not implemented in this lightweight trainer')
     else:
         raise ValueError(f'Unknown model type: {model_type}')
 
-    pipeline = Pipeline(
-        steps=[
-            ("preprocessor", preprocessor),
-            ("model", model),
-        ]
-    )
+    pipeline_steps = [("preprocessor", preprocessor)]
+    if is_tab_transformer:
+        pipeline_steps.append(("scaler", StandardScaler()))
+    pipeline_steps.append(("model", model))
+    pipeline = Pipeline(steps=pipeline_steps)
 
     pipeline.fit(X_train, y_train)
 
@@ -409,13 +587,16 @@ def train_model(dataset_path: str, target_column: str = None, model_type: str = 
         preds=preds,
         labels=labels,
     )
-    metrics["top_predictors"] = top_predictor_contributions(
-        pipeline,
-        numeric_columns,
-        categorical_columns,
-        X_val=X_val,
-        y_val=y_val,
-    )
+    if is_tab_transformer:
+        metrics["top_predictors"] = equal_predictor_contributions_table(X_val.columns)
+    else:
+        metrics["top_predictors"] = top_predictor_contributions(
+            pipeline,
+            numeric_columns,
+            categorical_columns,
+            X_val=X_val,
+            y_val=y_val,
+        )
     metrics["dataset_cleaning"] = dataset_cleaning
 
     os.makedirs(os.path.join(os.path.dirname(__file__), "models"), exist_ok=True)
@@ -503,14 +684,15 @@ def high_cardinality_categorical_columns(X: pd.DataFrame, categorical_columns: l
 
 def build_training_metrics(pipeline, X_val, y_val, preds, labels) -> dict:
     matrix = confusion_matrix(y_val, preds, labels=labels)
-    sensitivity = safe_float(recall_score(y_val, preds, average="weighted", zero_division=0))
-    specificity = calculate_specificity(matrix)
+    sensitivity = calculate_sensitivity(y_val, preds, labels)
+    specificity = calculate_specificity(matrix, labels)
+    weighted_recall = safe_float(recall_score(y_val, preds, average="weighted", zero_division=0))
     metrics = {
         "val_accuracy": safe_float(accuracy_score(y_val, preds)),
         "val_balanced_accuracy": safe_float(balanced_accuracy_score(y_val, preds)),
         "val_precision_weighted": safe_float(precision_score(y_val, preds, average="weighted", zero_division=0)),
         "val_precision_macro": safe_float(precision_score(y_val, preds, average="macro", zero_division=0)),
-        "val_recall_weighted": sensitivity,
+        "val_recall_weighted": weighted_recall,
         "val_recall_macro": safe_float(recall_score(y_val, preds, average="macro", zero_division=0)),
         "val_sensitivity": sensitivity,
         "sensitivity": sensitivity,
@@ -533,13 +715,14 @@ def build_training_metrics(pipeline, X_val, y_val, preds, labels) -> dict:
     if probabilities is not None:
         metrics["val_log_loss"] = safe_metric(lambda: log_loss(y_val, probabilities, labels=labels))
         if len(labels) == 2 and probabilities.shape[1] >= 2:
-            metrics["val_roc_auc"] = safe_metric(lambda: roc_auc_score(y_val, probabilities[:, 1]))
+            positive_index = positive_label_index(labels)
+            metrics["val_roc_auc"] = safe_metric(lambda: roc_auc_score(y_val, probabilities[:, positive_index]))
         elif len(labels) > 2:
             metrics["val_roc_auc_weighted_ovr"] = safe_metric(
                 lambda: roc_auc_score(y_val, probabilities, labels=labels, multi_class="ovr", average="weighted")
             )
 
-    return metrics
+    return enrich_metric_benchmarks(metrics)
 
 
 def top_predictor_contributions(pipeline, numeric_columns, categorical_columns, X_val=None, y_val=None, limit=10) -> list:
@@ -620,6 +803,23 @@ def equal_predictor_contributions(columns):
     return {str(column): 1.0 for column in list(columns)[:10] if str(column)}
 
 
+def equal_predictor_contributions_table(columns):
+    values = list(equal_predictor_contributions(columns).keys())
+    if not values:
+        return []
+    contribution = 1 / len(values)
+    return [
+        {
+            "rank": index,
+            "predictor": predictor,
+            "importance": contribution,
+            "contribution_probability": contribution,
+            "contribution_percent": contribution * 100,
+        }
+        for index, predictor in enumerate(values, start=1)
+    ]
+
+
 def raw_model_importances(model):
     if hasattr(model, "feature_importances_"):
         return np.asarray(model.feature_importances_, dtype=float)
@@ -647,11 +847,20 @@ def original_column_from_transformed_name(transformed_name, numeric_columns, cat
     return feature_name
 
 
-def calculate_specificity(matrix):
+def calculate_sensitivity(y_true, y_pred, labels):
+    if len(labels) == 2:
+        positive_label = labels[positive_label_index(labels)]
+        return safe_float(recall_score(y_true, y_pred, labels=[positive_label], average="macro", zero_division=0))
+    return safe_float(recall_score(y_true, y_pred, average="weighted", zero_division=0))
+
+
+def calculate_specificity(matrix, labels=None):
     try:
         if matrix.shape == (2, 2):
-            true_negative = float(matrix[0][0])
-            false_positive = float(matrix[0][1])
+            positive_index = positive_label_index(labels or [0, 1])
+            negative_index = 1 - positive_index
+            true_negative = float(matrix[negative_index][negative_index])
+            false_positive = float(matrix[negative_index][positive_index])
             denominator = true_negative + false_positive
             return safe_float(true_negative / denominator) if denominator else None
 
@@ -666,6 +875,15 @@ def calculate_specificity(matrix):
         return safe_float(sum(values) / len(values)) if values else None
     except Exception:
         return None
+
+
+def positive_label_index(labels):
+    normalized = [str(label).strip().lower() for label in labels]
+    positive_labels = {"1", "yes", "true", "required", "oxygen required", "postoperative oxygen required"}
+    for index, label in enumerate(normalized):
+        if label in positive_labels:
+            return index
+    return len(labels) - 1
 
 
 def safe_metric(callback):

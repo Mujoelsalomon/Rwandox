@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 import trainer
 
+from metric_benchmarks import enrich_metric_benchmarks
 from .common import cors, json_body, require_admin, require_login
 from .models import ModelArtifact, TrainingJob
 
@@ -145,12 +146,18 @@ def train_status_view(request, job_id):
 
 def training_job_payload(job):
     duration_seconds = training_duration_seconds(job)
+    result = job.result
+    if isinstance(result, dict) and isinstance(result.get("metrics"), dict):
+        result = {
+            **result,
+            "metrics": enrich_metric_benchmarks(result.get("metrics")),
+        }
     return {
         "job_id": job.job_id,
         "status": job.status,
         "dataset": job.dataset_path,
         "model_type": job.model_type,
-        "result": job.result,
+        "result": result,
         "error": job.error,
         "duration_seconds": duration_seconds,
         "duration_display": format_duration(duration_seconds),
@@ -203,10 +210,19 @@ def run_training(job_id, dataset_path, model_type, target_column):
         job.status = "completed"
         metadata = result.get("metadata", {})
         duration_seconds = training_duration_seconds(job, ended_at=timezone.now())
+        metrics = enrich_metric_benchmarks(result.get("metrics") or {})
+        metrics["training_duration_seconds"] = duration_seconds
+        metrics["training_duration_display"] = format_duration(duration_seconds)
+        metrics["training_job_id"] = job.job_id
+        metrics["dataset_path"] = dataset_path
+        metrics["dataset_name"] = Path(dataset_path).name
+        metrics["feature_count"] = metadata.get("feature_count") or len(metadata.get("columns") or [])
+        metrics["training_row_count"] = metadata.get("training_row_count")
+        metrics["validation_row_count"] = metadata.get("validation_row_count")
         job.result = {
             "model_name": model_name,
             "model_type": artifact.model_type,
-            "metrics": result.get("metrics"),
+            "metrics": metrics,
             "target_column": metadata.get("target"),
             "feature_count": metadata.get("feature_count") or len(metadata.get("columns") or []),
             "row_count": metadata.get("row_count"),
@@ -226,6 +242,8 @@ def run_training(job_id, dataset_path, model_type, target_column):
             "training_duration_display": format_duration(duration_seconds),
             "artifact_id": artifact.id,
         }
+        artifact.metrics = metrics
+        artifact.save(update_fields=["metrics"])
         job.error = ""
         job.save()
     except Exception as exc:
