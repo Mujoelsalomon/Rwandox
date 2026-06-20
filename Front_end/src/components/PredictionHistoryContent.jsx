@@ -1,10 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getSession } from '../authSession.js'
 import { PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents.js'
 import { API_BASE_URL } from '../config/api.js'
 import i18n from '../i18n'
 
 const pageSizes = [10, 25, 50, 100]
+
+function authHeaders(extraHeaders = {}) {
+  const session = getSession()
+  return {
+    Authorization: `Bearer ${session?.token || ''}`,
+    'X-User-Email': session?.email || '',
+    'X-User-Username': session?.username || '',
+    ...extraHeaders,
+  }
+}
 
 export default function PredictionHistoryContent() {
   const { t } = useTranslation()
@@ -25,7 +36,10 @@ export default function PredictionHistoryContent() {
     async function loadHistory({ showLoading = false } = {}) {
       if (showLoading) setLoading(true)
       try {
-        const resp = await fetch(`${API_BASE_URL}/prediction-history`, { credentials: 'include' })
+        const resp = await fetch(`${API_BASE_URL}/prediction-history`, {
+          credentials: 'include',
+          headers: authHeaders(),
+        })
         const data = await resp.json()
         if (!active) return
         if (!resp.ok) throw new Error(data.error || 'Could not load prediction history.')
@@ -109,15 +123,45 @@ export default function PredictionHistoryContent() {
     setPage(1)
   }
 
-  function downloadHistory(format) {
+  async function downloadHistory(format) {
     const params = new URLSearchParams({
       format: format === 'csv' ? 'csv' : 'pdf',
       search: search.trim(),
       risk: riskFilter,
       disposition: dispositionFilter,
     })
-    window.location.href = `${API_BASE_URL}/prediction-history/report?${params.toString()}`
-    setExportOpen(false)
+    try {
+      const resp = await fetch(`${API_BASE_URL}/prediction-history/report?${params.toString()}`, {
+        credentials: 'include',
+        headers: authHeaders(),
+      })
+      if (!resp.ok) {
+        let message = 'Could not export prediction history.'
+        try {
+          const data = await resp.json()
+          message = data.error || message
+        } catch {
+          // Keep the generic message when the backend returns a non-JSON error.
+        }
+        throw new Error(message)
+      }
+
+      const blob = await resp.blob()
+      const extension = format === 'csv' ? 'csv' : 'pdf'
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `prediction-history-report.${extension}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      setStatus('')
+      setExportOpen(false)
+    } catch (error) {
+      console.error(error)
+      setStatus(error.message || 'Could not export prediction history.')
+    }
   }
 
   return (

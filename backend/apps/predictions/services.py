@@ -1,5 +1,5 @@
 from ml.model_loader import load_model_assets
-from ml.predict import make_prediction
+from ml.predict import make_prediction, make_predictions
 
 
 def classify_risk(probability: float) -> str:
@@ -33,12 +33,33 @@ def build_recommendations(risk_level: str) -> list[str]:
 
 def run_prediction(payload: dict) -> dict:
     model, preprocessor, feature_order = load_model_assets()
+    return prediction_result_from_assets(payload, model, preprocessor, feature_order)
+
+
+def prediction_result_from_assets(payload: dict, model, preprocessor, feature_order) -> dict:
     probability, contributing_factors = make_prediction(
         payload=payload,
         model=model,
         preprocessor=preprocessor,
         feature_order=feature_order,
     )
+    return build_prediction_result(probability, contributing_factors, preprocessor)
+
+
+def prediction_results_from_assets(payloads: list[dict], model, preprocessor, feature_order) -> list[dict]:
+    batch_results = make_predictions(
+        payloads=payloads,
+        model=model,
+        preprocessor=preprocessor,
+        feature_order=feature_order,
+    )
+    return [
+        build_prediction_result(probability, contributing_factors, preprocessor)
+        for probability, contributing_factors in batch_results
+    ]
+
+
+def build_prediction_result(probability: float, contributing_factors: list[dict], preprocessor: dict) -> dict:
     predicted_class = "Yes" if probability >= 0.50 else "No"
     risk_level = classify_risk(probability)
     recommendations = build_recommendations(risk_level)

@@ -53,10 +53,13 @@ export default function Login_Form() {
 
       createSession({
         id: data.user?.id || '',
+        user_id: data.user?.user_id || '',
         email: data.user?.email || SUPER_USER.email,
         name: data.user?.name || SUPER_USER.name,
         role: data.user?.role || SUPER_USER.role,
         username: data.user?.username || SUPER_USER.username,
+        access_level: data.user?.access_level || '',
+        permissions: data.user?.permissions || [],
         is_staff: Boolean(data.user?.is_staff),
         is_superuser: Boolean(data.user?.is_superuser),
         rememberMe,

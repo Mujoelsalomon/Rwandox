@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { isSessionActive, SESSION_EVENT, SESSION_KEY, SESSION_REVOKED_AT_KEY } from './authSession.js'
+import { getSession, isSessionActive, SESSION_EVENT, SESSION_KEY, SESSION_REVOKED_AT_KEY } from './authSession.js'
 import DashboardContent from './components/DashboardContent.jsx'
 import Footer from './components/Footer.jsx'
 import SidebarMenu from './components/SidebarMenu.jsx'
@@ -49,10 +49,18 @@ export default function PostoperativeOxygenMLUIMockup() {
 
   const fetchActiveModel = useCallback(async () => {
     try {
-      const resp = await fetch(`${API_BASE_URL}/models`, { credentials: 'include' })
+      const session = getSession()
+      const resp = await fetch(`${API_BASE_URL}/models/active`, {
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${session?.token || ''}`,
+          'X-User-Email': session?.email || '',
+          'X-User-Username': session?.username || '',
+        },
+      })
       if (!resp.ok) return
       const data = await resp.json()
-      const active = Array.isArray(data.models) ? data.models.find((model) => model.is_active) : null
+      const active = data.model || null
       setActiveModel(active || null)
     } catch (e) {
       console.error(e)

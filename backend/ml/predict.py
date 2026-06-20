@@ -21,6 +21,32 @@ def make_prediction(payload, model=None, preprocessor=None, feature_order=None):
     return max(0.0, min(1.0, probability)), factors
 
 
+def make_predictions(payloads, model=None, preprocessor=None, feature_order=None):
+    if model is None:
+        raise RuntimeError("No trained prediction model is available.")
+
+    feature_order = feature_order or []
+    rows = [
+        {feature: _normalize_value(feature, payload.get(feature)) for feature in feature_order}
+        for payload in payloads
+    ]
+    frame = pd.DataFrame(rows, columns=feature_order)
+
+    if hasattr(model, "predict_proba"):
+        probabilities = model.predict_proba(frame)
+        classes = _class_labels(model, preprocessor)
+        positive_index = _positive_class_index(classes, probabilities[0]) if len(probabilities) else 0
+        positive_probabilities = probabilities[:, positive_index]
+    else:
+        positive_probabilities = model.predict(frame)
+
+    results = []
+    for row, probability in zip(rows, positive_probabilities):
+        normalized_probability = max(0.0, min(1.0, float(probability)))
+        results.append((normalized_probability, _contributing_factors(row)))
+    return results
+
+
 def _class_labels(model, metadata):
     labels = (metadata or {}).get("class_labels")
     if labels:

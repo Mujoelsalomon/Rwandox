@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 import trainer
 
 from metric_benchmarks import enrich_metric_benchmarks
-from .common import cors, json_body, require_admin, require_login
+from .common import cors, json_body, require_login, require_training_access
 from .models import ModelArtifact, TrainingJob
 
 
@@ -34,7 +34,7 @@ SUPPORTED_MODEL_TYPES = {
 def upload_dataset_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_admin(request)
+    auth_error = require_training_access(request)
     if auth_error:
         return auth_error
     if request.method != "POST":
@@ -98,7 +98,7 @@ def save_uploaded_dataset(request):
 def train_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_admin(request)
+    auth_error = require_training_access(request)
     if auth_error:
         return auth_error
     if request.method != "POST":
@@ -131,7 +131,7 @@ def train_view(request):
 def train_status_view(request, job_id):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_admin(request)
+    auth_error = require_training_access(request)
     if auth_error:
         return auth_error
     try:
@@ -169,7 +169,7 @@ def training_job_payload(job):
 def training_jobs_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_admin(request)
+    auth_error = require_training_access(request)
     if auth_error:
         return auth_error
 

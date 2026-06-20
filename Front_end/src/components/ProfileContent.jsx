@@ -121,7 +121,7 @@ export default function ProfileContent() {
           <h2 className="h4 fw-bold text-[22px] font-black text-[#071b49]">Account details</h2>
           <div className="mt-4 grid gap-3">
             <ProfileField label="Name" value={profile.name} />
-            <ProfileField label="User ID" value={profile.id ? `USR-${String(profile.id).padStart(3, '0')}` : 'Not available'} />
+            <ProfileField label="User ID" value={profile.user_id || 'Not available'} />
             <ProfileField label="Username" value={profile.username} />
             <ProfileField label="Role" value={profile.role} />
             <ProfileField label="Email" value={profile.email} />
@@ -149,7 +149,7 @@ export default function ProfileContent() {
                 className="form-control form-control-lg min-h-12 w-full rounded-[12px] border border-[#cbd8e8] bg-white px-4 text-[15px] font-semibold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#bfdbfe]"
               />
             </label>
-            <ReadOnlyInput label="User ID" value={profile.id ? `USR-${String(profile.id).padStart(3, '0')}` : 'Not available'} />
+            <ReadOnlyInput label="User ID" value={profile.user_id || 'Not available'} />
             {canEditRole ? (
               <label className="block">
                 <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Role</span>
@@ -228,9 +228,12 @@ function ReadOnlyInput({ label, value }) {
 function normalizeUser(user) {
   return {
     id: user?.id || '',
+    user_id: user?.user_id || '',
     username: user?.username || '',
     name: user?.name || user?.username || 'Anesthetist',
     role: user?.role || 'Clinician',
+    access_level: user?.access_level || '',
+    permissions: user?.permissions || [],
     email: user?.email || '',
     is_staff: Boolean(user?.is_staff),
     is_superuser: Boolean(user?.is_superuser),

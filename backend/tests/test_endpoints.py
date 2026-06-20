@@ -5,7 +5,7 @@ from io import BytesIO
 import json
 from unittest.mock import patch
 
-from apps.api.models import TrainingJob
+from apps.api.models import ModelArtifact, TrainingJob
 
 class EndpointsTest(TestCase):
     def setUp(self):
@@ -36,6 +36,26 @@ class EndpointsTest(TestCase):
         resp = self.client.get('/models')
 
         self.assertEqual(resp.status_code, 403)
+
+    def test_clinician_can_read_active_model_for_dashboard(self):
+        ModelArtifact.objects.create(
+            name='Dashboard active model',
+            path=__file__,
+            model_type='random_forest',
+            metrics={'val_accuracy': 0.8},
+            is_active=True,
+        )
+        clinician = User.objects.create_user(
+            username='dashboard-model-clinician',
+            email='dashboard-model-clinician@example.com',
+            password='pass12345',
+        )
+        self.client.force_login(clinician)
+
+        resp = self.client.get('/models/active')
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['model']['name'], 'Dashboard active model')
 
     def test_upload_dataset_rejects_unsupported_file_type(self):
         upload = BytesIO(b'not,a,dataset\n')
@@ -163,6 +183,64 @@ class EndpointsTest(TestCase):
         jobs_resp = self.client.get('/train/jobs')
         self.assertEqual(jobs_resp.status_code, 403)
 
+    def test_researcher_and_data_manager_can_use_training_workflow(self):
+        ModelArtifact.objects.create(
+            name='Comparison model',
+            path=__file__,
+            model_type='random_forest',
+            metrics={'val_accuracy': 0.8},
+            is_active=True,
+        )
+
+        for role in ['Researcher', 'Data manager']:
+            with self.subTest(role=role):
+                self.client.post(
+                    '/auth/login',
+                    data=json.dumps({'username': 'anesthetist', 'password': 'Munyaneza@123'}),
+                    content_type='application/json',
+                )
+                email = f'{role.lower().replace(" ", "-")}-workflow@example.com'
+                register_resp = self.client.post(
+                    '/auth/register',
+                    data=json.dumps({
+                        'name': f'{role} Workflow User',
+                        'email': email,
+                        'password': 'pass12345',
+                        'role': role,
+                    }),
+                    content_type='application/json',
+                )
+                self.assertEqual(register_resp.status_code, 201)
+                user = User.objects.get(email=email)
+                self.assertFalse(user.is_staff)
+                self.client.force_login(user)
+
+                upload = BytesIO(b'oxygen_required,age\nYes,50\nNo,42\n')
+                upload.name = f'{role.lower().replace(" ", "-")}-dataset.csv'
+                upload_resp = self.client.post('/upload-dataset', {'file': upload})
+                self.assertEqual(upload_resp.status_code, 200)
+
+                jobs_resp = self.client.get('/train/jobs')
+                self.assertEqual(jobs_resp.status_code, 200)
+
+                models_resp = self.client.get('/models')
+                self.assertEqual(models_resp.status_code, 200)
+                self.assertEqual(len(models_resp.json()['models']), 1)
+
+                train_resp = self.client.post(
+                    '/train',
+                    data=json.dumps({'dataset_path': __file__, 'model_type': 'random_forest'}),
+                    content_type='application/json',
+                )
+                self.assertEqual(train_resp.status_code, 400)
+
+                activate_resp = self.client.post(
+                    '/models/activate',
+                    data=json.dumps({'id': ModelArtifact.objects.first().id}),
+                    content_type='application/json',
+                )
+                self.assertEqual(activate_resp.status_code, 403)
+
     def test_clinician_can_upload_prediction_dataset_without_training_access(self):
         clinician = User.objects.create_user(
             username='prediction-dataset-clinician',
@@ -190,8 +268,10 @@ class EndpointsTest(TestCase):
         upload_resp = self.client.post('/upload-prediction-dataset', {'file': upload})
         self.assertEqual(upload_resp.status_code, 200)
 
-        with patch('apps.api.prediction_views.run_prediction') as mocked_prediction:
-            mocked_prediction.side_effect = [
+        with patch('apps.api.prediction_views.load_model_assets') as mocked_loader, \
+                patch('apps.api.prediction_views.prediction_results_from_assets') as mocked_prediction:
+            mocked_loader.return_value = ('model', {'_model_name': 'Test model'}, ['age', 'sex', 'postop_spo2'])
+            mocked_prediction.return_value = [
                 {'predicted_probability': 0.82, 'predicted_class': 'Yes', 'risk_level': 'High', 'recommendations': [], 'contributing_factors': []},
                 {'predicted_probability': 0.2, 'predicted_class': 'No', 'risk_level': 'Low', 'recommendations': [], 'contributing_factors': []},
             ]
@@ -218,7 +298,8 @@ class EndpointsTest(TestCase):
         self.assertEqual(data['summary']['maximum_probability'], 82)
         self.assertEqual(data['summary']['first_row_probability'], 82)
         self.assertEqual(data['summary']['first_row_risk_level'], 'High')
-        self.assertEqual(mocked_prediction.call_count, 2)
+        self.assertEqual(mocked_loader.call_count, 1)
+        self.assertEqual(mocked_prediction.call_count, 1)
 
     @override_settings(DEBUG=True)
     def test_admin_header_session_can_upload_dataset_without_cookie(self):
@@ -265,7 +346,7 @@ class EndpointsTest(TestCase):
         data = resp.json()
         self.assertIn('predicted_probability', data)
         self.assertIn('predicted_class', data)
-        self.assertNotIn('risk_level', data)
+        self.assertIn('risk_level', data)
 
     def test_post_predict_preview_does_not_persist(self):
         payload = {'persist': False, 'features': {'patient_coded_id': 'KBH-PREVIEW-001', 'age': 45, 'sex': 'Female', 'postop_spo2': 90}}
@@ -273,7 +354,7 @@ class EndpointsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIn('predicted_probability', data)
-        self.assertNotIn('risk_level', data)
+        self.assertIn('risk_level', data)
         self.assertNotIn('id', data)
 
         search_resp = self.client.get('/patients/search?q=KBH-PREVIEW-001')
@@ -371,6 +452,121 @@ class EndpointsTest(TestCase):
         )
         self.assertEqual(target_resp.status_code, 403)
 
+    def test_invalid_profile_role_is_rejected(self):
+        target_user = User.objects.create_user(
+            username='invalid-role-target',
+            email='invalid-role-target@example.com',
+            password='pass12345',
+            first_name='Invalid',
+            last_name='Role',
+        )
+
+        resp = self.client.post(
+            '/auth/profile',
+            data=json.dumps({
+                'user_id': target_user.id,
+                'name': 'Invalid Role',
+                'email': 'invalid-role-target@example.com',
+                'role': 'Reviewer',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()['error'], 'Invalid user role.')
+
+    def test_admin_can_register_new_user_with_role(self):
+        resp = self.client.post(
+            '/auth/register',
+            data=json.dumps({
+                'name': 'New Clinical User',
+                'email': 'new-clinical-user@example.com',
+                'password': 'pass12345',
+                'role': 'Nurse',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        created_user = User.objects.get(email='new-clinical-user@example.com')
+        self.assertFalse(created_user.is_staff)
+        self.assertFalse(created_user.is_superuser)
+        self.assertTrue(created_user.groups.filter(name='Nurse').exists())
+        self.assertRegex(created_user.profile.user_code, r'^OX\d{3}$')
+        self.assertLessEqual(len(created_user.profile.user_code), 50)
+        self.assertEqual(resp.json()['user']['user_id'], created_user.profile.user_code)
+        self.assertEqual(resp.json()['user']['role'], 'Nurse')
+
+    def test_anesthetist_role_returns_expected_permissions(self):
+        resp = self.client.post(
+            '/auth/register',
+            data=json.dumps({
+                'name': 'Anesthetist User',
+                'email': 'anesthetist-user@example.com',
+                'password': 'pass12345',
+                'role': 'Anesthetist',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()['user']['role'], 'Anesthetist')
+        self.assertEqual(resp.json()['user']['access_level'], 'Clinical user')
+        self.assertEqual(resp.json()['user']['permissions'], [
+            'Login',
+            'Enter patient data',
+            'Generate prediction',
+            'View prediction result',
+            'View key factors',
+            'Review prediction history',
+        ])
+
+    def test_clinician_role_returns_expected_permissions(self):
+        resp = self.client.post(
+            '/auth/register',
+            data=json.dumps({
+                'name': 'Clinician User',
+                'email': 'clinician-user@example.com',
+                'password': 'pass12345',
+                'role': 'Clinician',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()['user']['role'], 'Clinician')
+        self.assertEqual(resp.json()['user']['access_level'], 'Clinical user')
+        self.assertEqual(resp.json()['user']['permissions'], [
+            'Review prediction result',
+            'Support monitoring decision',
+            'Support disposition decision',
+        ])
+
+    def test_researcher_and_data_manager_roles_return_training_permissions(self):
+        expected_permissions = [
+            'Upload dataset',
+            'Train model',
+            'View training results',
+            'Compare models',
+        ]
+        for role in ['Researcher', 'Data manager']:
+            with self.subTest(role=role):
+                resp = self.client.post(
+                    '/auth/register',
+                    data=json.dumps({
+                        'name': f'{role} User',
+                        'email': f'{role.lower().replace(" ", "-")}-user@example.com',
+                        'password': 'pass12345',
+                        'role': role,
+                    }),
+                    content_type='application/json',
+                )
+
+                self.assertEqual(resp.status_code, 201)
+                self.assertEqual(resp.json()['user']['role'], role)
+                self.assertEqual(resp.json()['user']['access_level'], 'Clinical user')
+                self.assertEqual(resp.json()['user']['permissions'], expected_permissions)
+
     def test_superuser_can_edit_target_user_profile_and_role(self):
         target_user = User.objects.create_user(
             username='target',
@@ -398,3 +594,12 @@ class EndpointsTest(TestCase):
         self.assertTrue(target_user.is_staff)
         self.assertFalse(target_user.is_superuser)
         self.assertEqual(resp.json()['user']['role'], 'Administrator')
+        self.assertEqual(resp.json()['user']['access_level'], 'Administrator')
+        self.assertEqual(resp.json()['user']['permissions'], [
+            'Manage users',
+            'Manage active model',
+            'Monitor system status',
+            'View audit logs',
+            'Manage QR-code access',
+            'Manage settings',
+        ])

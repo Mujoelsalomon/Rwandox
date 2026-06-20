@@ -5,10 +5,20 @@ import { API_BASE_URL, getSession } from '../authSession.js'
 
 const defaultUsers = []
 
-const roleOptions = ['Super user', 'Administrator', 'Clinician', 'Reviewer', 'Viewer']
+const clinicalRoleOptions = ['Clinician', 'Nurse', 'Anesthetist', 'Researcher', 'Data manager']
+const registrationRoleOptions = ['Administrator', ...clinicalRoleOptions]
+const standardRoleOptions = ['Administrator', ...clinicalRoleOptions]
+
+function roleOptionsForSession(session) {
+  return session?.is_superuser ? ['Superuser', ...standardRoleOptions] : standardRoleOptions
+}
 
 function notify(message, type = 'info') {
   window.dispatchEvent(new CustomEvent('app-notification', { detail: { message, type } }))
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
 export default function SystemAdministrationContent() {
@@ -19,6 +29,7 @@ export default function SystemAdministrationContent() {
   const [originalRole, setOriginalRole] = useState(null)
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [error, setError] = useState('')
+  const roleOptions = roleOptionsForSession(getSession())
 
   useEffect(() => {
     let active = true
@@ -121,6 +132,30 @@ export default function SystemAdministrationContent() {
     notify('User role changes discarded.', 'warning')
   }
 
+  async function registerNewUser(form) {
+    const session = getSession()
+    const resp = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.token || ''}`,
+        'X-User-Email': session?.email || '',
+        'X-User-Username': session?.username || '',
+      },
+      body: JSON.stringify(form),
+    })
+    const data = await resp.json()
+    if (!resp.ok) throw new Error(data.error || 'Could not register user.')
+
+    setUsers((current) => {
+      const exists = current.some((user) => user.id === data.user.id)
+      return exists ? current.map((user) => (user.id === data.user.id ? data.user : user)) : [...current, data.user]
+    })
+    notify('New user registered.', 'success')
+    return data.user
+  }
+
   return (
     <div className="settings-content-18 container-fluid min-w-0 px-0">
       <section className="card border-0 shadow-sm rounded-4 mb-3 min-w-0 rounded-[16px] border border-[#e2eaf5] bg-white px-5 py-5 md:px-6">
@@ -173,6 +208,8 @@ export default function SystemAdministrationContent() {
           <UsersTable
             users={users}
             editingUserId={editingUserId}
+            roleOptions={roleOptions}
+            onRegister={registerNewUser}
             onEdit={handleEdit}
             onRoleChange={draftUserRole}
             onSave={saveUserRole}
@@ -739,8 +776,67 @@ function AdminAction({ title, detail, isActive = false, onClick }) {
   )
 }
 
-function UsersTable({ users, editingUserId, onEdit, onRoleChange, onSave, onDiscard }) {
+function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onRoleChange, onSave, onDiscard }) {
   const { t } = useTranslation()
+  const [registrationOpen, setRegistrationOpen] = useState(false)
+  const [registering, setRegistering] = useState(false)
+  const [registrationError, setRegistrationError] = useState('')
+  const [registrationForm, setRegistrationForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'Clinician',
+  })
+
+  function updateRegistrationField(field, value) {
+    setRegistrationForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function submitRegistration(event) {
+    event.preventDefault()
+    setRegistrationError('')
+
+    const name = registrationForm.name.trim()
+    const email = registrationForm.email.trim().toLowerCase()
+    const password = registrationForm.password
+    const role = registrationForm.role
+
+    if (!name) {
+      setRegistrationError('Full name is required.')
+      return
+    }
+    if (!validateEmail(email)) {
+      setRegistrationError('Enter a valid email address.')
+      return
+    }
+    if (password.length < 8) {
+      setRegistrationError('Password must be at least 8 characters.')
+      return
+    }
+    if (password !== registrationForm.confirmPassword) {
+      setRegistrationError('Passwords do not match.')
+      return
+    }
+
+    try {
+      setRegistering(true)
+      await onRegister({ name, email, password, role })
+      setRegistrationForm({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        role: 'Clinician',
+      })
+      setRegistrationOpen(false)
+    } catch (error) {
+      setRegistrationError(error.message || 'Could not register user.')
+    } finally {
+      setRegistering(false)
+    }
+  }
+
   return (
     <div className="card border-0 shadow-sm rounded-4 mt-5 min-w-0 overflow-hidden rounded-[14px] border border-[#d9e5f3] bg-white">
       <div className="flex min-w-0 flex-col gap-2 border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -748,7 +844,83 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange, onSave, onDisc
           <h2 className="section-title font-black text-[#071b49]">{t('userManagement')}</h2>
           <p className="small-text mt-1 font-semibold text-[#64799e]">{t('manageUserRoles')}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setRegistrationOpen((current) => !current)}
+          className="btn btn-primary fw-bold inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-4 py-2 text-white"
+        >
+          <Icon name="plus" className="h-5 w-5" />
+          <span>{registrationOpen ? 'Close registration' : 'Register the new user'}</span>
+        </button>
       </div>
+
+      {registrationOpen && (
+        <form onSubmit={submitRegistration} className="border-b border-[#e5edf7] bg-white px-4 py-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_180px]">
+            <RegistrationField
+              label="Full name"
+              value={registrationForm.name}
+              onChange={(value) => updateRegistrationField('name', value)}
+              placeholder="Clinical staff name"
+              autoComplete="name"
+            />
+            <RegistrationField
+              label="Email"
+              type="email"
+              value={registrationForm.email}
+              onChange={(value) => updateRegistrationField('email', value)}
+              placeholder="name@hospital.org"
+              autoComplete="email"
+            />
+            <RegistrationField
+              label="Password"
+              type="password"
+              value={registrationForm.password}
+              onChange={(value) => updateRegistrationField('password', value)}
+              placeholder="Minimum 8 characters"
+              autoComplete="new-password"
+            />
+            <RegistrationField
+              label="Confirm password"
+              type="password"
+              value={registrationForm.confirmPassword}
+              onChange={(value) => updateRegistrationField('confirmPassword', value)}
+              placeholder="Repeat password"
+              autoComplete="new-password"
+            />
+            <label className="block">
+              <span className="mb-2 block text-[12px] font-black uppercase tracking-[0.1em] text-[#64799e]">Role</span>
+              <RoleSelect value={registrationForm.role} roleOptions={registrationRoleOptions} onChange={(role) => updateRegistrationField('role', role)} />
+            </label>
+          </div>
+
+          {registrationError && (
+            <div className="alert alert-danger rounded-4 mt-3 px-4 py-3 text-[14px] font-bold" role="alert">
+              {registrationError}
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setRegistrationOpen(false)
+                setRegistrationError('')
+              }}
+              className="btn btn-light fw-bold min-h-11 rounded-[10px] px-4 py-2 text-[#172a53]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={registering}
+              className="btn btn-success fw-bold min-h-11 rounded-[10px] px-4 py-2 text-white disabled:opacity-70"
+            >
+              {registering ? 'Registering...' : 'Create user'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="hidden overflow-x-auto lg:block">
         <table className="table table-hover align-middle mb-0 w-full min-w-[760px] text-left">
@@ -765,11 +937,11 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange, onSave, onDisc
             {users.map((user) => (
               <tr key={user.id} className="border-t border-[#edf2f8]">
                 <td className="px-4 py-4 text-[14px] font-extrabold text-[#071b49]">{user.name}</td>
-                <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.id}</td>
+                <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.user_id || user.id}</td>
                 <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.email}</td>
                 <td className="px-4 py-4">
                   {editingUserId === user.id ? (
-                    <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
+                    <RoleSelect value={user.role} roleOptions={roleOptions} onChange={(role) => onRoleChange(user.id, role)} />
                   ) : (
                     <span className="badge rounded-pill bg-[#1768f2] px-3 py-2 text-[13px] font-extrabold text-white opacity-100 inline-flex items-center">
                       <svg className="hidden sm:inline-block mr-2 h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -802,7 +974,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange, onSave, onDisc
               <div className="min-w-0">
                 <p className="break-words text-[15px] font-extrabold text-[#071b49]">{user.name}</p>
                 <p className="mt-1 break-words text-[13px] font-semibold text-[#64799e]">{user.email}</p>
-                <p className="mt-1 text-[12px] font-black uppercase tracking-[0.12em] text-[#8aa0bf]">{user.id}</p>
+                <p className="mt-1 text-[12px] font-black uppercase tracking-[0.12em] text-[#8aa0bf]">{user.user_id || user.id}</p>
               </div>
               <button
                 type="button"
@@ -817,7 +989,7 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange, onSave, onDisc
             <div className="mt-3">
               <p className="mb-2 text-[12px] font-black uppercase tracking-[0.12em] text-[#64799e]">{t('role')}</p>
               {editingUserId === user.id ? (
-                <RoleSelect value={user.role} onChange={(role) => onRoleChange(user.id, role)} />
+                <RoleSelect value={user.role} roleOptions={roleOptions} onChange={(role) => onRoleChange(user.id, role)} />
               ) : (
                 <span className="badge rounded-pill bg-[#1768f2] px-3 py-2 text-[13px] font-extrabold text-white opacity-100 inline-flex items-center">
                   <svg className="hidden sm:inline-block mr-2 h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -872,7 +1044,23 @@ function UsersTable({ users, editingUserId, onEdit, onRoleChange, onSave, onDisc
   )
 }
 
-function RoleSelect({ value, onChange }) {
+function RegistrationField({ label, value, onChange, type = 'text', placeholder = '', autoComplete = 'off' }) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-2 block text-[12px] font-black uppercase tracking-[0.1em] text-[#64799e]">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        className="form-control h-10 w-full rounded-[10px] border border-[#c9d8eb] bg-white px-3 text-[14px] font-semibold text-[#071b49] outline-none transition placeholder:text-[#7a8aa6] focus:border-[#1768f2] focus:ring-2 focus:ring-[#b8d3ff]"
+      />
+    </label>
+  )
+}
+
+function RoleSelect({ value, roleOptions, onChange }) {
   return (
     <select
       value={value}
@@ -898,6 +1086,12 @@ function Icon({ name, className = '' }) {
   }
 
   const paths = {
+    plus: (
+      <>
+        <path d="M12 5v14" />
+        <path d="M5 12h14" />
+      </>
+    ),
     edit: (
       <>
         <path d="M12 20h9" />

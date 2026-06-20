@@ -1,17 +1,18 @@
 from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.contrib.sessions.models import Session
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .audit import record_audit
 from .common import cors, json_body, require_login
-from .serializers import user_payload
+from .serializers import CLINICAL_ROLE_NAMES, user_payload
 from .models import SystemSetting
 from .hospitals import HOSPITALS_BY_ID
 import json as _json
 from django.utils import timezone
+from apps.accounts.models import ensure_user_profile
 from .common import require_admin
 
 
@@ -19,6 +20,7 @@ DEFAULT_USERNAME = "anesthetist"
 DEFAULT_EMAIL = "munyanezajoel3@gmail.com"
 DEFAULT_PASSWORD = "Munyaneza@123"
 FAST_LOGIN_PBKDF2_ITERATIONS = int(getattr(settings, "FAST_LOGIN_PBKDF2_ITERATIONS", 120000))
+VALID_PROFILE_ROLES = {*CLINICAL_ROLE_NAMES, "Administrator", "Superuser"}
 
 
 def ensure_default_user(identifier=None):
@@ -58,6 +60,15 @@ def should_refresh_default_password(encoded_password):
         return False
 
 
+def sync_user_role_group(user, role):
+    clinical_groups = Group.objects.filter(name__in=CLINICAL_ROLE_NAMES)
+    if clinical_groups.exists():
+        user.groups.remove(*clinical_groups)
+    if role in CLINICAL_ROLE_NAMES:
+        group, _created = Group.objects.get_or_create(name=role)
+        user.groups.add(group)
+
+
 @csrf_exempt
 def login_view(request):
     if request.method == "OPTIONS":
@@ -95,9 +106,18 @@ def register_view(request):
     full_name = str(payload.get("name") or "").strip()
     email = str(payload.get("email") or "").strip().lower()
     password = payload.get("password") or ""
+    role = str(payload.get("role") or "").strip()
 
     if not full_name or not email or not password:
         return cors(JsonResponse({"error": "Name, email, and password are required."}, status=400))
+    if role:
+        if role not in VALID_PROFILE_ROLES:
+            return cors(JsonResponse({"error": "Invalid user role."}, status=400))
+        admin_error = require_admin(request)
+        if admin_error:
+            return admin_error
+        if role == "Superuser" and not request.user.is_superuser:
+            return cors(JsonResponse({"error": "Only a superuser can assign the superuser role."}, status=403))
     if User.objects.filter(email__iexact=email).exists():
         return cors(JsonResponse({"error": "An account with this email already exists."}, status=409))
 
@@ -112,8 +132,16 @@ def register_view(request):
     name_parts = full_name.split(maxsplit=1)
     user.first_name = name_parts[0]
     user.last_name = name_parts[1] if len(name_parts) > 1 else ""
-    user.save(update_fields=["first_name", "last_name"])
-    request.user = user
+    update_fields = ["first_name", "last_name"]
+    if role:
+        user.is_staff = role in {"Administrator", "Superuser"}
+        user.is_superuser = role == "Superuser"
+        update_fields.extend(["is_staff", "is_superuser"])
+    user.save(update_fields=update_fields)
+    ensure_user_profile(user)
+    sync_user_role_group(user, role or "Clinician")
+    if not role:
+        request.user = user
     record_audit(request, "Registered user account", object_type="User", object_id=user.id)
     return cors(JsonResponse({"user": user_payload(user)}, status=201))
 
@@ -180,6 +208,8 @@ def profile_update_view(request):
 
     if not full_name or not email:
         return cors(JsonResponse({"error": "Name and email are required."}, status=400))
+    if role and role not in VALID_PROFILE_ROLES:
+        return cors(JsonResponse({"error": "Invalid user role."}, status=400))
     if role and not (request.user.is_staff or request.user.is_superuser):
         return cors(JsonResponse({"error": "Only an administrator can edit user roles."}, status=403))
     if role == "Superuser" and not request.user.is_superuser:
@@ -201,6 +231,8 @@ def profile_update_view(request):
         target_user.is_superuser = role == "Superuser"
         update_fields.extend(["is_staff", "is_superuser"])
     target_user.save(update_fields=update_fields)
+    if role:
+        sync_user_role_group(target_user, role)
     record_audit(
         request,
         "Updated user profile",

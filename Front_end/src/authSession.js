@@ -75,6 +75,14 @@ export function isAdminSession(session = getSession()) {
   return Boolean(session?.is_staff || session?.is_superuser || ['Administrator', 'Superuser'].includes(session?.role))
 }
 
+export function hasPermission(session = getSession(), permission) {
+  return Array.isArray(session?.permissions) && session.permissions.includes(permission)
+}
+
+export function canAccessTraining(session = getSession()) {
+  return isAdminSession(session) || hasPermission(session, 'Train model')
+}
+
 export function notifySessionChanged() {
   window.dispatchEvent(new Event(SESSION_EVENT))
 }

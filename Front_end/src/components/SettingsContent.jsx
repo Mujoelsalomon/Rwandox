@@ -39,6 +39,11 @@ function recorded(value) {
   return value === undefined || value === null || value === '' ? 'Not recorded' : value
 }
 
+function recordedList(value) {
+  if (Array.isArray(value)) return value.length ? value.join(', ') : 'Not recorded'
+  return recorded(value)
+}
+
 function formatSessionDate(value) {
   const date = new Date(value || '')
   return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleString()
@@ -60,11 +65,12 @@ export default function SettingsContent() {
   const personalInformation = [
     { label: 'Full name', value: recorded(session?.name || session?.full_name || session?.username) },
     { label: 'Email', value: recorded(session?.email) },
-    { label: 'User ID', value: recorded(session?.id || session?.user_id || session?.username) },
+    { label: 'User ID', value: recorded(session?.user_id || session?.id || session?.username) },
   ]
   const roleInformation = [
     { label: 'Current role', value: recorded(session?.role) },
-    { label: 'Access level', value: recorded(session?.access_level || session?.permissions) },
+    { label: 'Access level', value: recorded(session?.access_level) },
+    { label: 'Admin permissions', value: recordedList(session?.permissions) },
     { label: 'Workspace', value: 'A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda' },
   ]
   const loginSecurity = [

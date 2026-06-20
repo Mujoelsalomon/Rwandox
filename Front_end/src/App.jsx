@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { clearCurrentSession, getSession, isAdminSession, isSessionActive } from './authSession.js'
+import { canAccessTraining, clearCurrentSession, getSession, isAdminSession, isSessionActive } from './authSession.js'
 import AppLayout from './components/AppLayout.jsx'
 import NewPredictionContent from './components/NewPredictionContent.jsx'
 import ProfileContent from './components/ProfileContent.jsx'
@@ -92,7 +92,7 @@ export default function App() {
         <Route
           path="/train"
           element={(
-            <ProtectedRoute adminOnly>
+            <ProtectedRoute trainingOnly>
               <AppLayout>
                 <TrainingPortal />
               </AppLayout>
@@ -148,12 +148,15 @@ function IdleSessionTimeout() {
   return null
 }
 
-function ProtectedRoute({ adminOnly = false, children }) {
+function ProtectedRoute({ adminOnly = false, trainingOnly = false, children }) {
   const session = getSession()
   if (!isSessionActive(session)) {
     return <Navigate to="/login" replace />
   }
   if (adminOnly && !isAdminSession(session)) {
+    return <Navigate to="/dashboard" replace />
+  }
+  if (trainingOnly && !canAccessTraining(session)) {
     return <Navigate to="/dashboard" replace />
   }
 

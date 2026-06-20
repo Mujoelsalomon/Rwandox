@@ -17,7 +17,8 @@ from metric_benchmarks import enrich_metric_benchmarks
 from apps.patients.models import Patient
 from apps.perioperative.models import PerioperativeRecord
 from apps.predictions.models import PredictionResult
-from apps.predictions.services import run_prediction
+from apps.predictions.services import prediction_results_from_assets, run_prediction
+from ml.model_loader import load_model_assets
 
 from .audit import record_audit
 from .common import bool_value, cors, float_value, int_or_none, int_value, json_body, require_login
@@ -93,25 +94,33 @@ def predict_dataset_view(request):
     if resolved_target_column in feature_columns:
         feature_columns.remove(resolved_target_column)
 
+    try:
+        model, preprocessor, feature_order = load_model_assets()
+    except Exception as exc:
+        return cors(JsonResponse({"error": str(exc)}, status=400))
+
+    row_features = []
+    row_indices = []
+    for index, row in dataframe.iterrows():
+        row_features.append({str(column): clean_dataset_value(row[column]) for column in feature_columns})
+        row_indices.append(int(index))
+
     predictions = []
     errors = []
-    for index, row in dataframe.iterrows():
-        features = {str(column): clean_dataset_value(row[column]) for column in feature_columns}
-        try:
-            result = run_prediction(features)
-            predictions.append({
-                "row_index": int(index),
-                "predicted_probability": result.get("predicted_probability"),
-                "predicted_class": result.get("predicted_class"),
-                "risk_level": result.get("risk_level"),
-                "recommendations": result.get("recommendations") or [],
-                "contributing_factors": result.get("contributing_factors") or [],
-                "active_model": result.get("active_model"),
-                "model_type": result.get("model_type"),
-                "training_metrics": enrich_metric_benchmarks(result.get("training_metrics") or {}),
-            })
-        except Exception as exc:
-            errors.append({"row_index": int(index), "error": str(exc)})
+    try:
+        row_results = prediction_results_from_assets(row_features, model, preprocessor, feature_order)
+    except Exception as exc:
+        return cors(JsonResponse({"error": str(exc)}, status=400))
+
+    for row_index, result in zip(row_indices, row_results):
+        predictions.append({
+            "row_index": row_index,
+            "predicted_probability": result.get("predicted_probability"),
+            "predicted_class": result.get("predicted_class"),
+            "risk_level": result.get("risk_level"),
+            "recommendations": result.get("recommendations") or [],
+            "contributing_factors": result.get("contributing_factors") or [],
+        })
 
     risk_counts = {"High": 0, "Moderate": 0, "Low": 0}
     probabilities = []
@@ -153,9 +162,9 @@ def predict_dataset_view(request):
             "maximum_probability": maximum_probability,
             "first_row_probability": probabilities[0] if probabilities else 0,
             "first_row_risk_level": predictions[0].get("risk_level") if predictions else None,
-            "active_model": predictions[0].get("active_model") if predictions else None,
-            "model_type": predictions[0].get("model_type") if predictions else None,
-            "training_metrics": enrich_metric_benchmarks(predictions[0].get("training_metrics")) if predictions else {},
+            "active_model": preprocessor.get("_model_name") if predictions else None,
+            "model_type": preprocessor.get("_model_type") if predictions else None,
+            "training_metrics": enrich_metric_benchmarks(preprocessor.get("_training_metrics") or {}) if predictions else {},
         },
     }))
 
@@ -1041,7 +1050,6 @@ def oxygen_required_prediction(prediction):
 def prediction_response_payload(result):
     payload = dict(result)
     payload["training_metrics"] = enrich_metric_benchmarks(payload.get("training_metrics") or {})
-    payload.pop("risk_level", None)
     return payload
 
 

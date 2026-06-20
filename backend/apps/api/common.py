@@ -80,6 +80,17 @@ def require_admin(request):
     return None
 
 
+def require_training_access(request):
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+    if request.user.is_staff or request.user.is_superuser:
+        return None
+    if request.user.groups.filter(name__in=["Researcher", "Data manager"]).exists():
+        return None
+    return cors(JsonResponse({"error": "Training access required."}, status=403))
+
+
 def bool_value(value):
     if isinstance(value, bool):
         return value

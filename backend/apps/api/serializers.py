@@ -1,17 +1,67 @@
+from apps.accounts.models import ensure_user_profile
+
 from .common import float_value
 
 
+CLINICAL_ROLE_NAMES = ["Clinician", "Nurse", "Anesthetist", "Researcher", "Data manager"]
+ADMIN_PERMISSIONS = [
+    "Manage users",
+    "Manage active model",
+    "Monitor system status",
+    "View audit logs",
+    "Manage QR-code access",
+    "Manage settings",
+]
+ROLE_PERMISSIONS = {
+    "Clinician": [
+        "Review prediction result",
+        "Support monitoring decision",
+        "Support disposition decision",
+    ],
+    "Anesthetist": [
+        "Login",
+        "Enter patient data",
+        "Generate prediction",
+        "View prediction result",
+        "View key factors",
+        "Review prediction history",
+    ],
+    "Researcher": [
+        "Upload dataset",
+        "Train model",
+        "View training results",
+        "Compare models",
+    ],
+    "Data manager": [
+        "Upload dataset",
+        "Train model",
+        "View training results",
+        "Compare models",
+    ],
+}
+
+
 def user_payload(user):
-    role = "Superuser" if user.is_superuser else "Administrator" if user.is_staff else "Clinician"
+    role = "Superuser" if user.is_superuser else "Administrator" if user.is_staff else clinical_role(user)
+    profile = ensure_user_profile(user)
+    permissions = ADMIN_PERMISSIONS if user.is_staff or user.is_superuser else ROLE_PERMISSIONS.get(role, [])
     return {
         "id": user.id,
+        "user_id": profile.user_code,
         "username": user.username,
         "email": user.email,
         "name": user.get_full_name() or user.first_name or user.username,
         "role": role,
+        "access_level": "Administrator" if user.is_staff or user.is_superuser else "Clinical user",
+        "permissions": permissions,
         "is_staff": user.is_staff,
         "is_superuser": user.is_superuser,
     }
+
+
+def clinical_role(user):
+    group_names = set(user.groups.values_list("name", flat=True))
+    return next((role for role in CLINICAL_ROLE_NAMES if role in group_names), "Clinician")
 
 
 def patient_payload(patient):

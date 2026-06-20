@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { getSession, isAdminSession, SESSION_EVENT } from '../authSession.js'
+import { canAccessTraining, getSession, isAdminSession, SESSION_EVENT } from '../authSession.js'
 
 const sidebarItems = [
   { labelKey: 'dashboard', to: '/dashboard', icon: 'grid' },
   { labelKey: 'newPrediction', to: '/new-prediction', icon: 'plus' },
   { labelKey: 'predictionHistory', to: '/prediction-history', icon: 'history' },
-  { labelKey: 'modelTraining', to: '/train', icon: 'barChart', adminOnly: true },
+  { labelKey: 'modelTraining', to: '/train', icon: 'barChart', trainingOnly: true },
   { labelKey: 'systemAdministration', to: '/system-administration', icon: 'shield', adminOnly: true },
   { labelKey: 'settings', to: '/settings', icon: 'settings' },
 ]
@@ -26,7 +26,11 @@ export default function SidebarMenu({ isOpen, onNavigate, widthStyle }) {
     return () => window.removeEventListener(SESSION_EVENT, handleSessionChange)
   }, [])
 
-  const visibleSidebarItems = sidebarItems.filter((item) => !item.adminOnly || isAdminSession(session))
+  const visibleSidebarItems = sidebarItems.filter((item) => {
+    if (item.adminOnly) return isAdminSession(session)
+    if (item.trainingOnly) return canAccessTraining(session)
+    return true
+  })
 
   return (
     <aside

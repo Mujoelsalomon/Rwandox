@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getSession } from './authSession.js'
+import { getSession, isAdminSession } from './authSession.js'
 import { API_BASE_URL } from './config/api.js'
 import { notifyModelRegistryUpdated } from './predictionEvents.js'
 
@@ -41,6 +41,7 @@ export default function TrainingPortal() {
   const [trainingNotice, setTrainingNotice] = useState('')
   const [trainingStartedAt, setTrainingStartedAt] = useState(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const isAdmin = isAdminSession(getSession())
 
   useEffect(() => {
     fetchModels()
@@ -289,16 +290,20 @@ export default function TrainingPortal() {
                           >
                             {t('view')}
                           </button>
-                          <button
-                            onClick={() => activateModel(model.id)}
-                            disabled={model.is_active || activatingId === model.id}
-                            className="btn-text btn btn-outline-primary btn-sm rounded border px-4 py-2 disabled:opacity-50"
-                          >
-                            {model.is_active ? t('active') : activatingId === model.id ? t('activating') : t('makeActive')}
-                          </button>
-                          <a className="text-sky-600 underline" href={`${API_BASE_URL}/models/download?id=${encodeURIComponent(model.id)}`}>
-                            {t('download')}
-                          </a>
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => activateModel(model.id)}
+                                disabled={model.is_active || activatingId === model.id}
+                                className="btn-text btn btn-outline-primary btn-sm rounded border px-4 py-2 disabled:opacity-50"
+                              >
+                                {model.is_active ? t('active') : activatingId === model.id ? t('activating') : t('makeActive')}
+                              </button>
+                              <a className="text-sky-600 underline" href={`${API_BASE_URL}/models/download?id=${encodeURIComponent(model.id)}`}>
+                                {t('download')}
+                              </a>
+                            </>
+                          )}
                         </>
                       ) : (
                         <span className="text-slate-500">{t('downloadUnavailable')}</span>
@@ -316,6 +321,7 @@ export default function TrainingPortal() {
             model={selectedModel}
             activatingId={activatingId}
             onActivate={activateModel}
+            canActivate={isAdmin}
           />
         ) : (
           <TrainingReport status={status} selectedModelType={modelType} latestModel={models.find((model) => model.is_active)} file={file} />
@@ -452,7 +458,7 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
   )
 }
 
-function SavedModelReport({ model, activatingId, onActivate }) {
+function SavedModelReport({ model, activatingId, onActivate, canActivate = false }) {
   const { t } = useTranslation()
   const metrics = model.metrics || {}
   const metricCards = [
@@ -494,7 +500,7 @@ function SavedModelReport({ model, activatingId, onActivate }) {
           }`}>
             {model.is_active ? t('active') : t('available')}
           </span>
-          {model.id && (
+          {canActivate && model.id && (
             <button
               onClick={() => onActivate(model.id)}
               disabled={model.is_active || activatingId === model.id}

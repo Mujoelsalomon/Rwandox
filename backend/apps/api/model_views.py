@@ -4,7 +4,7 @@ from django.http import FileResponse, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .audit import record_audit
-from .common import cors, json_body, require_admin
+from .common import cors, json_body, require_admin, require_login, require_training_access
 from .models import ModelArtifact
 from metric_benchmarks import enrich_metric_benchmarks
 
@@ -12,7 +12,7 @@ from metric_benchmarks import enrich_metric_benchmarks
 def models_list_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    auth_error = require_admin(request)
+    auth_error = require_training_access(request)
     if auth_error:
         return auth_error
 
@@ -20,6 +20,18 @@ def models_list_view(request):
     models = [model_payload(artifact) for artifact in artifacts]
     record_audit(request, "Viewed model registry", object_type="ModelArtifact", details={"count": len(models)})
     return cors(JsonResponse({"models": models}))
+
+
+def active_model_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+
+    artifact = ModelArtifact.objects.filter(is_active=True).first()
+    model = model_payload(artifact) if artifact else None
+    return cors(JsonResponse({"model": model}))
 
 
 def model_payload(artifact):

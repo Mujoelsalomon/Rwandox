@@ -7,8 +7,9 @@ const getApiBaseUrl = () => {
 
   const protocol = window.location.protocol;
   const hostname = window.location.hostname;
+  const apiHostname = hostname === "localhost" ? "127.0.0.1" : hostname;
 
-  return `${protocol}//${hostname}:8000`;
+  return `${protocol}//${apiHostname}:8000`;
 };
 
 export const API_BASE_URL = getApiBaseUrl();

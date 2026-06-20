@@ -30,6 +30,7 @@ from .maintenance_views import (
     maintenance_test_prediction_view,
 )
 from .model_views import (
+    active_model_view,
     models_activate_view,
     models_download_view,
     models_list_view,
@@ -77,6 +78,7 @@ __all__ = [
     "maintenance_reset_failed_jobs_view",
     "maintenance_storage_status_view",
     "maintenance_test_prediction_view",
+    "active_model_view",
     "models_activate_view",
     "models_download_view",
     "models_list_view",

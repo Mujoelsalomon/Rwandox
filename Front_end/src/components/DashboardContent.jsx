@@ -1,8 +1,19 @@
- import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { getSession } from '../authSession.js'
 import { API_BASE_URL } from '../config/api.js'
 import { MODEL_REGISTRY_UPDATED_EVENT, PREDICTION_HISTORY_UPDATED_EVENT } from '../predictionEvents'
+
+function authHeaders(extraHeaders = {}) {
+  const session = getSession()
+  return {
+    Authorization: `Bearer ${session?.token || ''}`,
+    'X-User-Email': session?.email || '',
+    'X-User-Username': session?.username || '',
+    ...extraHeaders,
+  }
+}
 
 function dashboardMetrics(activeModel, t, predictions) {
   const modelMetrics = activeModel?.metrics || {}
@@ -10,10 +21,19 @@ function dashboardMetrics(activeModel, t, predictions) {
     ?? modelMetrics.val_roc_auc_weighted_ovr
     ?? modelMetrics.val_auc
     ?? modelMetrics.auc
+    ?? activeModel?.val_roc_auc
+    ?? activeModel?.val_roc_auc_weighted_ovr
+    ?? activeModel?.val_auc
+    ?? activeModel?.auc
   const aucValue = formatModelMetric(
     aucMetric
   )
-  const f1Metric = modelMetrics.val_f1_score ?? modelMetrics.f1_score
+  const f1Metric = modelMetrics.val_f1_score
+    ?? modelMetrics.f1_score
+    ?? modelMetrics.val_f1_macro
+    ?? activeModel?.val_f1_score
+    ?? activeModel?.f1_score
+    ?? activeModel?.val_f1_macro
   const f1Value = formatModelMetric(f1Metric)
   const todayPredictions = predictions.filter(isTodayPrediction)
   const highRiskToday = todayPredictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
@@ -52,7 +72,13 @@ function dashboardMetrics(activeModel, t, predictions) {
     label: t('modelAuc'),
     value: aucValue,
     sub: t('latestValidatedVersion'),
-    chip: aucValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : aucClassification(aucMetric),
+    chip: aucValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : (
+      modelMetrics.auc_classification
+      || modelMetrics.val_roc_auc_classification
+      || modelMetrics.val_roc_auc_weighted_ovr_classification
+      || modelMetrics.val_auc_classification
+      || aucClassification(aucMetric)
+    ),
     chipTone: 'purple',
     icon: 'shield',
     iconTone: 'purple',
@@ -61,7 +87,13 @@ function dashboardMetrics(activeModel, t, predictions) {
     label: t('modelF1Score'),
     value: f1Value,
     sub: t('balancePrecisionRecall'),
-    chip: f1Value === 'No data' ? t('noData', { defaultValue: 'No data' }) : f1Classification(f1Metric),
+    chip: f1Value === 'No data' ? t('noData', { defaultValue: 'No data' }) : (
+      modelMetrics.f1_classification
+      || modelMetrics.val_f1_score_classification
+      || modelMetrics.f1_score_classification
+      || modelMetrics.val_f1_macro_classification
+      || f1Classification(f1Metric)
+    ),
     chipTone: 'teal',
     icon: 'checkCircle',
     iconTone: 'teal',
@@ -98,7 +130,10 @@ export default function DashboardContent({
     async function loadDashboardPredictions({ showLoading = false } = {}) {
       if (showLoading) setPredictionsLoading(true)
       try {
-        const resp = await fetch(`${API_BASE_URL}/prediction-history`, { credentials: 'include' })
+        const resp = await fetch(`${API_BASE_URL}/prediction-history`, {
+          credentials: 'include',
+          headers: authHeaders(),
+        })
         const data = await resp.json()
         if (!active) return
         if (!resp.ok) throw new Error(data.error || 'Could not load recent predictions.')
@@ -120,7 +155,11 @@ export default function DashboardContent({
       if (typeof onRefreshModel === 'function') onRefreshModel()
     }
 
-    function handlePredictionHistoryUpdated() {
+    function handlePredictionHistoryUpdated(event) {
+      const prediction = normalizeEventPrediction(event?.detail?.prediction)
+      if (prediction) {
+        setPredictions((current) => sortPredictionsByDate(upsertPrediction(current, prediction)))
+      }
       refreshDashboard({ showLoading: true })
     }
 
@@ -502,11 +541,50 @@ function sortPredictionsByDate(items) {
   })
 }
 
+function upsertPrediction(items, prediction) {
+  if (!prediction?.id) return [prediction, ...items]
+  const index = items.findIndex((item) => String(item.id) === String(prediction.id))
+  if (index === -1) return [prediction, ...items]
+  return items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...prediction } : item))
+}
+
+function normalizeEventPrediction(prediction) {
+  if (!prediction || !prediction.generated_at) return null
+  const probability = normalizeProbability(prediction.predicted_probability ?? prediction.probability)
+  const riskLevel = prediction.risk_level || riskFromProbability(probability)
+
+  return {
+    id: prediction.id,
+    patient_id: prediction.patient_id || prediction.hospital_id || 'Not recorded',
+    surgery_type: prediction.surgery_type || prediction.type_of_surgery || 'Not recorded',
+    patient_disposition: prediction.patient_disposition || dispositionFromRisk(riskLevel),
+    predicted_probability: probability,
+    risk_level: riskLevel,
+    model_version: prediction.model_version || prediction.active_model || 'Not recorded',
+    generated_at: prediction.generated_at,
+    recommendations: prediction.recommendations || [],
+    contributing_factors: prediction.contributing_factors || [],
+  }
+}
+
 function normalizeProbability(value) {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return 0
   const percent = numeric <= 1 ? numeric * 100 : numeric
   return Math.min(100, Math.max(0, Math.round(percent)))
+}
+
+function riskFromProbability(probability) {
+  if (probability >= 70) return 'High'
+  if (probability >= 30) return 'Moderate'
+  return 'Low'
+}
+
+function dispositionFromRisk(risk) {
+  const bucket = riskBucket(risk)
+  if (bucket === 'High') return 'ICU'
+  if (bucket === 'Moderate') return 'HDU'
+  return 'Ward'
 }
 
 function normalizeList(value) {
