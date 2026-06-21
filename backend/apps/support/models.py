@@ -47,11 +47,13 @@ class SupportTicket(models.Model):
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
         related_name="support_tickets",
     )
     full_name = models.CharField(max_length=150)
-    email = models.EmailField()
+    email = models.EmailField(blank=True)
     role = models.CharField(max_length=100, blank=True)
     department = models.CharField(max_length=100, blank=True)
     category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)

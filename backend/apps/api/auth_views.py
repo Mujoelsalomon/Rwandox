@@ -101,6 +101,9 @@ def register_view(request):
         return cors(HttpResponse())
     if request.method != "POST":
         return cors(JsonResponse({"error": "method not allowed"}, status=405))
+    admin_error = require_admin(request)
+    if admin_error:
+        return admin_error
 
     payload = json_body(request)
     full_name = str(payload.get("name") or "").strip()
@@ -113,9 +116,6 @@ def register_view(request):
     if role:
         if role not in VALID_PROFILE_ROLES:
             return cors(JsonResponse({"error": "Invalid user role."}, status=400))
-        admin_error = require_admin(request)
-        if admin_error:
-            return admin_error
         if role == "Superuser" and not request.user.is_superuser:
             return cors(JsonResponse({"error": "Only a superuser can assign the superuser role."}, status=403))
     if User.objects.filter(email__iexact=email).exists():
@@ -140,8 +140,6 @@ def register_view(request):
     user.save(update_fields=update_fields)
     ensure_user_profile(user)
     sync_user_role_group(user, role or "Clinician")
-    if not role:
-        request.user = user
     record_audit(request, "Registered user account", object_type="User", object_id=user.id)
     return cors(JsonResponse({"user": user_payload(user)}, status=201))
 

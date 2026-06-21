@@ -131,8 +131,8 @@ const sections = [
       field('renalDisease', 'Renal disease', 'select', yesNo, 'History in file', null, 'Yes=1, No=2'),
       field('hivStatus', 'HIV status', 'select', ['Positive', 'Negative', 'Unknown'], 'OpenMRS / file', null, 'Positive=1, Negative=2, Unknown=3'),
       field('anemia', 'Anemia', 'select', yesNo, 'Lab chart / file', null, 'Yes=1, No=2'),
-      field('bmiCategory', 'BMI category', 'text', null, 'Derived from BMI'),
-      field('obesity', 'Obesity', 'select', yesNo, 'Derived / file'),
+      { key: 'bmiCategory', label: 'BMI category', type: 'readonly', source: 'Derived from BMI' },
+      { key: 'obesity', label: 'Obesity', type: 'readonly', source: 'Derived from BMI' },
       field('sleepApnea', 'Sleep apnea', 'select', yesNoUnknown, 'History in file'),
       field('baselineSpo2', 'Baseline room-air SpO2', 'number', null, 'Preoperative chart / nursing chart', '%'),
       field('baselineRespiratoryRate', 'Baseline respiratory rate', 'number', null, 'Preoperative chart', 'breaths/min'),
@@ -210,6 +210,8 @@ export default function NewPredictionContent() {
     if (!heightM || !weightKg) return ''
     return (weightKg / (heightM * heightM)).toFixed(1)
   }, [form.height, form.weight])
+  const bmiCategory = useMemo(() => bmiCategoryFromBmi(bmi), [bmi])
+  const obesityStatus = useMemo(() => obesityFromBmi(bmi), [bmi])
 
   function updateField(name, value) {
     setForm((current) => ({ ...current, [name]: value }))
@@ -324,7 +326,7 @@ export default function NewPredictionContent() {
       lastSyncedPayloadRef.current = ''
     }
 
-    const draft = { ...form, bmi }
+    const draft = { ...form, bmi, bmiCategory, obesity: obesityStatus }
     try {
       localStorage.setItem('postopOxygenPredictionDraft', JSON.stringify(draft))
 
@@ -529,7 +531,9 @@ export default function NewPredictionContent() {
             <FormSection
               key={section.title}
               bmi={bmi}
+              bmiCategory={bmiCategory}
               form={form}
+              obesityStatus={obesityStatus}
               section={section}
               updateField={updateField}
             />
@@ -578,7 +582,7 @@ export default function NewPredictionContent() {
   )
 }
 
-function FormSection({ bmi, form, section, updateField }) {
+function FormSection({ bmi, bmiCategory, form, obesityStatus, section, updateField }) {
   const gridClass = section.columns === 3 ? 'lg:grid-cols-2 2xl:grid-cols-3' : 'lg:grid-cols-2'
 
   return (
@@ -588,7 +592,7 @@ function FormSection({ bmi, form, section, updateField }) {
           <DataField
             key={item.key}
             field={item}
-            value={item.key === 'bmi' ? bmi : form[item.key]}
+            value={derivedFieldValue(item.key, { bmi, bmiCategory, form, obesityStatus })}
             onChange={(value) => updateField(item.key, value)}
           />
         ))}
@@ -654,6 +658,13 @@ function DataField({ field: item, onChange, value }) {
       </div>
     </FieldShell>
   )
+}
+
+function derivedFieldValue(key, { bmi, bmiCategory, form, obesityStatus }) {
+  if (key === 'bmi') return bmi
+  if (key === 'bmiCategory') return bmiCategory
+  if (key === 'obesity') return obesityStatus
+  return form[key]
 }
 
 function FieldShell({ children, coding, isRequired = false, label, source }) {
@@ -1398,7 +1409,24 @@ function normalizeColumnName(value) {
     .replace(/^_+|_+$/g, '')
 }
 
+function bmiCategoryFromBmi(bmi) {
+  const value = Number(bmi)
+  if (!Number.isFinite(value) || value <= 0) return ''
+  if (value < 18.5) return 'Underweight'
+  if (value < 25) return 'Healthy Weight'
+  if (value < 30) return 'Overweight'
+  return 'Obese'
+}
+
+function obesityFromBmi(bmi) {
+  const value = Number(bmi)
+  if (!Number.isFinite(value) || value <= 0) return ''
+  return value >= 30 ? 'Yes' : 'No'
+}
+
 function buildPredictionPayload(form, bmi) {
+  const bmiCategory = bmiCategoryFromBmi(bmi)
+  const obesity = obesityFromBmi(bmi)
   const comorbidities = [
     ['respiratory_disease', form.preExistingRespiratoryDisease],
     ['copd_asthma', form.copdAsthma],
@@ -1408,7 +1436,7 @@ function buildPredictionPayload(form, bmi) {
     ['renal_disease', form.renalDisease],
     ['hiv_status', form.hivStatus],
     ['anemia', form.anemia],
-    ['obesity', form.obesity],
+    ['obesity', obesity],
     ['sleep_apnea', form.sleepApnea],
   ]
     .filter(([, value]) => value && value !== 'No')
@@ -1442,6 +1470,7 @@ function buildPredictionPayload(form, bmi) {
     height_cm: Number(form.height) || 0,
     bmi: Number(bmi) || 0,
     body_mass_index: Number(bmi) || 0,
+    bmi_category: bmiCategory,
     smoking_history: form.smokingHistory === 'Yes',
     alcohol_use: form.alcoholUse,
     comorbidities,
@@ -1461,7 +1490,7 @@ function buildPredictionPayload(form, bmi) {
     renal_disease: form.renalDisease,
     hiv_status: form.hivStatus,
     anemia: form.anemia,
-    obesity: form.obesity,
+    obesity,
     sleep_apnea: form.sleepApnea,
     surgical_specialty: form.surgicalSpecialty,
     type_of_surgery_performed: form.typeOfSurgery || form.surgicalSpecialty,
@@ -1498,7 +1527,7 @@ function buildPredictionPayload(form, bmi) {
     consciousness: form.sedativeUse === 'Yes' ? 'Drowsy' : 'Alert',
     time_since_surgery: 0,
     oxygen_before_prediction: form.intraoperativeDesaturation === 'Yes',
-    full_case_report_form: form,
+    full_case_report_form: { ...form, bmiCategory, obesity },
   }
 }
 
@@ -1536,6 +1565,7 @@ function mapAnesthesiaType(value) {
 
 function validatePredictionFields(form, bmi) {
   const missing = requiredPredictionFields
+    .filter(([key]) => key !== 'obesity')
     .filter(([key]) => !String(form[key] ?? '').trim())
     .map(([key, label]) => requiredPredictionFieldMap.get(key) || label)
 

@@ -6,6 +6,7 @@ import json
 from unittest.mock import patch
 
 from apps.api.models import ModelArtifact, TrainingJob
+from apps.support.models import SupportTicket
 
 class EndpointsTest(TestCase):
     def setUp(self):
@@ -63,6 +64,60 @@ class EndpointsTest(TestCase):
         resp = self.client.post('/upload-dataset', {'file': upload})
         self.assertEqual(resp.status_code, 400)
         self.assertIn('unsupported dataset format', resp.json()['error'])
+
+    def test_anonymous_user_can_create_login_support_ticket_for_admin_portal(self):
+        self.client.logout()
+
+        resp = self.client.post(
+            '/api/support/tickets/',
+            data={
+                'full_name': 'Locked Out User',
+                'email': '',
+                'role': 'Unable to log in',
+                'category': 'login',
+                'priority': 'medium',
+                'subject': 'Login help requested by Locked Out User',
+                'message': 'I cannot log in with my account.',
+            },
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        ticket = SupportTicket.objects.get(subject='Login help requested by Locked Out User')
+        self.assertIsNone(ticket.user)
+        self.assertEqual(ticket.category, SupportTicket.CATEGORY_LOGIN)
+        self.assertEqual(ticket.email_delivery_error, '')
+
+        list_resp = self.client.get('/api/support/tickets/')
+        self.assertEqual(list_resp.status_code, 403)
+
+        self.client.post(
+            '/auth/login',
+            data=json.dumps({'username': 'anesthetist', 'password': 'Munyaneza@123'}),
+            content_type='application/json',
+        )
+        admin_list_resp = self.client.get('/api/support/tickets/')
+        self.assertEqual(admin_list_resp.status_code, 200)
+        self.assertTrue(any(item['id'] == ticket.id for item in admin_list_resp.json()))
+
+    def test_admin_can_resolve_support_ticket(self):
+        ticket = SupportTicket.objects.create(
+            full_name='Support User',
+            email='support-user@example.com',
+            category=SupportTicket.CATEGORY_TECHNICAL,
+            priority=SupportTicket.PRIORITY_MEDIUM,
+            subject='Resolve me',
+            message='Needs admin follow-up.',
+        )
+
+        resp = self.client.post(
+            f'/api/support/tickets/{ticket.id}/resolve/',
+            data={'admin_response': 'Issue resolved.'},
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, SupportTicket.STATUS_RESOLVED)
+        self.assertEqual(ticket.admin_response, 'Issue resolved.')
 
     def test_train_rejects_dataset_outside_uploads(self):
         resp = self.client.post(
@@ -474,6 +529,23 @@ class EndpointsTest(TestCase):
 
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.json()['error'], 'Invalid user role.')
+
+    def test_anonymous_user_cannot_register_account(self):
+        self.client.logout()
+
+        resp = self.client.post(
+            '/auth/register',
+            data=json.dumps({
+                'name': 'Public Signup User',
+                'email': 'public-signup@example.com',
+                'password': 'pass12345',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.json()['error'], 'Authentication required.')
+        self.assertFalse(User.objects.filter(email='public-signup@example.com').exists())
 
     def test_admin_can_register_new_user_with_role(self):
         resp = self.client.post(

@@ -82,9 +82,9 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
   }
 
   return (
-    <header className="navbar navbar-expand !fixed left-0 right-0 !top-0 z-50 flex h-[88px] items-center border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-6 py-0 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur">
-      <div className="container-fluid flex h-full items-center justify-between gap-4 px-0">
-        <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-5">
+    <header className="navbar navbar-expand !fixed left-0 right-0 !top-0 z-50 flex h-[88px] items-center border-b border-[#84cc16] bg-gradient-to-r from-[#ccff00] via-[#a3ff12] to-[#39ff14] px-4 py-0 shadow-[0_8px_28px_rgba(57,255,20,0.18)] backdrop-blur md:px-6">
+      <div className="container-fluid grid h-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-0 md:gap-5">
+        <div className="flex items-center">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white shadow-sm ring-1 ring-white/70 md:h-14 md:w-14">
             <img
               src={postopO2Logo}
@@ -92,11 +92,12 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
               className="h-full w-full object-cover"
             />
           </div>
-          <div className="min-w-0">
-            <span className="block max-w-[min(62vw,820px)] text-[13px] font-extrabold leading-tight text-[#225000] sm:text-[14px] lg:text-[16px]">
-             {t('appName')}
-            </span>
-          </div>
+        </div>
+
+        <div className="flex min-w-0 justify-center px-1 text-center sm:px-3">
+          <span className="block max-w-[980px] text-[15px] font-black leading-tight text-[#225000] sm:text-[18px] lg:text-[22px] xl:text-[24px]">
+            {t('appName')}
+          </span>
         </div>
 
         <div className="flex min-w-0 shrink-0 items-center gap-3 md:gap-5">

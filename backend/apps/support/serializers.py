@@ -41,6 +41,9 @@ class SupportTicketSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        extra_kwargs = {
+            "email": {"required": False, "allow_blank": True},
+        }
 
     def validate(self, attrs):
         request = self.context.get("request")

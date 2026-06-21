@@ -239,13 +239,13 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
           <Icon name={icon} className={`h-6 w-6 ${toneClass(iconTone, 'text')}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="card-title font-extrabold text-[#071b49]">{label}</h2>
-          <p className="mt-2 text-[32px] font-black leading-none text-[#071b49]">{value}</p>
-          <p className="small-text mt-2 font-semibold text-[#334766]">{sub}</p>
+          <h2 className="text-[20px] font-extrabold leading-6 text-[#071b49]">{label}</h2>
+          <p className="mt-2 text-[38px] font-black leading-none text-[#071b49]">{value}</p>
+          <p className="mt-2 text-[16px] font-semibold leading-6 text-[#334766]">{sub}</p>
         </div>
       </div>
       <div className="mt-3 flex items-center gap-3 pl-16">
-        <span className={`badge inline-flex max-w-full items-center justify-center whitespace-normal rounded-pill rounded-[7px] px-2.5 py-1 text-center text-[12px] font-extrabold leading-4 ${toneClass(chipTone, 'chip')}`}>
+        <span className={`badge inline-flex max-w-full items-center justify-center whitespace-normal rounded-pill rounded-[7px] px-2.5 py-1 text-center text-[13px] font-extrabold leading-4 ${toneClass(chipTone, 'chip')}`}>
           {chipTone === 'green' && <span className="mr-1">↓</span>}
           {chipTone === 'blue' && <span className="mr-1">↑</span>}
           {chip}
@@ -270,14 +270,14 @@ function RiskDistribution({ predictions }) {
           style={{ background: gradient }}
         >
           <div className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full bg-white shadow-inner">
-            <span className="text-[28px] font-black leading-none text-[#071b49]">{total}</span>
-            <span className="text-[14px] text-[#53668a]">{t('total')}</span>
+            <span className="text-[32px] font-black leading-none text-[#071b49]">{total}</span>
+            <span className="text-[16px] text-[#53668a]">{t('total')}</span>
           </div>
         </div>
 
         <div className="w-full max-w-[340px] space-y-5">
           {rows.map((row) => (
-            <div key={row.label} className="grid grid-cols-[16px_1fr_auto] items-center gap-3 text-[16px]">
+            <div key={row.label} className="grid grid-cols-[16px_1fr_auto] items-center gap-3 text-[18px]">
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
               <span className="font-semibold text-[#334766]">{translateRiskLabel(row.label, t)}</span>
               <span className="font-medium text-[#20365f]">{row.value}</span>
@@ -304,7 +304,7 @@ function RiskTrend({ predictions, riskScore }) {
         <div className="absolute inset-x-0 top-[46px] h-px bg-[#dfe7f2]" />
         <div className="absolute inset-x-0 top-[90px] h-px bg-[#dfe7f2]" />
         <div className="absolute inset-x-0 top-[132px] h-px bg-[#dfe7f2]" />
-        <div className="absolute left-0 top-0 flex h-[150px] flex-col justify-between text-[14px] font-semibold text-[#334766]">
+        <div className="absolute left-0 top-0 flex h-[150px] flex-col justify-between text-[16px] font-semibold text-[#334766]">
           <span>80%</span>
           <span>60%</span>
           <span>40%</span>
@@ -325,10 +325,10 @@ function RiskTrend({ predictions, riskScore }) {
             <circle key={`${x}-${y}`} cx={x} cy={y} r="1.9" fill="#1768f2" vectorEffect="non-scaling-stroke" />
           ))}
         </svg>
-        <div className="absolute right-0 top-[32px] rounded-[6px] bg-[#1768f2] px-3 py-2 text-[14px] font-extrabold text-white">
+        <div className="absolute right-0 top-[32px] rounded-[6px] bg-[#1768f2] px-3 py-2 text-[16px] font-extrabold text-white">
           {riskScore}%
         </div>
-        <div className="absolute bottom-0 left-12 right-3 grid grid-cols-7 text-center text-[11px] font-semibold text-[#334766] sm:text-[14px]">
+        <div className="absolute bottom-0 left-12 right-3 grid grid-cols-7 text-center text-[12px] font-semibold text-[#334766] sm:text-[16px]">
           {trend.labels.map((label) => <span key={label}>{label}</span>)}
         </div>
       </div>
@@ -366,8 +366,8 @@ function WorkflowStep({ index, titleKey, subKey, tone, icon }) {
       </div>
       <Icon name={icon} className={`h-6 w-6 shrink-0 ${toneClass(tone, 'text')}`} />
       <div className="min-w-0">
-        <p className="break-words text-[14px] font-extrabold leading-5 text-[#071b49]">{t(titleKey)}</p>
-        <p className="break-words text-[12px] font-semibold leading-4 text-[#334766]">{t(subKey)}</p>
+        <p className="break-words text-[16px] font-extrabold leading-5 text-[#071b49]">{t(titleKey)}</p>
+        <p className="break-words text-[14px] font-semibold leading-5 text-[#334766]">{t(subKey)}</p>
       </div>
     </div>
   )
@@ -452,7 +452,7 @@ function RecentPredictionsTable({ loading, predictions, status }) {
       </div>
 
       {status && (
-        <div className="alert alert-warning rounded-4 mx-5 mt-4 border border-[#f59e0b] bg-[#fffbeb] px-4 py-3 text-[13px] font-bold text-[#713f12] md:mx-6">
+        <div className="alert alert-warning rounded-4 mx-5 mt-4 border border-[#f59e0b] bg-[#fffbeb] px-4 py-3 text-[15px] font-bold text-[#713f12] md:mx-6">
           {status}
         </div>
       )}
@@ -473,7 +473,7 @@ function RecentPredictionsTable({ loading, predictions, status }) {
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-5 py-5 text-[15px] font-bold text-[#334766]" colSpan="7">
+                <td className="px-5 py-5 text-[17px] font-bold text-[#334766]" colSpan="7">
                   {t('loadingRecentPredictions')}
                 </td>
               </tr>
@@ -491,7 +491,7 @@ function RecentPredictionsTable({ loading, predictions, status }) {
               ))
             ) : (
               <tr>
-                <td className="px-5 py-5 text-[15px] font-bold text-[#334766]" colSpan="7">
+                <td className="px-5 py-5 text-[17px] font-bold text-[#334766]" colSpan="7">
                   {t('noRecentPredictions')}
                 </td>
               </tr>
@@ -500,7 +500,7 @@ function RecentPredictionsTable({ loading, predictions, status }) {
         </table>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-[#cbd8e8] bg-white px-5 py-4 text-[13px] font-bold text-[#334766] md:flex-row md:items-center md:justify-between md:px-6">
+      <div className="flex flex-col gap-3 border-t border-[#cbd8e8] bg-white px-5 py-4 text-[15px] font-bold text-[#334766] md:flex-row md:items-center md:justify-between md:px-6">
         <span>
           {t('showingLatestPredictions', { start: showingStart, end: showingEnd, total: predictions.length })}
         </span>
@@ -513,7 +513,7 @@ function RecentPredictionsTable({ loading, predictions, status }) {
           >
             {t('previous')}
           </button>
-          <span className="rounded-[10px] bg-[#eaf2ff] px-3 py-2 text-[13px] font-black text-[#1768f2]">
+          <span className="rounded-[10px] bg-[#eaf2ff] px-3 py-2 text-[15px] font-black text-[#1768f2]">
             {t('pageCount', { current: currentPage, total: totalPages })}
           </span>
           <button

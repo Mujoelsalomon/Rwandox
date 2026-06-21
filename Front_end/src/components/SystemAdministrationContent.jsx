@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import LocalAccessQRCode from './LocalAccessQRCode.jsx'
+import SupportPortal from './SupportPortal.jsx'
 import { API_BASE_URL, getSession } from '../authSession.js'
 
 const defaultUsers = []
@@ -29,6 +30,7 @@ export default function SystemAdministrationContent() {
   const [originalRole, setOriginalRole] = useState(null)
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [error, setError] = useState('')
+  const [activeSupportTicketCount, setActiveSupportTicketCount] = useState(0)
   const roleOptions = roleOptionsForSession(getSession())
 
   useEffect(() => {
@@ -54,6 +56,35 @@ export default function SystemAdministrationContent() {
     return () => { active = false }
   }, [])
 
+  useEffect(() => {
+    let active = true
+    async function loadSupportTicketCount() {
+      const session = getSession()
+      try {
+        const resp = await fetch(`${API_BASE_URL}/api/support/tickets/`, {
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${session?.token || ''}`,
+            'X-User-Email': session?.email || '',
+            'X-User-Username': session?.username || '',
+          },
+        })
+        if (!active || !resp.ok) return
+        const data = await resp.json()
+        const tickets = Array.isArray(data) ? data : data.results || []
+        const count = tickets.filter((ticket) => ['open', 'in_progress'].includes(ticket.status)).length
+        if (active) setActiveSupportTicketCount(count)
+      } catch (e) {
+        console.error(e)
+        if (active) setActiveSupportTicketCount(0)
+      }
+    }
+
+    loadSupportTicketCount()
+    return () => { active = false }
+  }, [])
+
   function openAdminPanel(title) {
     if (title === 'User access') {
       setActiveAdminPanel((current) => (current === 'users' ? null : 'users'))
@@ -74,6 +105,10 @@ export default function SystemAdministrationContent() {
     }
     if (title === 'QR-code access') {
       setActiveAdminPanel((current) => (current === 'qr' ? null : 'qr'))
+      return
+    }
+    if (title === 'Support management') {
+      setActiveAdminPanel((current) => (current === 'support' ? null : 'support'))
       return
     }
 
@@ -171,36 +206,49 @@ export default function SystemAdministrationContent() {
           </div>
         </div>
 
-        <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-5 grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-6">
           <AdminAction
             title={t('userAccess')}
             detail={t('userAccessDetail')}
+            icon="users"
             isActive={activeAdminPanel === 'users'}
             onClick={() => openAdminPanel('User access')}
           />
           <AdminAction
             title={t('auditLogs')}
             detail={t('auditLogsDetail')}
+            icon="audit"
             isActive={activeAdminPanel === 'audit'}
             onClick={() => openAdminPanel('Audit logs')}
           />
           <AdminAction
             title={t('modelRegistry')}
             detail={t('modelRegistryDetail')}
+            icon="database"
             isActive={activeAdminPanel === 'model'}
             onClick={() => openAdminPanel('Model registry')}
           />
           <AdminAction
             title={t('maintenance')}
             detail={t('maintenanceDetail')}
+            icon="spanners"
             isActive={activeAdminPanel === 'maintenance'}
             onClick={() => openAdminPanel('Maintenance')}
           />
           <AdminAction
             title={t('qrCodeAccess')}
             detail={t('qrCodeAccessDetail')}
+            icon="qr"
             isActive={activeAdminPanel === 'qr'}
             onClick={() => openAdminPanel('QR-code access')}
+          />
+          <AdminAction
+            title="Support management"
+            detail="Review incoming support tickets and admin follow-up."
+            icon="mail"
+            alertCount={activeSupportTicketCount}
+            isActive={activeAdminPanel === 'support'}
+            onClick={() => openAdminPanel('Support management')}
           />
         </div>
 
@@ -228,7 +276,24 @@ export default function SystemAdministrationContent() {
         {activeAdminPanel === 'qr' && (
           <LocalAccessQRCode />
         )}
+        {activeAdminPanel === 'support' && (
+          <SupportManagement onActiveTicketCountChange={setActiveSupportTicketCount} />
+        )}
       </section>
+    </div>
+  )
+}
+
+function SupportManagement({ onActiveTicketCountChange }) {
+  return (
+    <div className="mt-5 min-w-0">
+      <section className="card border-0 shadow-sm rounded-4 mb-4 rounded-[14px] border border-[#d9e5f3] bg-white px-4 py-4">
+        <h2 className="section-title font-black text-[#071b49]">Support management</h2>
+        <p className="small-text mt-1 font-semibold text-[#64799e]">
+          Review support tickets sent from the login form and support portal, update ticket status, and record admin responses.
+        </p>
+      </section>
+      <SupportPortal managementOnly onActiveTicketCountChange={onActiveTicketCountChange} />
     </div>
   )
 }
@@ -759,17 +824,31 @@ function formatMetric(value) {
     )
   }
 
-function AdminAction({ title, detail, isActive = false, onClick }) {
+function AdminAction({ title, detail, icon = '', alertCount = 0, isActive = false, onClick }) {
+  const hasAlert = alertCount > 0
   return (
     <button
       type="button"
-      className={`card btn min-h-[112px] min-w-0 rounded-[12px] border px-4 py-4 text-left transition hover:border-[#b8cce6] hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#1768f2] ${
+      className={`card btn relative min-h-[112px] min-w-0 rounded-[12px] border px-4 py-4 text-left transition hover:border-[#b8cce6] hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#1768f2] ${
         isActive
           ? 'border-[#1768f2] bg-white shadow-[0_12px_28px_rgba(23,104,242,0.14)]'
+          : hasAlert
+            ? 'border-[#dc2626] bg-[#fff5f5] shadow-[0_12px_28px_rgba(220,38,38,0.14)]'
           : 'border-[#d9e5f3] bg-[#f8fbff]'
       }`}
       onClick={onClick}
     >
+      {hasAlert && (
+        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[#dc2626] px-2 py-1 text-[11px] font-black text-white shadow-sm">
+          <Icon name="alert" className="h-3.5 w-3.5" />
+          {alertCount}
+        </span>
+      )}
+      {icon && (
+        <span className={`mb-3 flex h-10 w-10 items-center justify-center rounded-[10px] ${hasAlert ? 'bg-[#fee2e2] text-[#dc2626]' : 'bg-[#eaf2ff] text-[#1768f2]'}`}>
+          <Icon name={icon} className="h-5 w-5" />
+        </span>
+      )}
       <span className="body-text block break-words font-extrabold text-[#071b49]">{title}</span>
       <span className="small-text mt-2 block break-words font-semibold text-[#64799e]">{detail}</span>
     </button>
@@ -1075,6 +1154,24 @@ function RoleSelect({ value, roleOptions, onChange }) {
 }
 
 function Icon({ name, className = '' }) {
+  if (name === 'spanners') {
+    return (
+      <svg className={className} viewBox="0 0 64 64" aria-hidden="true">
+        <g stroke="#071b49" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4">
+          <path d="M12 54 40 26l-6-6 11-11 10 3-9 9 4 4 9-9 3 10-11 11-6-6-28 28Z" fill="#f8c64f" />
+          <path d="M13 52h8" stroke="#fff" strokeWidth="3" />
+          <path d="M24 41h11" stroke="#fff" strokeWidth="3" />
+          <circle cx="12" cy="54" r="3" fill="#fff" />
+          <path d="M52 54 24 26l6-6L19 9 9 12l9 9-4 4-9-9-3 10 11 11 6-6 28 28Z" fill="#38c6ec" />
+          <path d="M27 26 46 45" stroke="#8aa0bf" strokeWidth="6" />
+          <path d="M27 26 46 45" stroke="#071b49" strokeWidth="2" />
+          <path d="M44 17c2 1 3 2 4 4" stroke="#fff" strokeWidth="3" />
+          <path d="M21 43c-3 2-5 5-6 8" stroke="#fff" strokeWidth="3" />
+        </g>
+      </svg>
+    )
+  }
+
   const common = {
     className,
     fill: 'none',
@@ -1096,6 +1193,59 @@ function Icon({ name, className = '' }) {
       <>
         <path d="M12 20h9" />
         <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+      </>
+    ),
+    mail: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </>
+    ),
+    users: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.9" />
+        <path d="M16 3.1a4 4 0 0 1 0 7.8" />
+      </>
+    ),
+    audit: (
+      <>
+        <path d="M9 11h6" />
+        <path d="M9 15h4" />
+        <path d="M8 3h8l3 3v15H5V3h3Z" />
+        <path d="M16 3v4h4" />
+      </>
+    ),
+    database: (
+      <>
+        <ellipse cx="12" cy="5" rx="7" ry="3" />
+        <path d="M5 5v6c0 1.7 3.1 3 7 3s7-1.3 7-3V5" />
+        <path d="M5 11v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+      </>
+    ),
+    settings: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z" />
+      </>
+    ),
+    qr: (
+      <>
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+        <path d="M14 14h3v3h-3z" />
+        <path d="M18 18h3v3h-3z" />
+        <path d="M18 14h3" />
+        <path d="M14 21h3" />
+      </>
+    ),
+    alert: (
+      <>
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+        <path d="M12 9v4" />
+        <path d="M12 17h.01" />
       </>
     ),
   }

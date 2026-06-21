@@ -9,7 +9,6 @@ import SettingsContent from './components/SettingsContent.jsx'
 import SupportPortal from './components/SupportPortal.jsx'
 import SystemAdministrationContent from './components/SystemAdministrationContent.jsx'
 import Login_Form from './components/Login_Form.jsx'
-import Sign_Up_Form from './components/Sign_Up_Form.jsx'
 import PostoperativeOxygenMLUIMockup from './PostoperativeOxygenMLUIMockup.jsx'
 import TrainingPortal from './TrainingPortal.jsx'
 
@@ -20,7 +19,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login_Form />} />
-        <Route path="/signup" element={<Sign_Up_Form />} />
+        <Route path="/signup" element={<Navigate to="/login" replace />} />
         <Route
           path="/dashboard"
           element={(

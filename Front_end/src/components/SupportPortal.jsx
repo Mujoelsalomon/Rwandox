@@ -36,7 +36,7 @@ const statusOptions = [
   ['closed', 'Closed'],
 ]
 
-export default function SupportPortal() {
+export default function SupportPortal({ managementOnly = false, onActiveTicketCountChange }) {
   const [tickets, setTickets] = useState([])
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -51,6 +51,12 @@ export default function SupportPortal() {
   useEffect(() => {
     loadTickets()
   }, [])
+
+  useEffect(() => {
+    if (onActiveTicketCountChange) {
+      onActiveTicketCountChange(activeSupportTickets(tickets).length)
+    }
+  }, [onActiveTicketCountChange, tickets])
 
   async function loadTickets() {
     setLoading(true)
@@ -117,6 +123,9 @@ export default function SupportPortal() {
       setSelectedTicket(data)
       setMessage('Support ticket updated successfully.')
       await loadTickets()
+      if (['resolved', 'closed'].includes(data.status)) {
+        setSelectedTicket(null)
+      }
     } catch (error) {
       setError(supportRequestErrorMessage(error, 'Could not update support ticket.'))
     } finally {
@@ -124,20 +133,47 @@ export default function SupportPortal() {
     }
   }
 
+  async function resolveTicket(ticketId, adminResponse) {
+    setSaving(true)
+    setMessage('')
+    setError('')
+    try {
+      const body = new FormData()
+      body.append('admin_response', adminResponse || 'Resolved by administrator.')
+      const response = await fetch(`${SUPPORT_TICKETS_URL}${ticketId}/resolve/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: authHeaders(false),
+        body,
+      })
+      const data = await readJsonResponse(response)
+      if (!response.ok) throw new Error(formatApiError(data))
+      setSelectedTicket(null)
+      setMessage('Support ticket resolved successfully.')
+      await loadTickets()
+    } catch (error) {
+      setError(supportRequestErrorMessage(error, 'Could not resolve support ticket.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="container-fluid min-w-0 px-0">
-      <section className="card border-0 shadow-sm rounded-4 mb-4 rounded-[16px] border border-[#d9e5f3] bg-white px-5 py-5 md:px-6">
-        <p className="small-text text-primary fw-bold text-uppercase mb-2 font-extrabold tracking-[0.14em]">Support Portal</p>
-        <h1 className="page-title fw-black mb-2 text-[#071b49]">Support Portal</h1>
-        <p className="body-text mb-0 mt-2 max-w-[850px] font-semibold text-[#53668a]">
-          Submit technical issues, prediction concerns, model feedback, or system support requests.
-        </p>
-      </section>
+      {!managementOnly && (
+        <section className="card border-0 shadow-sm rounded-4 mb-4 rounded-[16px] border border-[#d9e5f3] bg-white px-5 py-5 md:px-6">
+          <p className="small-text text-primary fw-bold text-uppercase mb-2 font-extrabold tracking-[0.14em]">Support Portal</p>
+          <h1 className="page-title fw-black mb-2 text-[#071b49]">Support Portal</h1>
+          <p className="body-text mb-0 mt-2 max-w-[850px] font-semibold text-[#53668a]">
+            Submit technical issues, prediction concerns, model feedback, or system support requests.
+          </p>
+        </section>
+      )}
 
       {message && <div className="alert alert-success rounded-4 fw-bold">{message}</div>}
       {error && <div className="alert alert-danger rounded-4 fw-bold">{error}</div>}
 
-      <SupportTicketForm currentUser={session} loading={submitting} onSubmit={submitTicket} />
+      {!managementOnly && <SupportTicketForm currentUser={session} loading={submitting} onSubmit={submitTicket} />}
       <SupportTicketTable error={ticketLoadError} loading={loading} tickets={tickets} onSelectTicket={setSelectedTicket} />
 
       {selectedTicket && (
@@ -146,6 +182,7 @@ export default function SupportPortal() {
           loading={saving}
           ticket={selectedTicket}
           onClose={() => setSelectedTicket(null)}
+          onResolve={resolveTicket}
           onUpdate={updateTicket}
         />
       )}
@@ -229,6 +266,8 @@ function SupportTicketForm({ currentUser, loading, onSubmit }) {
 }
 
 function SupportTicketTable({ error, loading, onSelectTicket, tickets }) {
+  const activeTickets = activeSupportTickets(tickets)
+
   return (
     <section className="card border-0 shadow-sm rounded-4 overflow-hidden rounded-[16px] border border-[#d9e5f3] bg-white">
       <div className="border-b border-[#e5edf7] px-5 py-4 md:px-6">
@@ -257,7 +296,7 @@ function SupportTicketTable({ error, loading, onSelectTicket, tickets }) {
               <tr>
                 <td className="px-4 py-5 font-bold text-[#92400e]" colSpan="8">{error}</td>
               </tr>
-            ) : tickets.length > 0 ? tickets.map((ticket) => (
+            ) : activeTickets.length > 0 ? activeTickets.map((ticket) => (
               <tr key={ticket.id}>
                 <td className="px-4 py-3 font-black text-[#071b49]">#{ticket.id}</td>
                 <td className="px-4 py-3 font-bold text-[#071b49]">{ticket.subject}</td>
@@ -278,7 +317,7 @@ function SupportTicketTable({ error, loading, onSelectTicket, tickets }) {
               </tr>
             )) : (
               <tr>
-                <td className="px-4 py-5 font-bold text-[#53668a]" colSpan="8">No support tickets found.</td>
+                <td className="px-4 py-5 font-bold text-[#53668a]" colSpan="8">No active support tickets found.</td>
               </tr>
             )}
           </tbody>
@@ -288,12 +327,20 @@ function SupportTicketTable({ error, loading, onSelectTicket, tickets }) {
   )
 }
 
-function SupportTicketDetails({ isAdmin, loading, onClose, onUpdate, ticket }) {
+function activeSupportTickets(tickets) {
+  return tickets.filter((ticket) => !['resolved', 'closed'].includes(ticket.status))
+}
+
+function SupportTicketDetails({ isAdmin, loading, onClose, onResolve, onUpdate, ticket }) {
   const [status, setStatus] = useState(ticket.status)
   const [adminResponse, setAdminResponse] = useState(ticket.admin_response || '')
 
   async function handleSave() {
     await onUpdate(ticket.id, { status, admin_response: adminResponse })
+  }
+
+  async function handleResolve() {
+    await onResolve(ticket.id, adminResponse)
   }
 
   return (
@@ -359,9 +406,14 @@ function SupportTicketDetails({ isAdmin, loading, onClose, onUpdate, ticket }) {
                   <span className="form-label mb-2 block text-[14px] font-bold text-[#49617f]">Response</span>
                   <textarea className="form-control min-h-[120px] rounded-[10px]" value={adminResponse} onChange={(event) => setAdminResponse(event.target.value)} />
                 </label>
-                <button type="button" disabled={loading} onClick={handleSave} className="btn-text btn btn-primary w-fit rounded-[10px] px-5 py-2 font-extrabold text-white disabled:opacity-70">
-                  {loading ? 'Saving...' : 'Save Response'}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button type="button" disabled={loading} onClick={handleSave} className="btn-text btn btn-primary w-fit rounded-[10px] px-5 py-2 font-extrabold text-white disabled:opacity-70">
+                    {loading ? 'Saving...' : 'Save Response'}
+                  </button>
+                  <button type="button" disabled={loading} onClick={handleResolve} className="btn-text btn btn-success w-fit rounded-[10px] px-5 py-2 font-extrabold text-white disabled:opacity-70">
+                    {loading ? 'Resolving...' : 'Resolve ticket'}
+                  </button>
+                </div>
               </div>
             ) : (
               <p className="body-text mt-2 whitespace-pre-wrap font-semibold text-[#334766]">{ticket.admin_response || 'No admin response yet.'}</p>
@@ -473,7 +525,7 @@ async function readJsonResponse(response) {
   }
 }
 
-function supportRequestErrorMessage(error, fallback = 'Could not send the support ticket email.') {
+function supportRequestErrorMessage(error, fallback = 'Could not save the support ticket.') {
   if (isSmtpConfigurationError(error?.message)) {
     return 'Support request was saved. The administrator can review it in the support portal.'
   }
@@ -498,9 +550,6 @@ function formatApiError(data) {
   const message = data.detail || data.error || Object.entries(data)
     .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
     .join(' ')
-  if (isSmtpConfigurationError(message)) {
-    return 'Support ticket was saved for administrator review.'
-  }
   return message
 }
 

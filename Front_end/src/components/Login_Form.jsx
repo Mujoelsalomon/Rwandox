@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { createSession } from '../authSession.js'
 import { API_BASE_URL } from '../config/api.js'
 import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
@@ -20,10 +20,14 @@ export default function Login_Form() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
-  const [resetOpen, setResetOpen] = useState(false)
-  const [resetEmail, setResetEmail] = useState('')
-  const [resetStatus, setResetStatus] = useState('')
-  const [resetError, setResetError] = useState('')
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [helpName, setHelpName] = useState('')
+  const [helpEmail, setHelpEmail] = useState('')
+  const [helpPriority, setHelpPriority] = useState('medium')
+  const [helpMessage, setHelpMessage] = useState('')
+  const [helpLoading, setHelpLoading] = useState(false)
+  const [helpStatus, setHelpStatus] = useState('')
+  const [helpError, setHelpError] = useState('')
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -73,25 +77,72 @@ export default function Login_Form() {
     }
   }
 
-  function openResetDialog() {
-    setResetEmail(email)
-    setResetStatus('')
-    setResetError('')
-    setResetOpen(true)
+  function openHelpDialog() {
+    setHelpName('')
+    setHelpEmail(email)
+    setHelpPriority('medium')
+    setHelpMessage('')
+    setHelpStatus('')
+    setHelpError('')
+    setHelpOpen(true)
   }
 
-  function handleResetSubmit(event) {
+  async function handleHelpSubmit(event) {
     event.preventDefault()
-    const normalizedResetEmail = resetEmail.trim().toLowerCase()
+    const normalizedHelpName = helpName.trim()
+    const normalizedHelpEmail = helpEmail.trim().toLowerCase()
+    const normalizedHelpMessage = helpMessage.trim()
 
-    if (!normalizedResetEmail) {
-      setResetError('Enter your username or email to request a password reset.')
-      setResetStatus('')
+    if (!normalizedHelpName) {
+      setHelpError('Enter your full name so the administrator can follow up.')
+      setHelpStatus('')
+      return
+    }
+    if (!normalizedHelpEmail) {
+      setHelpError('Enter your username or email so the administrator can identify your account.')
+      setHelpStatus('')
+      return
+    }
+    if (!normalizedHelpMessage) {
+      setHelpError('Describe the login issue so the administrator knows what to review.')
+      setHelpStatus('')
       return
     }
 
-    setResetError('')
-    setResetStatus('If this account is authorized, password reset instructions have been prepared for the administrator.')
+    setHelpError('')
+    setHelpStatus('')
+    setHelpLoading(true)
+
+    try {
+      const body = new FormData()
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedHelpEmail)
+      body.append('full_name', normalizedHelpName)
+      body.append('email', isEmail ? normalizedHelpEmail : '')
+      body.append('role', 'Unable to log in')
+      body.append('category', 'login')
+      body.append('priority', helpPriority)
+      body.append('subject', `Login help requested by ${normalizedHelpName}`)
+      body.append('message', `${normalizedHelpMessage}\n\nUsername or email entered: ${normalizedHelpEmail}\n\nThis ticket was submitted from the login form and should be reviewed in the administrator support portal.`)
+
+      const response = await fetch(`${API_BASE_URL}/api/support/tickets/`, {
+        method: 'POST',
+        credentials: 'include',
+        body,
+      })
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Could not send the help request.')
+      }
+
+      setHelpStatus('Your help request was sent to the administrator support portal. Contact System Administration and share your username or email for follow-up.')
+      setHelpMessage('')
+    } catch (requestError) {
+      console.error(requestError)
+      setHelpError(requestError.message || 'Could not send the help request. Please contact System Administration directly.')
+    } finally {
+      setHelpLoading(false)
+    }
   }
 
   return (
@@ -179,13 +230,6 @@ export default function Login_Form() {
               />
               <span>Remember me</span>
             </label>
-            <button
-              type="button"
-              onClick={openResetDialog}
-              className="text-left font-black text-[#0876df] transition hover:text-[#075eb4] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe] sm:text-right"
-            >
-              Forgot password?
-            </button>
           </div>
 
           <button
@@ -196,37 +240,60 @@ export default function Login_Form() {
             {loginLoading ? 'Verifying...' : 'Login'}
           </button>
 
-          <div className="mt-4 text-center text-[14px] font-semibold text-[#53668a]">
-            Don't have an account?{' '}
-            <Link to="/signup" className="font-black text-[#0876df] transition hover:text-[#075eb4] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe]">
-              Sign up
-            </Link>
-          </div>
+          <button
+            type="button"
+            onClick={openHelpDialog}
+            className="mx-auto mt-4 flex items-center gap-2 rounded-full border border-[#bfdbfe] bg-[#f8fbff] px-4 py-2 text-[14px] font-black text-[#0876df] transition hover:border-[#93c5fd] hover:bg-[#eff6ff] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe]"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1768f2] text-white shadow-sm">
+              <Icon name="help" className="h-5 w-5" />
+            </span>
+            <span>Help</span>
+          </button>
+
+          <p className="mt-4 text-center text-[14px] font-semibold text-[#53668a]">
+            Accounts are created by System Administration.
+          </p>
         </form>
       </section>
 
-      {resetOpen && (
+      {helpOpen && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#071b49]/35 px-4 backdrop-blur-sm">
           <form
-            onSubmit={handleResetSubmit}
-            className="card border-0 shadow-lg rounded-4 w-full max-w-[430px] rounded-[16px] border border-[#dce6f2] bg-white px-5 py-5 sm:px-6"
+            onSubmit={handleHelpSubmit}
+            className="card border-0 shadow-lg rounded-4 max-h-[calc(100vh-32px)] w-full max-w-[560px] overflow-y-auto rounded-[16px] border border-[#dce6f2] bg-white px-5 py-5 sm:px-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-[20px] font-black text-[#071b49]">Reset password</h2>
+                <h2 className="text-[20px] font-black text-[#071b49]">Login help</h2>
                 <p className="mt-1 text-[14px] font-semibold leading-6 text-[#64799e]">
-                  Enter your authorized account email to start recovery.
+                  Send a login support ticket directly to the administrator portal.
                 </p>
               </div>
               <button
                 type="button"
-                aria-label="Close password reset"
-                onClick={() => setResetOpen(false)}
+                aria-label="Close login help"
+                onClick={() => setHelpOpen(false)}
                 className="btn btn-light flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#64799e]"
               >
                 <Icon name="close" className="h-5 w-5" />
               </button>
             </div>
+
+            <label className="mt-4 block">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Full Name</span>
+              <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe]">
+                <Icon name="user" className="h-5 w-5 shrink-0 text-[#64799e]" />
+                <input
+                  type="text"
+                  autoComplete="name"
+                  value={helpName}
+                  onChange={(event) => setHelpName(event.target.value)}
+                  placeholder="Enter your full name"
+                  className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
+                />
+              </span>
+            </label>
 
             <label className="mt-4 block">
               <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Username or Email</span>
@@ -235,31 +302,56 @@ export default function Login_Form() {
                 <input
                   type="text"
                   autoComplete="username"
-                  value={resetEmail}
-                  onChange={(event) => setResetEmail(event.target.value)}
+                  value={helpEmail}
+                  onChange={(event) => setHelpEmail(event.target.value)}
                   placeholder="Enter your username or email"
                   className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
                 />
               </span>
             </label>
 
-            {resetError && (
+            <label className="mt-4 block">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Priority</span>
+              <select
+                value={helpPriority}
+                onChange={(event) => setHelpPriority(event.target.value)}
+                className="form-select min-h-12 w-full rounded-[10px] border border-[#cbd8e8] bg-white px-4 text-[15px] font-semibold text-[#071b49] outline-none focus:border-[#1768f2] focus:ring-2 focus:ring-[#bfdbfe]"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </label>
+
+            <label className="mt-4 block">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Login Issue</span>
+              <textarea
+                value={helpMessage}
+                onChange={(event) => setHelpMessage(event.target.value)}
+                placeholder="Describe what happens when you try to log in"
+                className="form-control min-h-[110px] w-full resize-y rounded-[10px] border border-[#cbd8e8] bg-white px-4 py-3 text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6] focus:border-[#1768f2] focus:ring-2 focus:ring-[#bfdbfe]"
+              />
+            </label>
+
+            {helpError && (
               <div className="alert alert-danger rounded-4 mt-4 px-4 py-3 text-[14px] font-bold" role="alert">
-                {resetError}
+                {helpError}
               </div>
             )}
 
-            {resetStatus && (
+            {helpStatus && (
               <div className="alert alert-success rounded-4 mt-4 px-4 py-3 text-[14px] font-bold" role="status">
-                {resetStatus}
+                {helpStatus}
               </div>
             )}
 
             <button
               type="submit"
+              disabled={helpLoading}
               className="btn btn-primary fw-bold mt-5 min-h-12 w-full rounded-[10px] px-6 py-3 text-center text-[16px] font-black text-white"
             >
-              Send reset request
+              {helpLoading ? 'Sending...' : 'Send support ticket'}
             </button>
           </form>
         </div>
@@ -316,6 +408,13 @@ function Icon({ name, className = '' }) {
       <>
         <path d="M18 6 6 18" />
         <path d="m6 6 12 12" />
+      </>
+    ),
+    help: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.4 9a3 3 0 0 1 5.2 2c0 2-2.6 2.2-2.6 4" />
+        <path d="M12 18h.01" />
       </>
     ),
   }
