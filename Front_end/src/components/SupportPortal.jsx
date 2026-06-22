@@ -165,7 +165,7 @@ export default function SupportPortal({ managementOnly = false, onActiveTicketCo
           <p className="small-text text-primary fw-bold text-uppercase mb-2 font-extrabold tracking-[0.14em]">Support Portal</p>
           <h1 className="page-title fw-black mb-2 text-[#071b49]">Support Portal</h1>
           <p className="body-text mb-0 mt-2 max-w-[850px] font-semibold text-[#53668a]">
-            Submit technical issues, prediction concerns, model feedback, or system support requests.
+            Submit technical issues, prediction concerns, model feedback, or model support requests.
           </p>
         </section>
       )}

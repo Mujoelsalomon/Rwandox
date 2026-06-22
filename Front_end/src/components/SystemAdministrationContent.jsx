@@ -492,23 +492,23 @@ function formatRegistryDate(value) {
     }
 
     async function exportLogs() {
-      setActionLoading('Export System Logs')
+      setActionLoading('Export Model Logs')
       setMessage('')
       try {
         const response = await requestMaintenance('/api/admin/maintenance/export-logs/', { raw: true })
-        if (!response.ok) throw new Error('Could not export system logs.')
+        if (!response.ok) throw new Error('Could not export model logs.')
         const blob = await response.blob()
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = `system-logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')}.txt`
+        link.download = `model-logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')}.txt`
         document.body.appendChild(link)
         link.click()
         link.remove()
         URL.revokeObjectURL(url)
-        setMessage('System logs exported.')
+        setMessage('Model logs exported.')
       } catch (error) {
-        setMessage(error.message || 'Could not export system logs.')
+        setMessage(error.message || 'Could not export model logs.')
       } finally {
         setActionLoading('')
       }
@@ -624,10 +624,10 @@ function formatRegistryDate(value) {
         <div className="mt-4 rounded-[14px] border border-[#d9e5f3] bg-[#f8fbff] p-4">
           <h3 className="card-title font-black text-[#071b49]">{t('maintenanceActions')}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <MaintenanceAction label="Refresh System Status" loading={loading} onClick={refreshSystemStatus} />
+            <MaintenanceAction label="Refresh Model Status" loading={loading} onClick={refreshSystemStatus} />
             <MaintenanceAction label="Reload Active Model" loading={actionLoading === 'Reload Active Model'} onClick={() => runAction('/api/admin/maintenance/reload-model/', 'Reload Active Model')} />
             <MaintenanceAction label="Clear Temporary Files" loading={actionLoading === 'Clear Temporary Files'} onClick={() => runAction('/api/admin/maintenance/clear-temp-files/', 'Clear Temporary Files')} />
-            <MaintenanceAction label="Export System Logs" loading={actionLoading === 'Export System Logs'} onClick={exportLogs} />
+            <MaintenanceAction label="Export Model Logs" loading={actionLoading === 'Export Model Logs'} onClick={exportLogs} />
             <MaintenanceAction label="Backup Database" loading={actionLoading === 'Backup Database'} onClick={() => runAction('/api/admin/maintenance/backup-database/', 'Backup Database')} />
             <MaintenanceAction label="Reset Failed Training Jobs" loading={actionLoading === 'Reset Failed Training Jobs'} onClick={() => runAction('/api/admin/maintenance/reset-failed-jobs/', 'Reset Failed Training Jobs')} />
           </div>

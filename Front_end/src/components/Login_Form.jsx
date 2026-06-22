@@ -135,11 +135,11 @@ export default function Login_Form() {
         throw new Error(data.detail || data.error || 'Could not send the help request.')
       }
 
-      setHelpStatus('Your help request was sent to the administrator support portal. Contact System Administration and share your username or email for follow-up.')
+      setHelpStatus('Your help request was sent to the administrator support portal. Contact Model Administration and share your username or email for follow-up.')
       setHelpMessage('')
     } catch (requestError) {
       console.error(requestError)
-      setHelpError(requestError.message || 'Could not send the help request. Please contact System Administration directly.')
+      setHelpError(requestError.message || 'Could not send the help request. Please contact Model Administration directly.')
     } finally {
       setHelpLoading(false)
     }
@@ -252,7 +252,7 @@ export default function Login_Form() {
           </button>
 
           <p className="mt-4 text-center text-[14px] font-semibold text-[#53668a]">
-            Accounts are created by System Administration.
+            Accounts are created by Model Administration.
           </p>
         </form>
       </section>

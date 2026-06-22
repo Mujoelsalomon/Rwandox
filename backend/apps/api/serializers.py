@@ -7,7 +7,7 @@ CLINICAL_ROLE_NAMES = ["Clinician", "Nurse", "Anesthetist", "Researcher", "Data 
 ADMIN_PERMISSIONS = [
     "Manage users",
     "Manage active model",
-    "Monitor system status",
+    "Monitor model status",
     "View audit logs",
     "Manage QR-code access",
     "Manage settings",

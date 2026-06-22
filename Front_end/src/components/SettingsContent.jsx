@@ -8,7 +8,7 @@ import FACILITIES from '../data/rwandaFacilities.js'
 const defaultPreferences = {
   'High-risk patient alerts': true,
   'Prediction completion alerts': true,
-  'System update alerts': false,
+  'Model update alerts': false,
 }
 
 const defaultThresholds = {
@@ -26,7 +26,7 @@ const notificationItems = [
     detail: 'Notify the account when upload or form-based prediction has completed.',
   },
   {
-    label: 'System update alerts',
+    label: 'Model update alerts',
     detail: 'Notify the account about application updates, maintenance, and service notices.',
   },
 ]

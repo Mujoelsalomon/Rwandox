@@ -161,8 +161,8 @@ def maintenance_export_logs_view(request):
         sections.append("No application log files were found.")
 
     response = HttpResponse("\n\n".join(sections), content_type="text/plain; charset=utf-8")
-    response["Content-Disposition"] = f'attachment; filename="system-logs-{timezone.now().strftime("%Y%m%d%H%M%S")}.txt"'
-    record_audit(request, "Exported system logs", object_type="Maintenance")
+    response["Content-Disposition"] = f'attachment; filename="model-logs-{timezone.now().strftime("%Y%m%d%H%M%S")}.txt"'
+    record_audit(request, "Exported model logs", object_type="Maintenance")
     return cors(response)
 
 
@@ -203,7 +203,7 @@ def maintenance_backup_database_view(request):
     source = Path(str(database_name)) if database_name else None
     if connection.vendor != "sqlite" or not source or not source.exists():
         message = (
-            "PostgreSQL backups must be created with pg_dump or the managed database provider backup system."
+            "PostgreSQL backups must be created with pg_dump or the managed database provider backup model."
             if connection.vendor == "postgresql"
             else "Automatic file backup is available for SQLite databases only."
         )

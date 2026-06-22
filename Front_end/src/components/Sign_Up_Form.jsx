@@ -118,7 +118,7 @@ export default function Sign_Up_Form() {
               Create Your Account
             </h1>
             <p className="mt-2 text-[14px] font-semibold text-[#64799e] sm:text-[16px]">
-              Join us to use the oxygen prediction system
+              Join us to use the oxygen prediction model
             </p>
           </div>
 

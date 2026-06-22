@@ -47,7 +47,7 @@ VITE_LOCAL_IP=<LOCAL_IP>
 VITE_LOCAL_FRONTEND_URL=http://<LOCAL_IP>:5173
 ```
 
-Open System Administration, then choose `QR-code access` to show and download the local access QR code.
+Open Model Administration, then choose `QR-code access` to show and download the local access QR code.
 
 Build for production:
 

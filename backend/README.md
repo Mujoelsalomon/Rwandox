@@ -116,7 +116,7 @@ Production readiness checklist:
 
 PostgreSQL backups:
 
-- The in-app "Backup Database" action can copy SQLite files only. PostgreSQL is not a single database file, so use `pg_dump` or the managed provider backup system.
+- The in-app "Backup Database" action can copy SQLite files only. PostgreSQL is not a single database file, so use `pg_dump` or the managed provider backup model.
 - For local PostgreSQL, a typical backup command is:
 
 ```powershell

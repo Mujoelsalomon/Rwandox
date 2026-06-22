@@ -670,7 +670,7 @@ class EndpointsTest(TestCase):
         self.assertEqual(resp.json()['user']['permissions'], [
             'Manage users',
             'Manage active model',
-            'Monitor system status',
+            'Monitor model status',
             'View audit logs',
             'Manage QR-code access',
             'Manage settings',

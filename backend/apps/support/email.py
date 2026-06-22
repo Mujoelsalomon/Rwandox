@@ -85,7 +85,7 @@ def support_ticket_html_body(context):
     return f"""
     <div style="font-family:Arial,sans-serif;color:#071b49;line-height:1.5;">
       <h2 style="margin:0 0 12px;">New Support Ticket</h2>
-      <p style="margin:0 0 18px;">A support ticket was submitted from the postoperative oxygen prediction system.</p>
+      <p style="margin:0 0 18px;">A support ticket was submitted from the postoperative oxygen prediction model.</p>
       <table style="border-collapse:collapse;width:100%;max-width:720px;border:1px solid #d9e5f3;">
         <tbody>{detail_rows}</tbody>
       </table>

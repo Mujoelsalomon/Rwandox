@@ -280,7 +280,7 @@ def settings_facility_view(request):
         return cors(JsonResponse({"facility": facility}))
 
     if request.method == "POST":
-        # only admin/superuser may change system facility
+        # only admin/superuser may change model facility
         admin_error = require_admin(request)
         if admin_error:
             return admin_error
@@ -299,7 +299,7 @@ def settings_facility_view(request):
         }
         setting, _created = SystemSetting.objects.update_or_create(
             setting_key="selected_facility",
-            defaults={"setting_value": _json.dumps(stored), "description": "Selected facility for system footer"},
+            defaults={"setting_value": _json.dumps(stored), "description": "Selected facility for model footer"},
         )
         record_audit(request, "Updated selected facility", object_type="SystemSetting", object_id=setting.id, details={"facility_id": facility_id})
         return cors(JsonResponse({"facility": facility}))
