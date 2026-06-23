@@ -6,7 +6,7 @@ import { API_BASE_URL, getSession } from '../authSession.js'
 
 const defaultUsers = []
 
-const clinicalRoleOptions = ['Clinician', 'Nurse', 'Anesthetist', 'Researcher', 'Data manager']
+const clinicalRoleOptions = ['Doctor', 'Nurse', 'Anesthetist', 'Researcher', 'Data manager']
 const registrationRoleOptions = ['Administrator', ...clinicalRoleOptions]
 const standardRoleOptions = ['Administrator', ...clinicalRoleOptions]
 
@@ -20,6 +20,23 @@ function notify(message, type = 'info') {
 
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function authHeaders(extra = {}) {
+  const session = getSession()
+  return {
+    Accept: 'application/json',
+    Authorization: `Bearer ${session?.token || ''}`,
+    'X-User-Email': session?.email || '',
+    'X-User-Username': session?.username || '',
+    ...extra,
+  }
+}
+
+function formatUserDate(value) {
+  if (!value) return 'Never'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Not recorded' : date.toLocaleString()
 }
 
 export default function SystemAdministrationContent() {
@@ -38,7 +55,10 @@ export default function SystemAdministrationContent() {
     async function loadUsers() {
       setLoadingUsers(true)
       try {
-        const resp = await fetch(`${API_BASE_URL}/api/admin/users/`, { credentials: 'include' })
+        const resp = await fetch(`${API_BASE_URL}/api/admin/users/`, {
+          credentials: 'include',
+          headers: authHeaders(),
+        })
         if (!active) return
         if (!resp.ok) throw new Error('Could not load users')
         const data = await resp.json()
@@ -64,10 +84,7 @@ export default function SystemAdministrationContent() {
         const resp = await fetch(`${API_BASE_URL}/api/support/tickets/`, {
           credentials: 'include',
           headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${session?.token || ''}`,
-            'X-User-Email': session?.email || '',
-            'X-User-Username': session?.username || '',
+            ...authHeaders(),
           },
         })
         if (!active || !resp.ok) return
@@ -142,7 +159,7 @@ export default function SystemAdministrationContent() {
         const resp = await fetch(`${API_BASE_URL}/auth/profile`, {
           method: 'POST',
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ id: user.id, name: user.name, email: user.email, role: user.role }),
         })
         const data = await resp.json()
@@ -168,16 +185,10 @@ export default function SystemAdministrationContent() {
   }
 
   async function registerNewUser(form) {
-    const session = getSession()
     const resp = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.token || ''}`,
-        'X-User-Email': session?.email || '',
-        'X-User-Username': session?.username || '',
-      },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(form),
     })
     const data = await resp.json()
@@ -188,6 +199,50 @@ export default function SystemAdministrationContent() {
       return exists ? current.map((user) => (user.id === data.user.id ? data.user : user)) : [...current, data.user]
     })
     notify('New user registered.', 'success')
+    return data.user
+  }
+
+  async function resetUserPassword(userId, password = '') {
+    const resp = await fetch(`${API_BASE_URL}/api/admin/users/reset-password/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ id: userId, password }),
+    })
+    const data = await resp.json()
+    if (!resp.ok) throw new Error(data.error || 'Could not reset user password.')
+    setUsers((current) => current.map((user) => (user.id === data.user.id ? data.user : user)))
+    notify('Temporary password generated.', 'success')
+    return data
+  }
+
+  async function updateUserStatus(userId, isActive) {
+    const resp = await fetch(`${API_BASE_URL}/api/admin/users/status/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ id: userId, is_active: isActive }),
+    })
+    const data = await resp.json()
+    if (!resp.ok) throw new Error(data.error || 'Could not update user status.')
+    setUsers((current) => current.map((user) => (user.id === data.user.id ? data.user : user)))
+    notify(isActive ? 'User account activated.' : 'User account disabled.', 'success')
+    return data.user
+  }
+
+  async function deleteUser(userId) {
+    const resp = await fetch(`${API_BASE_URL}/api/admin/users/delete/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ id: userId }),
+    })
+    const data = await resp.json()
+    if (!resp.ok) throw new Error(data.error || 'Could not delete user.')
+    setUsers((current) => current.filter((user) => user.id !== data.user.id))
+    setEditingUserId(null)
+    setOriginalRole(null)
+    notify('User account deleted.', 'success')
     return data.user
   }
 
@@ -255,9 +310,13 @@ export default function SystemAdministrationContent() {
         {activeAdminPanel === 'users' && (
           <UsersTable
             users={users}
+            loading={loadingUsers}
             editingUserId={editingUserId}
             roleOptions={roleOptions}
             onRegister={registerNewUser}
+            onResetPassword={resetUserPassword}
+            onUpdateStatus={updateUserStatus}
+            onDeleteUser={deleteUser}
             onEdit={handleEdit}
             onRoleChange={draftUserRole}
             onSave={saveUserRole}
@@ -855,17 +914,24 @@ function AdminAction({ title, detail, icon = '', alertCount = 0, isActive = fals
   )
 }
 
-function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onRoleChange, onSave, onDiscard }) {
+function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, onResetPassword, onUpdateStatus, onDeleteUser, onEdit, onRoleChange, onSave, onDiscard }) {
   const { t } = useTranslation()
   const [registrationOpen, setRegistrationOpen] = useState(false)
   const [registering, setRegistering] = useState(false)
   const [registrationError, setRegistrationError] = useState('')
+  const [createdCredentials, setCreatedCredentials] = useState(null)
+  const [resettingUserId, setResettingUserId] = useState(null)
+  const [statusLoadingUserId, setStatusLoadingUserId] = useState(null)
+  const [deletingUserId, setDeletingUserId] = useState(null)
+  const [temporaryPassword, setTemporaryPassword] = useState(null)
+  const [actionError, setActionError] = useState('')
   const [registrationForm, setRegistrationForm] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'Clinician',
+    role: 'Doctor',
   })
 
   function updateRegistrationField(field, value) {
@@ -877,6 +943,7 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
     setRegistrationError('')
 
     const name = registrationForm.name.trim()
+    const username = registrationForm.username.trim().toLowerCase()
     const email = registrationForm.email.trim().toLowerCase()
     const password = registrationForm.password
     const role = registrationForm.role
@@ -887,6 +954,10 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
     }
     if (!validateEmail(email)) {
       setRegistrationError('Enter a valid email address.')
+      return
+    }
+    if (username && !/^[a-z0-9._-]{3,30}$/.test(username)) {
+      setRegistrationError('Username must be 3-30 characters and use letters, numbers, dots, underscores, or hyphens.')
       return
     }
     if (password.length < 8) {
@@ -900,19 +971,81 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
 
     try {
       setRegistering(true)
-      await onRegister({ name, email, password, role })
+      const user = await onRegister({ name, username, email, password, role })
+      setCreatedCredentials({
+        name: user.name,
+        username: user.username,
+        password,
+        role: user.role,
+      })
       setRegistrationForm({
         name: '',
+        username: '',
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'Clinician',
+        role: 'Doctor',
       })
       setRegistrationOpen(false)
     } catch (error) {
       setRegistrationError(error.message || 'Could not register user.')
     } finally {
       setRegistering(false)
+    }
+  }
+
+  async function resetPassword(user) {
+    const password = window.prompt(`Enter a temporary password for ${user.name}. Leave blank to auto-generate one.`) || ''
+    if (password && password.length < 8) {
+      setActionError('Temporary password must be at least 8 characters.')
+      return
+    }
+
+    setTemporaryPassword(null)
+    setActionError('')
+    setResettingUserId(user.id)
+    try {
+      const data = await onResetPassword(user.id, password)
+      setTemporaryPassword({
+        userName: data.user?.name || user.name,
+        username: data.user?.username || user.username,
+        password: data.temporary_password,
+      })
+    } catch (error) {
+      setActionError(error.message || 'Could not reset password.')
+    } finally {
+      setResettingUserId(null)
+    }
+  }
+
+  async function changeStatus(user) {
+    const nextStatus = !user.is_active
+    const confirmed = window.confirm(`${nextStatus ? 'Activate' : 'Disable'} ${user.name}?`)
+    if (!confirmed) return
+
+    setActionError('')
+    setStatusLoadingUserId(user.id)
+    try {
+      await onUpdateStatus(user.id, nextStatus)
+    } catch (error) {
+      setActionError(error.message || 'Could not update user status.')
+    } finally {
+      setStatusLoadingUserId(null)
+    }
+  }
+
+  async function removeUser(user) {
+    const confirmed = window.confirm(`Delete ${user.name}? This removes the account and cannot be undone.`)
+    if (!confirmed) return
+
+    setActionError('')
+    setDeletingUserId(user.id)
+    try {
+      await onDeleteUser(user.id)
+    } catch (error) {
+      setActionError(error.message || 'Could not delete user.')
+    } finally {
+      setDeletingUserId(null)
     }
   }
 
@@ -933,15 +1066,28 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
         </button>
       </div>
 
+      {createdCredentials && (
+        <div className="border-b border-[#e5edf7] bg-[#ecfdf5] px-4 py-4 text-[14px] font-semibold text-[#14532d]">
+          Created active account for <strong>{createdCredentials.name}</strong>: username <code className="rounded bg-white px-2 py-1 font-black text-[#071b49]">{createdCredentials.username}</code>, password <code className="rounded bg-white px-2 py-1 font-black text-[#071b49]">{createdCredentials.password}</code>, role <strong>{createdCredentials.role}</strong>.
+        </div>
+      )}
+
       {registrationOpen && (
         <form onSubmit={submitRegistration} className="border-b border-[#e5edf7] bg-white px-4 py-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_180px]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_180px]">
             <RegistrationField
               label="Full name"
               value={registrationForm.name}
               onChange={(value) => updateRegistrationField('name', value)}
               placeholder="Clinical staff name"
               autoComplete="name"
+            />
+            <RegistrationField
+              label="Username"
+              value={registrationForm.username}
+              onChange={(value) => updateRegistrationField('username', value)}
+              placeholder="Optional login name"
+              autoComplete="username"
             />
             <RegistrationField
               label="Email"
@@ -1001,21 +1147,44 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
         </form>
       )}
 
+      {temporaryPassword && (
+        <div className="border-b border-[#e5edf7] bg-[#ecfdf5] px-4 py-4 text-[14px] font-semibold text-[#14532d]">
+          Temporary password for <strong>{temporaryPassword.userName}</strong>
+          {temporaryPassword.username ? <> ({temporaryPassword.username})</> : null}: <code className="rounded bg-white px-2 py-1 font-black text-[#071b49]">{temporaryPassword.password}</code>
+          <span className="ml-2">Share it securely and ask the user to change it after login.</span>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="alert alert-danger rounded-0 mb-0 border-x-0 border-t-0 px-4 py-3 text-[14px] font-bold" role="alert">
+          {actionError}
+        </div>
+      )}
+
       <div className="hidden overflow-x-auto lg:block">
-        <table className="table table-hover align-middle mb-0 w-full min-w-[760px] text-left">
+        <table className="table table-hover align-middle mb-0 w-full min-w-[1180px] text-left">
           <thead className="table-header bg-white font-black uppercase tracking-[0.12em] text-[#64799e]">
             <tr>
               <th className="px-4 py-3">{t('names')}</th>
+              <th className="px-4 py-3">Username</th>
               <th className="px-4 py-3">User ID</th>
               <th className="px-4 py-3">{t('email')}</th>
               <th className="px-4 py-3">{t('role')}</th>
-              <th className="px-4 py-3 text-right">{t('edit')}</th>
+              <th className="px-4 py-3">Password</th>
+              <th className="px-4 py-3">Last login</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3 text-right">Help</th>
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {loading ? (
+              <tr>
+                <td colSpan="9" className="px-4 py-6 text-center text-[14px] font-semibold text-[#64799e]">Loading users...</td>
+              </tr>
+            ) : users.length ? users.map((user) => (
               <tr key={user.id} className="border-t border-[#edf2f8]">
                 <td className="px-4 py-4 text-[14px] font-extrabold text-[#071b49]">{user.name}</td>
+                <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.username || 'Not recorded'}</td>
                 <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.user_id || user.id}</td>
                 <td className="px-4 py-4 text-[14px] font-semibold text-[#53668a]">{user.email}</td>
                 <td className="px-4 py-4">
@@ -1030,30 +1199,78 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
                     </span>
                   )}
                 </td>
+                <td className="px-4 py-4 text-[14px] font-black tracking-[0.1em] text-[#53668a]">{user.password_display || '********'}</td>
+                <td className="px-4 py-4 text-[13px] font-semibold text-[#53668a]">{formatUserDate(user.last_login)}</td>
+                <td className="px-4 py-4">
+                  <span className={`rounded-full px-3 py-2 text-[12px] font-black ${user.is_active ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
+                    {user.is_active ? 'Active' : 'Disabled'}
+                  </span>
+                </td>
                 <td className="px-4 py-4 text-right">
-                  <button
-                    type="button"
-                    aria-label={`Edit ${user.name} role`}
-                    onClick={() => onEdit(editingUserId === user.id ? null : user.id)}
-                    className="btn btn-light inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f6fd] text-[#172a53]"
-                  >
-                    <Icon name="edit" className="h-5 w-5" />
-                  </button>
+                  <div className="inline-flex items-center justify-end gap-2">
+                    {editingUserId === user.id && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label={`${user.is_active ? 'Disable' : 'Activate'} ${user.name}`}
+                          disabled={statusLoadingUserId === user.id}
+                          onClick={() => changeStatus(user)}
+                          className={`btn fw-bold min-h-10 rounded-full px-3 py-2 text-[13px] disabled:opacity-60 ${user.is_active ? 'btn-outline-warning' : 'btn-outline-success'}`}
+                        >
+                          {statusLoadingUserId === user.id ? 'Saving...' : user.is_active ? 'Disable' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Delete ${user.name}`}
+                          disabled={deletingUserId === user.id}
+                          onClick={() => removeUser(user)}
+                          className="btn btn-outline-danger fw-bold min-h-10 rounded-full px-3 py-2 text-[13px] disabled:opacity-60"
+                        >
+                          {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Reset ${user.name} password`}
+                          disabled={resettingUserId === user.id}
+                          onClick={() => resetPassword(user)}
+                          className="btn btn-outline-primary fw-bold min-h-10 rounded-full px-3 py-2 text-[13px] disabled:opacity-60"
+                        >
+                          {resettingUserId === user.id ? 'Resetting...' : 'Reset'}
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={`Edit ${user.name} role`}
+                      onClick={() => onEdit(editingUserId === user.id ? null : user.id)}
+                      className="btn btn-light inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f6fd] text-[#172a53]"
+                    >
+                      <Icon name="edit" className="h-5 w-5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="9" className="px-4 py-8 text-center text-[14px] font-semibold text-[#64799e]">
+                  No users found. Register a new user to start managing account access.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="grid gap-3 p-3 lg:hidden">
-        {users.map((user) => (
+        {loading ? (
+          <div className="rounded-[12px] border border-[#e5edf7] bg-[#f8fbff] p-4 text-[14px] font-semibold text-[#64799e]">Loading users...</div>
+        ) : users.length ? users.map((user) => (
           <div key={user.id} className="card rounded-4 rounded-[12px] border border-[#e5edf7] bg-[#f8fbff] p-4">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="break-words text-[15px] font-extrabold text-[#071b49]">{user.name}</p>
                 <p className="mt-1 break-words text-[13px] font-semibold text-[#64799e]">{user.email}</p>
-                <p className="mt-1 text-[12px] font-black uppercase tracking-[0.12em] text-[#8aa0bf]">{user.user_id || user.id}</p>
+                <p className="mt-1 text-[12px] font-black uppercase tracking-[0.12em] text-[#8aa0bf]">{user.username || 'No username'} | {user.user_id || user.id}</p>
               </div>
               <button
                 type="button"
@@ -1078,8 +1295,37 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
                 </span>
               )}
             </div>
+            <div className="mt-3 grid gap-2 rounded-[10px] bg-white px-3 py-3 text-[13px] font-semibold text-[#53668a]">
+              <p>Password: <span className="font-black tracking-[0.1em]">{user.password_display || '********'}</span></p>
+              <p>Status: <span className={user.is_active ? 'text-[#166534]' : 'text-[#991b1b]'}>{user.is_active ? 'Active' : 'Disabled'}</span></p>
+              <p>Last login: {formatUserDate(user.last_login)}</p>
+            </div>
             {editingUserId === user.id && (
-              <div className="mt-3 flex gap-3">
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={statusLoadingUserId === user.id}
+                  onClick={() => changeStatus(user)}
+                  className={`btn fw-bold min-h-10 rounded-full px-3 py-2 ${user.is_active ? 'btn-outline-warning' : 'btn-outline-success'} disabled:opacity-60`}
+                >
+                  {statusLoadingUserId === user.id ? 'Saving...' : user.is_active ? 'Disable' : 'Activate'}
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingUserId === user.id}
+                  onClick={() => removeUser(user)}
+                  className="btn btn-outline-danger fw-bold min-h-10 rounded-full px-3 py-2 disabled:opacity-60"
+                >
+                  {deletingUserId === user.id ? 'Deleting...' : 'Delete'}
+                </button>
+                <button
+                  type="button"
+                  disabled={resettingUserId === user.id}
+                  onClick={() => resetPassword(user)}
+                  className="btn btn-outline-primary fw-bold min-h-10 rounded-full px-3 py-2 disabled:opacity-60"
+                >
+                  {resettingUserId === user.id ? 'Resetting...' : 'Reset password'}
+                </button>
                 <button
                   type="button"
                   onClick={() => onDiscard(user.id)}
@@ -1097,7 +1343,11 @@ function UsersTable({ users, editingUserId, roleOptions, onRegister, onEdit, onR
               </div>
             )}
           </div>
-        ))}
+        )) : (
+          <div className="rounded-[12px] border border-[#e5edf7] bg-[#f8fbff] p-4 text-[14px] font-semibold text-[#64799e]">
+            No users found. Register a new user to start managing account access.
+          </div>
+        )}
       </div>
       {editingUserId && (
         <div className="border-t border-[#e5edf7] bg-white px-4 py-4 sm:flex sm:items-center sm:justify-end">

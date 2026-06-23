@@ -26,19 +26,19 @@ class EndpointsTest(TestCase):
         # Expect list or dict with models
         self.assertTrue(isinstance(data, (list, dict)))
 
-    def test_clinician_cannot_access_model_registry(self):
-        clinician = User.objects.create_user(
-            username='model-registry-clinician',
-            email='model-registry-clinician@example.com',
+    def test_doctor_cannot_access_model_registry(self):
+        doctor = User.objects.create_user(
+            username='model-registry-doctor',
+            email='model-registry-doctor@example.com',
             password='pass12345',
         )
-        self.client.force_login(clinician)
+        self.client.force_login(doctor)
 
         resp = self.client.get('/models')
 
         self.assertEqual(resp.status_code, 403)
 
-    def test_clinician_can_read_active_model_for_dashboard(self):
+    def test_doctor_can_read_active_model_for_dashboard(self):
         ModelArtifact.objects.create(
             name='Dashboard active model',
             path=__file__,
@@ -46,12 +46,12 @@ class EndpointsTest(TestCase):
             metrics={'val_accuracy': 0.8},
             is_active=True,
         )
-        clinician = User.objects.create_user(
-            username='dashboard-model-clinician',
-            email='dashboard-model-clinician@example.com',
+        doctor = User.objects.create_user(
+            username='dashboard-model-doctor',
+            email='dashboard-model-doctor@example.com',
             password='pass12345',
         )
-        self.client.force_login(clinician)
+        self.client.force_login(doctor)
 
         resp = self.client.get('/models/active')
 
@@ -167,13 +167,13 @@ class EndpointsTest(TestCase):
         self.assertIn('table_count', data['database'])
         self.assertIn('migration_status', data['database'])
 
-    def test_clinician_cannot_access_maintenance_endpoints(self):
-        clinician = User.objects.create_user(
-            username='maintenance-clinician',
-            email='maintenance-clinician@example.com',
+    def test_doctor_cannot_access_maintenance_endpoints(self):
+        doctor = User.objects.create_user(
+            username='maintenance-doctor',
+            email='maintenance-doctor@example.com',
             password='pass12345',
         )
-        self.client.force_login(clinician)
+        self.client.force_login(doctor)
 
         get_resp = self.client.get('/api/admin/maintenance/health/')
         post_resp = self.client.post('/api/admin/maintenance/reload-model/')
@@ -215,13 +215,13 @@ class EndpointsTest(TestCase):
         self.assertEqual(data['status'], 'failed')
         self.assertIn('server may have restarted', data['error'])
 
-    def test_clinician_cannot_access_training_endpoints(self):
-        clinician = User.objects.create_user(
-            username='training-clinician',
-            email='training-clinician@example.com',
+    def test_doctor_cannot_access_training_endpoints(self):
+        doctor = User.objects.create_user(
+            username='training-doctor',
+            email='training-doctor@example.com',
             password='pass12345',
         )
-        self.client.force_login(clinician)
+        self.client.force_login(doctor)
 
         upload = BytesIO(b'oxygen_required,age\nYes,50\n')
         upload.name = 'dataset.csv'
@@ -296,13 +296,13 @@ class EndpointsTest(TestCase):
                 )
                 self.assertEqual(activate_resp.status_code, 403)
 
-    def test_clinician_can_upload_prediction_dataset_without_training_access(self):
-        clinician = User.objects.create_user(
-            username='prediction-dataset-clinician',
-            email='prediction-dataset-clinician@example.com',
+    def test_doctor_can_upload_prediction_dataset_without_training_access(self):
+        doctor = User.objects.create_user(
+            username='prediction-dataset-doctor',
+            email='prediction-dataset-doctor@example.com',
             password='pass12345',
         )
-        self.client.force_login(clinician)
+        self.client.force_login(doctor)
 
         upload = BytesIO(b'oxygen_required,age,sex,postop_spo2\nYes,50,Female,90\nNo,41,Male,96\n')
         upload.name = 'prediction-dataset.csv'
@@ -375,10 +375,10 @@ class EndpointsTest(TestCase):
         self.assertIn('postoperative_oxygen_required', data['columns'])
 
     @override_settings(DEBUG=True)
-    def test_clinician_header_session_cannot_upload_dataset(self):
+    def test_doctor_header_session_cannot_upload_dataset(self):
         User.objects.create_user(
-            username='header-clinician',
-            email='header-clinician@example.com',
+            username='header-doctor',
+            email='header-doctor@example.com',
             password='pass12345',
         )
         self.client.logout()
@@ -388,7 +388,7 @@ class EndpointsTest(TestCase):
         resp = self.client.post(
             '/upload-dataset',
             {'file': upload},
-            HTTP_X_USER_EMAIL='header-clinician@example.com',
+            HTTP_X_USER_EMAIL='header-doctor@example.com',
             HTTP_AUTHORIZATION='Bearer local-preview-token',
         )
 
@@ -476,10 +476,10 @@ class EndpointsTest(TestCase):
         self.assertEqual(risk_resp.json()['resourceType'], 'RiskAssessment')
         self.assertEqual(risk_resp.json()['subject']['reference'], 'Patient/KBH-FHIR-001')
 
-    def test_clinician_cannot_edit_role_or_other_user_profile(self):
-        clinician = User.objects.create_user(
-            username='clinician',
-            email='clinician@example.com',
+    def test_doctor_cannot_edit_role_or_other_user_profile(self):
+        doctor = User.objects.create_user(
+            username='doctor',
+            email='doctor@example.com',
             password='pass12345',
             first_name='Clinical',
             last_name='User',
@@ -491,11 +491,11 @@ class EndpointsTest(TestCase):
             first_name='Other',
             last_name='User',
         )
-        self.client.force_login(clinician)
+        self.client.force_login(doctor)
 
         role_resp = self.client.post(
             '/auth/profile',
-            data=json.dumps({'name': 'Clinical User', 'email': 'clinician@example.com', 'role': 'Administrator'}),
+            data=json.dumps({'name': 'Clinical User', 'email': 'doctor@example.com', 'role': 'Administrator'}),
             content_type='application/json',
         )
         self.assertEqual(role_resp.status_code, 403)
@@ -593,20 +593,20 @@ class EndpointsTest(TestCase):
             'Review prediction history',
         ])
 
-    def test_clinician_role_returns_expected_permissions(self):
+    def test_doctor_role_returns_expected_permissions(self):
         resp = self.client.post(
             '/auth/register',
             data=json.dumps({
-                'name': 'Clinician User',
-                'email': 'clinician-user@example.com',
+                'name': 'Doctor User',
+                'email': 'doctor-user@example.com',
                 'password': 'pass12345',
-                'role': 'Clinician',
+                'role': 'Doctor',
             }),
             content_type='application/json',
         )
 
         self.assertEqual(resp.status_code, 201)
-        self.assertEqual(resp.json()['user']['role'], 'Clinician')
+        self.assertEqual(resp.json()['user']['role'], 'Doctor')
         self.assertEqual(resp.json()['user']['access_level'], 'Clinical user')
         self.assertEqual(resp.json()['user']['permissions'], [
             'Review prediction result',

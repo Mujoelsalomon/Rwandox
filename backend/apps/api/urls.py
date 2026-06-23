@@ -3,6 +3,7 @@ from .views import (
     audit_logs_export_view,
     audit_logs_view,
     current_user_view,
+    change_password_view,
     login_view,
     logout_all_view,
     logout_view,
@@ -41,7 +42,7 @@ from .views import (
     prediction_history_report_view,
     prediction_history_view,
 )
-from .auth_views import admin_users_view
+from .auth_views import admin_delete_user_view, admin_reset_user_password_view, admin_update_user_status_view, admin_users_view
 from .auth_views import settings_facility_view
 
 urlpatterns = [
@@ -52,7 +53,11 @@ urlpatterns = [
     path("auth/logout", logout_view, name="api_logout"),
     path("auth/logout-all", logout_all_view, name="api_logout_all"),
     path("auth/me", current_user_view, name="api_current_user"),
+    path("auth/change-password", change_password_view, name="api_change_password"),
     path("api/admin/users/", admin_users_view, name="api_admin_users"),
+    path("api/admin/users/reset-password/", admin_reset_user_password_view, name="api_admin_reset_user_password"),
+    path("api/admin/users/status/", admin_update_user_status_view, name="api_admin_update_user_status"),
+    path("api/admin/users/delete/", admin_delete_user_view, name="api_admin_delete_user"),
     path("auth/profile", profile_update_view, name="api_profile_update"),
     path("api/settings/facility/", settings_facility_view, name="api_settings_facility"),
     path("predict", predict_view, name="api_predict"),

@@ -15,6 +15,7 @@ from ml.model_loader import load_model_assets
 
 from .audit import record_audit
 from .common import cors, require_admin
+from .model_bootstrap import active_model_artifact
 from .models import EmrSyncLog, ModelArtifact, TrainingJob
 
 
@@ -307,7 +308,7 @@ def database_status_payload():
 
 
 def model_status_payload(force_load=False):
-    active = ModelArtifact.objects.filter(is_active=True).first()
+    active = active_model_artifact()
     loaded = False
     load_error = ""
     if force_load or active:

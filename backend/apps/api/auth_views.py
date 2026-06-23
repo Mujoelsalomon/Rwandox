@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.contrib.sessions.models import Session
 from django.http import HttpResponse, JsonResponse
+from django.utils.crypto import get_random_string
 from django.views.decorators.csrf import csrf_exempt
 
 from .audit import record_audit
@@ -12,7 +13,7 @@ from .models import SystemSetting
 from .hospitals import HOSPITALS_BY_ID
 import json as _json
 from django.utils import timezone
-from apps.accounts.models import ensure_user_profile
+from apps.accounts.models import UserProfile, ensure_user_profile
 from .common import require_admin
 
 
@@ -81,18 +82,30 @@ def login_view(request):
     password = payload.get("password") or ""
 
     ensure_default_user(identifier)
-    username = identifier
-    if "@" in identifier:
-        user_by_email = User.objects.filter(email__iexact=identifier).only("username").first()
-        username = user_by_email.username if user_by_email else identifier
+    username = login_username_for_identifier(identifier)
 
     user = authenticate(request, username=username, password=password)
     if user is None:
+        inactive_user = User.objects.filter(username__iexact=username, is_active=False).first()
+        if inactive_user and inactive_user.check_password(password):
+            return cors(JsonResponse({"error": "This account is disabled. Contact Model Administration."}, status=403))
         return cors(JsonResponse({"error": "Invalid username/email or password."}, status=401))
 
     login(request, user)
     record_audit(request, "Logged in", object_type="User", object_id=user.id)
     return cors(JsonResponse({"user": user_payload(user)}))
+
+
+def login_username_for_identifier(identifier):
+    if "@" in identifier:
+        user_by_email = User.objects.filter(email__iexact=identifier).only("username").first()
+        return user_by_email.username if user_by_email else identifier
+
+    profile = UserProfile.objects.select_related("user").filter(user_code__iexact=identifier).first()
+    if profile:
+        return profile.user.username
+
+    return identifier
 
 
 @csrf_exempt
@@ -107,6 +120,7 @@ def register_view(request):
 
     payload = json_body(request)
     full_name = str(payload.get("name") or "").strip()
+    requested_username = str(payload.get("username") or "").strip().lower()
     email = str(payload.get("email") or "").strip().lower()
     password = payload.get("password") or ""
     role = str(payload.get("role") or "").strip()
@@ -120,9 +134,11 @@ def register_view(request):
             return cors(JsonResponse({"error": "Only a superuser can assign the superuser role."}, status=403))
     if User.objects.filter(email__iexact=email).exists():
         return cors(JsonResponse({"error": "An account with this email already exists."}, status=409))
+    if requested_username and User.objects.filter(username__iexact=requested_username).exists():
+        return cors(JsonResponse({"error": "An account with this username already exists."}, status=409))
 
     base_username = email.split("@")[0] or "user"
-    username = base_username
+    username = requested_username or base_username
     suffix = 1
     while User.objects.filter(username__iexact=username).exists():
         suffix += 1
@@ -133,13 +149,17 @@ def register_view(request):
     user.first_name = name_parts[0]
     user.last_name = name_parts[1] if len(name_parts) > 1 else ""
     update_fields = ["first_name", "last_name"]
+    user.is_active = True
+    update_fields.append("is_active")
     if role:
         user.is_staff = role in {"Administrator", "Superuser"}
         user.is_superuser = role == "Superuser"
         update_fields.extend(["is_staff", "is_superuser"])
     user.save(update_fields=update_fields)
-    ensure_user_profile(user)
-    sync_user_role_group(user, role or "Clinician")
+    profile = ensure_user_profile(user)
+    profile.must_change_password = True
+    profile.save(update_fields=["must_change_password", "updated_at"])
+    sync_user_role_group(user, role or "Doctor")
     record_audit(request, "Registered user account", object_type="User", object_id=user.id)
     return cors(JsonResponse({"user": user_payload(user)}, status=201))
 
@@ -173,6 +193,39 @@ def current_user_view(request):
         return cors(JsonResponse({"authenticated": False}, status=401))
     record_audit(request, "Viewed current profile", object_type="User", object_id=request.user.id)
     return cors(JsonResponse({"authenticated": True, "user": user_payload(request.user)}))
+
+
+@csrf_exempt
+def change_password_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_login(request)
+    if auth_error:
+        return auth_error
+    if request.method != "POST":
+        return cors(JsonResponse({"error": "method not allowed"}, status=405))
+
+    payload = json_body(request)
+    current_password = str(payload.get("current_password") or "")
+    new_password = str(payload.get("new_password") or "")
+
+    if not current_password:
+        return cors(JsonResponse({"error": "Current temporary password is required."}, status=400))
+    if not request.user.check_password(current_password):
+        return cors(JsonResponse({"error": "Current temporary password is incorrect."}, status=400))
+    if len(new_password) < 8:
+        return cors(JsonResponse({"error": "New password must be at least 8 characters."}, status=400))
+    if current_password == new_password:
+        return cors(JsonResponse({"error": "Choose a new password different from the temporary password."}, status=400))
+
+    request.user.set_password(new_password)
+    request.user.save(update_fields=["password"])
+    profile = ensure_user_profile(request.user)
+    profile.must_change_password = False
+    profile.save(update_fields=["must_change_password", "updated_at"])
+    login(request, request.user)
+    record_audit(request, "Changed first-login password", object_type="User", object_id=request.user.id)
+    return cors(JsonResponse({"user": user_payload(request.user)}))
 
 
 @csrf_exempt
@@ -256,6 +309,107 @@ def admin_users_view(request):
     payload = [user_payload(u) for u in users]
     record_audit(request, "Viewed user list", object_type="UserList")
     return cors(JsonResponse({"users": payload}))
+
+
+@csrf_exempt
+def admin_reset_user_password_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_admin(request)
+    if auth_error:
+        return auth_error
+    if request.method != "POST":
+        return cors(JsonResponse({"error": "method not allowed"}, status=405))
+
+    payload = json_body(request)
+    try:
+        target_user_id = int(payload.get("id") or payload.get("user_id"))
+    except (TypeError, ValueError):
+        return cors(JsonResponse({"error": "Valid user id is required."}, status=400))
+
+    target_user = User.objects.filter(id=target_user_id).first()
+    if target_user is None:
+        return cors(JsonResponse({"error": "User account not found."}, status=404))
+    if target_user.is_superuser and not request.user.is_superuser:
+        return cors(JsonResponse({"error": "Only a superuser can reset a superuser password."}, status=403))
+
+    requested_password = str(payload.get("password") or "").strip()
+    if requested_password and len(requested_password) < 8:
+        return cors(JsonResponse({"error": "Temporary password must be at least 8 characters."}, status=400))
+
+    temporary_password = requested_password or get_random_string(14)
+    target_user.set_password(temporary_password)
+    target_user.save(update_fields=["password"])
+    profile = ensure_user_profile(target_user)
+    profile.must_change_password = True
+    profile.save(update_fields=["must_change_password", "updated_at"])
+    record_audit(request, "Reset user password", object_type="User", object_id=target_user.id)
+    return cors(JsonResponse({
+        "user": user_payload(target_user),
+        "temporary_password": temporary_password,
+        "message": "Temporary password generated. Share it securely and ask the user to change it after login.",
+    }))
+
+
+@csrf_exempt
+def admin_update_user_status_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_admin(request)
+    if auth_error:
+        return auth_error
+    if request.method != "POST":
+        return cors(JsonResponse({"error": "method not allowed"}, status=405))
+
+    payload = json_body(request)
+    try:
+        target_user_id = int(payload.get("id") or payload.get("user_id"))
+    except (TypeError, ValueError):
+        return cors(JsonResponse({"error": "Valid user id is required."}, status=400))
+
+    target_user = User.objects.filter(id=target_user_id).first()
+    if target_user is None:
+        return cors(JsonResponse({"error": "User account not found."}, status=404))
+    if target_user.id == request.user.id and payload.get("is_active") is False:
+        return cors(JsonResponse({"error": "You cannot disable your own account."}, status=400))
+    if target_user.is_superuser and not request.user.is_superuser:
+        return cors(JsonResponse({"error": "Only a superuser can change a superuser account status."}, status=403))
+
+    target_user.is_active = bool(payload.get("is_active"))
+    target_user.save(update_fields=["is_active"])
+    action = "Activated user account" if target_user.is_active else "Disabled user account"
+    record_audit(request, action, object_type="User", object_id=target_user.id)
+    return cors(JsonResponse({"user": user_payload(target_user)}))
+
+
+@csrf_exempt
+def admin_delete_user_view(request):
+    if request.method == "OPTIONS":
+        return cors(HttpResponse())
+    auth_error = require_admin(request)
+    if auth_error:
+        return auth_error
+    if request.method != "POST":
+        return cors(JsonResponse({"error": "method not allowed"}, status=405))
+
+    payload = json_body(request)
+    try:
+        target_user_id = int(payload.get("id") or payload.get("user_id"))
+    except (TypeError, ValueError):
+        return cors(JsonResponse({"error": "Valid user id is required."}, status=400))
+
+    target_user = User.objects.filter(id=target_user_id).first()
+    if target_user is None:
+        return cors(JsonResponse({"error": "User account not found."}, status=404))
+    if target_user.id == request.user.id:
+        return cors(JsonResponse({"error": "You cannot delete your own account."}, status=400))
+    if target_user.is_superuser and not request.user.is_superuser:
+        return cors(JsonResponse({"error": "Only a superuser can delete a superuser account."}, status=403))
+
+    deleted_user = user_payload(target_user)
+    target_user.delete()
+    record_audit(request, "Deleted user account", object_type="User", object_id=target_user_id)
+    return cors(JsonResponse({"deleted": True, "user": deleted_user}))
 
 
 @csrf_exempt

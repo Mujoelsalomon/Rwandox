@@ -9,7 +9,7 @@ const SUPER_USER = {
   email: 'munyanezajoel3@gmail.com',
   password: 'Munyaneza@123',
   name: 'Anesthetist',
-  role: 'Clinician',
+  role: 'Doctor',
 }
 
 export default function Login_Form() {
@@ -18,6 +18,9 @@ export default function Login_Form() {
   const [rememberMe, setRememberMe] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [pendingUser, setPendingUser] = useState(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -34,7 +37,7 @@ export default function Login_Form() {
     const normalizedLogin = email.trim().toLowerCase()
 
     if (!normalizedLogin || !password) {
-      setError('Enter your username/email and password.')
+      setError('Enter your username, user ID, or email and password.')
       return
     }
 
@@ -51,23 +54,18 @@ export default function Login_Form() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Invalid username/email or password.')
+        setError(data.error || 'Invalid username, user ID, email, or password.')
         return
       }
 
-      createSession({
-        id: data.user?.id || '',
-        user_id: data.user?.user_id || '',
-        email: data.user?.email || SUPER_USER.email,
-        name: data.user?.name || SUPER_USER.name,
-        role: data.user?.role || SUPER_USER.role,
-        username: data.user?.username || SUPER_USER.username,
-        access_level: data.user?.access_level || '',
-        permissions: data.user?.permissions || [],
-        is_staff: Boolean(data.user?.is_staff),
-        is_superuser: Boolean(data.user?.is_superuser),
-        rememberMe,
-      })
+      if (data.user?.must_change_password) {
+        setPendingUser(data.user)
+        setNewPassword('')
+        setConfirmPassword('')
+        return
+      }
+
+      createUserSession(data.user)
       navigate('/dashboard')
     } catch (error) {
       console.error(error)
@@ -99,7 +97,7 @@ export default function Login_Form() {
       return
     }
     if (!normalizedHelpEmail) {
-      setHelpError('Enter your username or email so the administrator can identify your account.')
+      setHelpError('Enter your username, user ID, or email so the administrator can identify your account.')
       setHelpStatus('')
       return
     }
@@ -122,7 +120,7 @@ export default function Login_Form() {
       body.append('category', 'login')
       body.append('priority', helpPriority)
       body.append('subject', `Login help requested by ${normalizedHelpName}`)
-      body.append('message', `${normalizedHelpMessage}\n\nUsername or email entered: ${normalizedHelpEmail}\n\nThis ticket was submitted from the login form and should be reviewed in the administrator support portal.`)
+      body.append('message', `${normalizedHelpMessage}\n\nUsername, user ID, or email entered: ${normalizedHelpEmail}\n\nThis ticket was submitted from the login form and should be reviewed in the administrator support portal.`)
 
       const response = await fetch(`${API_BASE_URL}/api/support/tickets/`, {
         method: 'POST',
@@ -135,13 +133,72 @@ export default function Login_Form() {
         throw new Error(data.detail || data.error || 'Could not send the help request.')
       }
 
-      setHelpStatus('Your help request was sent to the administrator support portal. Contact Model Administration and share your username or email for follow-up.')
+      setHelpStatus('Your help request was sent to the administrator support portal. Contact Model Administration and share your username, user ID, or email for follow-up.')
       setHelpMessage('')
     } catch (requestError) {
       console.error(requestError)
       setHelpError(requestError.message || 'Could not send the help request. Please contact Model Administration directly.')
     } finally {
       setHelpLoading(false)
+    }
+  }
+
+  function createUserSession(user) {
+    createSession({
+      id: user?.id || '',
+      user_id: user?.user_id || '',
+      email: user?.email || SUPER_USER.email,
+      name: user?.name || SUPER_USER.name,
+      role: user?.role || SUPER_USER.role,
+      username: user?.username || SUPER_USER.username,
+      access_level: user?.access_level || '',
+      permissions: user?.permissions || [],
+      is_staff: Boolean(user?.is_staff),
+      is_superuser: Boolean(user?.is_superuser),
+      must_change_password: Boolean(user?.must_change_password),
+      rememberMe,
+    })
+  }
+
+  async function handlePasswordChange(event) {
+    event.preventDefault()
+
+    if (newPassword.length < 8) {
+      setError('Your new password must be at least 8 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match.')
+      return
+    }
+    if (newPassword === password) {
+      setError('Choose a password different from the temporary password.')
+      return
+    }
+
+    setLoginLoading(true)
+    setError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ current_password: password, new_password: newPassword }),
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Could not update your password.')
+        return
+      }
+
+      createUserSession(data.user)
+      navigate('/dashboard')
+    } catch (changeError) {
+      console.error(changeError)
+      setError('Could not connect to update your password.')
+    } finally {
+      setLoginLoading(false)
     }
   }
 
@@ -164,7 +221,7 @@ export default function Login_Form() {
 
       <section className="relative z-10 flex h-full w-full items-center justify-center px-3 py-3 sm:px-4">
         <form
-          onSubmit={handleSubmit}
+          onSubmit={pendingUser ? handlePasswordChange : handleSubmit}
           className="card border-0 shadow-lg rounded-4 flex max-h-[calc(100vh-24px)] w-full max-w-[665px] flex-col overflow-hidden rounded-[18px] border border-[#dce6f2] bg-white/94 px-4 py-4 backdrop-blur sm:rounded-[22px] sm:px-8 sm:py-5 lg:px-10"
         >
           <div className="text-center">
@@ -174,9 +231,17 @@ export default function Login_Form() {
             </h1>
           </div>
 
+          {pendingUser && (
+            <div className="alert alert-info rounded-4 mt-4 px-4 py-3 text-[14px] font-bold" role="status">
+              Welcome {pendingUser.name}. Create your own password to finish first login.
+            </div>
+          )}
+
+          {!pendingUser ? (
+          <>
           <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4">
             <label className="block">
-              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Username or Email</span>
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Username, User ID, or Email</span>
               <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
                 <Icon name="user" className="h-5 w-5 shrink-0 text-[#64799e]" />
                 <input
@@ -184,7 +249,7 @@ export default function Login_Form() {
                   autoComplete="username"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Enter your username or email"
+                  placeholder="Enter your username, user ID, or email"
                   className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
                 />
               </span>
@@ -231,15 +296,50 @@ export default function Login_Form() {
               <span>Remember me</span>
             </label>
           </div>
+          </>
+          ) : (
+          <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4">
+            <label className="block">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">New Password</span>
+              <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
+                <Icon name="lock" className="h-5 w-5 shrink-0 text-[#64799e]" />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="Create your new password"
+                  className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
+                />
+              </span>
+            </label>
+
+            <label className="block">
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Confirm New Password</span>
+              <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe] sm:min-h-14">
+                <Icon name="lock" className="h-5 w-5 shrink-0 text-[#64799e]" />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Repeat your new password"
+                  className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
+                />
+              </span>
+            </label>
+          </div>
+          )}
 
           <button
             type="submit"
             disabled={loginLoading}
             className="btn btn-primary fw-bold mt-5 min-h-12 w-full rounded-[10px] px-6 py-3 text-center text-[17px] font-black text-white disabled:opacity-70 sm:min-h-14 sm:text-[18px]"
           >
-            {loginLoading ? 'Verifying...' : 'Login'}
+            {loginLoading ? (pendingUser ? 'Saving...' : 'Verifying...') : (pendingUser ? 'Create Password and Continue' : 'Login')}
           </button>
 
+          {!pendingUser ? (
           <button
             type="button"
             onClick={openHelpDialog}
@@ -250,6 +350,20 @@ export default function Login_Form() {
             </span>
             <span>Help</span>
           </button>
+          ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setPendingUser(null)
+              setNewPassword('')
+              setConfirmPassword('')
+              setError('')
+            }}
+            className="btn btn-light fw-bold mt-4 min-h-11 rounded-[10px] px-4 py-2 text-[#172a53]"
+          >
+            Back to login
+          </button>
+          )}
 
           <p className="mt-4 text-center text-[14px] font-semibold text-[#53668a]">
             Accounts are created by Model Administration.
@@ -296,7 +410,7 @@ export default function Login_Form() {
             </label>
 
             <label className="mt-4 block">
-              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Username or Email</span>
+              <span className="form-label mb-2 block text-[14px] font-black text-[#071b49]">Username, User ID, or Email</span>
               <span className="input-group flex min-h-12 items-center gap-3 rounded-[10px] border border-[#cbd8e8] bg-white px-4 transition focus-within:border-[#1768f2] focus-within:ring-2 focus-within:ring-[#bfdbfe]">
                 <Icon name="user" className="h-5 w-5 shrink-0 text-[#64799e]" />
                 <input
@@ -304,7 +418,7 @@ export default function Login_Form() {
                   autoComplete="username"
                   value={helpEmail}
                   onChange={(event) => setHelpEmail(event.target.value)}
-                  placeholder="Enter your username or email"
+                  placeholder="Enter your username, user ID, or email"
                   className="form-control border-0 shadow-none min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-[#071b49] outline-none placeholder:text-[#7a8aa6]"
                 />
               </span>

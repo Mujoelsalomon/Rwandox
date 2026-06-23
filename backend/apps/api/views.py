@@ -3,6 +3,7 @@ from .audit_views import (
     audit_logs_view,
 )
 from .auth_views import (
+    change_password_view,
     current_user_view,
     login_view,
     logout_all_view,
@@ -57,6 +58,7 @@ from .training_views import (
 
 
 __all__ = [
+    "change_password_view",
     "current_user_view",
     "audit_logs_export_view",
     "audit_logs_view",

@@ -3,7 +3,7 @@ from apps.accounts.models import ensure_user_profile
 from .common import float_value
 
 
-CLINICAL_ROLE_NAMES = ["Clinician", "Nurse", "Anesthetist", "Researcher", "Data manager"]
+CLINICAL_ROLE_NAMES = ["Doctor", "Nurse", "Anesthetist", "Researcher", "Data manager"]
 ADMIN_PERMISSIONS = [
     "Manage users",
     "Manage active model",
@@ -13,7 +13,7 @@ ADMIN_PERMISSIONS = [
     "Manage settings",
 ]
 ROLE_PERMISSIONS = {
-    "Clinician": [
+    "Doctor": [
         "Review prediction result",
         "Support monitoring decision",
         "Support disposition decision",
@@ -56,12 +56,18 @@ def user_payload(user):
         "permissions": permissions,
         "is_staff": user.is_staff,
         "is_superuser": user.is_superuser,
+        "is_active": user.is_active,
+        "must_change_password": profile.must_change_password,
+        "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+        "last_login": user.last_login.isoformat() if user.last_login else None,
+        "password_status": "Masked",
+        "password_display": "********",
     }
 
 
 def clinical_role(user):
     group_names = set(user.groups.values_list("name", flat=True))
-    return next((role for role in CLINICAL_ROLE_NAMES if role in group_names), "Clinician")
+    return next((role for role in CLINICAL_ROLE_NAMES if role in group_names), "Doctor")
 
 
 def patient_payload(patient):

@@ -41,9 +41,9 @@ def load_model_assets():
 
 def _active_model_artifact():
     try:
-        from apps.api.models import ModelArtifact
+        from apps.api.model_bootstrap import active_model_artifact
 
-        artifact = ModelArtifact.objects.filter(is_active=True).first()
+        artifact = active_model_artifact()
         if artifact and artifact.path:
             path = Path(artifact.path)
             return artifact if path.exists() and _metadata_for(path) else None

@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.utils.timezone import now
 
 from apps.api.models import ModelArtifact
+from apps.api.model_bootstrap import active_model_artifact
 from apps.predictions.models import PredictionResult
 from metric_benchmarks import enrich_metric_benchmarks
 
@@ -24,7 +25,7 @@ def dashboard_view(request):
     recent_predictions = PredictionResult.objects.select_related(
         "record", "record__patient"
     ).order_by("-generated_at")[:5]
-    active_model = ModelArtifact.objects.filter(is_active=True).first()
+    active_model = active_model_artifact()
     model_metrics = enrich_metric_benchmarks(active_model.metrics) if active_model and isinstance(active_model.metrics, dict) else {}
     model_auc = (
         model_metrics.get("val_roc_auc")

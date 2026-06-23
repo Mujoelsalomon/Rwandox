@@ -142,7 +142,7 @@
   "noActiveModel": "No active model",
   "notAvailable": "Not available",
   "notGenerated": "Not generated",
-  "clinicalRecommendationHigh": "Patient has a high predicted risk of requiring postoperative oxygen. Book an ICU or HDU bed for closer monitoring and cardiorespiratory support, provide close postoperative monitoring, prepare oxygen support, monitor SpO2 continuously, and arrange early senior clinician review.",
+  "clinicalRecommendationHigh": "Patient has a high predicted risk of requiring postoperative oxygen. Book an ICU or HDU bed for closer monitoring and cardiorespiratory support, provide close postoperative monitoring, prepare oxygen support, monitor SpO2 continuously, and arrange early senior doctor review.",
   "clinicalRecommendationModerate": "Patient has a moderate predicted risk of requiring postoperative oxygen. Monitor SpO2 closely, ensure oxygen equipment is available, and reassess respiratory status frequently during the early postoperative period.",
   "clinicalRecommendationLow": "Patient has a low predicted risk of requiring postoperative oxygen. Continue routine postoperative monitoring, maintain standard recovery room observation, and reassess if clinical condition changes.",
   "clinicalRecommendationCriticalSupport": "Because this is a very critical surgical patient, book an ICU or HDU bed when available to support cardiorespiratory monitoring and escalation after surgery.",
@@ -179,7 +179,7 @@
   "carePlan": {
     "highOxygen": "Prepare supplemental oxygen immediately and titrate to the patient target saturation.",
     "highMonitoring": "Use close PACU or HDU monitoring with frequent SpO2 and respiratory-rate reassessment.",
-    "highDisposition": "Book ICU or HDU care for cardiorespiratory support and arrange early senior clinician review.",
+    "highDisposition": "Book ICU or HDU care for cardiorespiratory support and arrange early senior doctor review.",
     "moderateOxygen": "Keep oxygen equipment ready and start oxygen if SpO2 falls or respiratory work increases.",
     "moderateMonitoring": "Repeat SpO2 assessment and reassess respiratory status during early recovery.",
     "moderateDisposition": "Use HDU or enhanced ward observation according to clinical status and local protocol.",

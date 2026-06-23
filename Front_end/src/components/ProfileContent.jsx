@@ -158,7 +158,7 @@ export default function ProfileContent() {
                   onChange={(event) => updateField('role', event.target.value)}
                   className="form-select form-select-lg min-h-12 w-full rounded-[12px] border border-[#cbd8e8] bg-white px-4 text-[15px] font-semibold text-[#071b49] outline-none transition focus:border-[#1768f2] focus:ring-2 focus:ring-[#bfdbfe]"
                 >
-                  <option value="Clinician">Clinician</option>
+                  <option value="Doctor">Doctor</option>
                   <option value="Administrator">Administrator</option>
                   {profile.is_superuser && <option value="Superuser">Superuser</option>}
                 </select>
@@ -231,7 +231,7 @@ function normalizeUser(user) {
     user_id: user?.user_id || '',
     username: user?.username || '',
     name: user?.name || user?.username || 'Anesthetist',
-    role: user?.role || 'Clinician',
+    role: user?.role || 'Doctor',
     access_level: user?.access_level || '',
     permissions: user?.permissions || [],
     email: user?.email || '',

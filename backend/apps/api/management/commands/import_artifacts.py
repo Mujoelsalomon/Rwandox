@@ -1,8 +1,7 @@
-import os
 from pathlib import Path
 from django.core.management.base import BaseCommand
 
-from apps.api.models import ModelArtifact
+from apps.api.model_bootstrap import bootstrap_model_artifacts
 
 
 class Command(BaseCommand):
@@ -23,21 +22,9 @@ class Command(BaseCommand):
             self.stderr.write("Models directory does not exist")
             return
 
-        added = 0
-        for p in sorted(base.iterdir()):
-            if p.is_file():
-                name = p.name
-                existing = ModelArtifact.objects.filter(path=str(p)).first()
-                if existing:
-                    continue
-                ma = ModelArtifact.objects.create(
-                    name=name,
-                    path=str(p),
-                    model_type=(name.split('_')[0] if '_' in name else ''),
-                    metrics=None,
-                    is_active=False,
-                )
-                added += 1
-                self.stdout.write(self.style.SUCCESS(f"Imported {name} -> id={ma.id}"))
+        result = bootstrap_model_artifacts(base)
+        active = result["active"]
 
-        self.stdout.write(self.style.SUCCESS(f"Done. {added} files imported."))
+        if active:
+            self.stdout.write(self.style.SUCCESS(f"Active model: {Path(active.path).name} -> id={active.id}"))
+        self.stdout.write(self.style.SUCCESS(f"Done. {result['created']} files imported."))
