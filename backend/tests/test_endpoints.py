@@ -3,10 +3,17 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from io import BytesIO
 import json
+import os
+import tempfile
 from unittest.mock import patch
+
+import joblib
 
 from apps.api.models import ModelArtifact, TrainingJob
 from apps.support.models import SupportTicket
+from apps.predictions.services import build_prediction_result
+import trainer
+from ml.predict import make_prediction
 
 class EndpointsTest(TestCase):
     def setUp(self):
@@ -43,7 +50,7 @@ class EndpointsTest(TestCase):
             name='Dashboard active model',
             path=__file__,
             model_type='random_forest',
-            metrics={'val_accuracy': 0.8},
+            metrics={'val_accuracy': 0.8, 'test_auc': 0.81, 'test_sensitivity': 0.9},
             is_active=True,
         )
         doctor = User.objects.create_user(
@@ -56,7 +63,12 @@ class EndpointsTest(TestCase):
         resp = self.client.get('/models/active')
 
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()['model']['name'], 'Dashboard active model')
+        model = resp.json()['model']
+        self.assertEqual(model['name'], 'Dashboard active model')
+        self.assertEqual(model['auc'], 0.81)
+        self.assertEqual(model['sensitivity'], 0.9)
+        self.assertEqual(model['metrics']['test_auc_classification'], 'Excellent')
+        self.assertEqual(model['metrics']['test_sensitivity_classification'], 'Excellent detection')
 
     def test_upload_dataset_rejects_unsupported_file_type(self):
         upload = BytesIO(b'not,a,dataset\n')
@@ -127,6 +139,129 @@ class EndpointsTest(TestCase):
         )
         self.assertEqual(resp.status_code, 400)
         self.assertIn('uploaded dataset', resp.json()['error'])
+
+    def test_training_metadata_keeps_final_test_set_untouched(self):
+        dataset_path = write_training_fixture_dataset()
+
+        try:
+            result = trainer.train_model(dataset_path, target_column='postoperative_oxygen_required', model_type='random_forest')
+        finally:
+            os.unlink(dataset_path)
+
+        metadata = result['metadata']
+        metrics = result['metrics']
+        self.assertEqual(metadata['validation_size'], 0.3)
+        self.assertEqual(metrics['class_weights']['computed_from'], 'training_split_only')
+        self.assertIn('test set is untouched', metrics['class_distribution']['test_set_policy'])
+        self.assertEqual(
+            metrics['class_weights']['positive_class_weight'],
+            metrics['class_distribution']['training']['negative'] / metrics['class_distribution']['training']['positive'],
+        )
+        self.assertEqual(
+            metadata['test_row_count'],
+            metrics['class_distribution']['test']['total'],
+        )
+        self.assertIn('selected_threshold', metadata)
+        self.assertEqual(metadata['calibration_method'], 'Sigmoid / Platt scaling')
+        self.assertEqual(metadata['calibration_fit']['fit_data'], 'training_split_only')
+        self.assertIn('never used for calibration', metadata['calibration_fit']['test_set_usage'])
+        self.assertEqual(metrics['calibration']['method'], 'Sigmoid / Platt scaling')
+        self.assertEqual(metrics['calibration']['fit_data'], 'training_split_only')
+        self.assertIn('never used for calibration', metrics['calibration']['test_set_usage'])
+
+    def test_saved_model_predictions_are_consistent_for_identical_input(self):
+        dataset_path = write_training_fixture_dataset()
+
+        try:
+            result = trainer.train_model(dataset_path, target_column='postoperative_oxygen_required', model_type='logistic_regression')
+        finally:
+            os.unlink(dataset_path)
+
+        model = joblib.load(result['model_path'])
+        metadata = result['metadata']
+        self.assertTrue(hasattr(model, 'raw_predict_proba'))
+        self.assertTrue(hasattr(model, 'predict_proba'))
+        payload = {
+            'age_years': 54,
+            'sex': 'Female',
+            'body_mass_index': 28,
+            'baseline_room_air_spo2_percent': 92,
+            'copd_or_asthma': 'Yes',
+            'sleep_apnea': 'No',
+            'asa_class': 'III',
+            'duration_of_surgery_minutes': 120,
+        }
+        first_probability, _ = make_prediction(payload, model=model, preprocessor=metadata, feature_order=metadata['columns'])
+        second_probability, _ = make_prediction(payload, model=model, preprocessor=metadata, feature_order=metadata['columns'])
+
+        self.assertEqual(first_probability, second_probability)
+
+    def test_large_dataset_training_profile_does_not_cap_tab_transformer_by_default(self):
+        self.assertIsNone(trainer.TAB_TRANSFORMER_MAX_ROWS or None)
+        profile = trainer.runtime_profile('tab_transformer', 10000)
+        self.assertTrue(profile['large_dataset_profile'])
+        self.assertIn('large-dataset profile', ' '.join(profile['notes']))
+
+    def test_large_dataset_svm_uses_scalable_probability_candidate(self):
+        class_weight_info = {
+            'positive_class_weight': 2.0,
+            'negative_cases': 7000,
+            'positive_cases': 3000,
+        }
+        candidates = trainer.model_candidates(
+            algo='svm',
+            class_weight_info=class_weight_info,
+            training_row_count=10000,
+        )
+
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0].__class__.__name__, 'SGDClassifier')
+        self.assertTrue(hasattr(candidates[0], 'predict_proba'))
+
+    def test_class_labels_are_not_used_as_probabilities(self):
+        class LabelOnlyModel:
+            def predict(self, frame):
+                return [1 for _ in range(len(frame))]
+
+        with self.assertRaisesRegex(RuntimeError, 'class labels cannot be used as probabilities'):
+            make_prediction(
+                {'age_years': 54},
+                model=LabelOnlyModel(),
+                preprocessor={'class_labels': ['No', 'Yes']},
+                feature_order=['age_years'],
+            )
+
+    def test_display_probability_uses_safety_bounds(self):
+        low = build_prediction_result(
+            {'raw_probability': 0.2, 'calibrated_probability': 0.003},
+            [],
+            {'selected_threshold': 0.5},
+        )
+        high = build_prediction_result(
+            {'raw_probability': 0.8, 'calibrated_probability': 0.997},
+            [],
+            {'selected_threshold': 0.5},
+        )
+        middle = build_prediction_result(
+            {'raw_probability': 0.4, 'calibrated_probability': 0.456},
+            [],
+            {'selected_threshold': 0.5},
+        )
+
+        self.assertEqual(low['display_probability'], '<1%')
+        self.assertEqual(high['display_probability'], '>99%')
+        self.assertEqual(middle['display_probability'], '45.6%')
+
+    def test_risk_classification_uses_calibrated_probability_not_display_rounding(self):
+        result = build_prediction_result(
+            {'raw_probability': 0.99, 'calibrated_probability': 0.695},
+            [],
+            {'selected_threshold': 0.7},
+        )
+
+        self.assertEqual(result['display_probability'], '69.5%')
+        self.assertEqual(result['risk_level'], 'Moderate')
+        self.assertEqual(result['predicted_class'], 'No')
 
     def test_training_jobs_endpoint_returns_jobs_list(self):
         resp = self.client.get('/train/jobs')
@@ -403,6 +538,55 @@ class EndpointsTest(TestCase):
         self.assertIn('predicted_class', data)
         self.assertIn('risk_level', data)
 
+    def test_post_predict_truncates_long_active_model_name(self):
+        long_name = 'Very long deployed postoperative oxygen model name that exceeds the prediction model version column'
+        ModelArtifact.objects.create(
+            name=long_name,
+            path=__file__,
+            model_type='xgboost',
+            metrics={'val_accuracy': 0.8},
+            is_active=True,
+        )
+        payload = {'features': {'patient_coded_id': 'KBH-LONG-MODEL-001', 'age': 45, 'sex': 'Female', 'postop_spo2': 90}}
+
+        resp = self.client.post('/predict', data=json.dumps(payload), content_type='application/json')
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['model_version'], long_name[:50])
+
+    def test_post_predict_without_patient_hospital_id(self):
+        payload = {
+            'features': {
+                'age_years': 45,
+                'age': 45,
+                'sex': 'Female',
+                'weight_kg': 70,
+                'height_cm': 165,
+                'body_mass_index': 25.7,
+                'asa_class': 'II',
+                'baseline_room_air_spo2_percent': 96,
+                'baseline_spo2': 96,
+                'baseline_respiratory_rate_bpm': 18,
+                'surgical_specialty': 'General surgery',
+                'type_of_surgery_performed': 'Appendectomy',
+                'surgery_status': 'Elective',
+                'urgency': 'elective',
+                'duration_of_surgery_minutes': 90,
+                'surgery_duration': 90,
+                'estimated_blood_loss_ml': 100,
+                'anesthesia_type': 'General',
+                'expected_airway_type': 'Endotracheal tube',
+                'postoperative_destination': 'Surgical Ward',
+            }
+        }
+        resp = self.client.post('/predict', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('predicted_probability', data)
+        self.assertIn('id', data)
+        self.assertTrue(data['patient_id'].startswith('UNRECORDED-'))
+
     def test_post_predict_preview_does_not_persist(self):
         payload = {'persist': False, 'features': {'patient_coded_id': 'KBH-PREVIEW-001', 'age': 45, 'sex': 'Female', 'postop_spo2': 90}}
         resp = self.client.post('/predict', data=json.dumps(payload), content_type='application/json')
@@ -637,7 +821,7 @@ class EndpointsTest(TestCase):
                 self.assertEqual(resp.status_code, 201)
                 self.assertEqual(resp.json()['user']['role'], role)
                 self.assertEqual(resp.json()['user']['access_level'], 'Clinical user')
-                self.assertEqual(resp.json()['user']['permissions'], expected_permissions)
+        self.assertEqual(resp.json()['user']['permissions'], expected_permissions)
 
     def test_superuser_can_edit_target_user_profile_and_role(self):
         target_user = User.objects.create_user(
@@ -675,3 +859,38 @@ class EndpointsTest(TestCase):
             'Manage QR-code access',
             'Manage settings',
         ])
+
+
+def write_training_fixture_dataset():
+    headers = [
+        'age_years',
+        'sex',
+        'body_mass_index',
+        'baseline_room_air_spo2_percent',
+        'copd_or_asthma',
+        'sleep_apnea',
+        'asa_class',
+        'duration_of_surgery_minutes',
+        'postoperative_oxygen_required',
+    ]
+    rows = []
+    for index in range(48):
+        positive = index % 6 == 0
+        rows.append([
+            40 + (index % 25),
+            'Female' if index % 2 else 'Male',
+            22 + (index % 10),
+            91 if positive else 97,
+            'Yes' if index % 8 == 0 else 'No',
+            'Yes' if index % 13 == 0 else 'No',
+            'III' if positive else 'II',
+            130 if positive else 75 + (index % 40),
+            'Yes' if positive else 'No',
+        ])
+
+    handle = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False, newline='')
+    handle.write(','.join(headers) + '\n')
+    for row in rows:
+        handle.write(','.join(str(item) for item in row) + '\n')
+    handle.close()
+    return handle.name

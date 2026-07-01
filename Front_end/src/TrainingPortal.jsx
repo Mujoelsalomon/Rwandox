@@ -381,10 +381,12 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
   const metricCards = [
     ['Accuracy', metrics.val_accuracy, 'percent'],
     ['F1-score', metrics.val_f1_score ?? metrics.f1_score, 'percent'],
+    ['F2-score', metrics.test_f2_score, 'percent'],
     ['Precision', metrics.val_precision_weighted, 'percent'],
     ['Sensitivity', metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'],
     ['Specificity', metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'],
     ['AUC Score', metrics.val_roc_auc ?? metrics.val_roc_auc_weighted_ovr, 'decimal'],
+    ['Brier Score', metrics.test_brier_score ?? metrics.val_brier_score, 'decimal'],
   ]
   const details = {
     modelName: formatModelType(result.model_type || latestModel?.model_type || selectedModelType || 'Not selected'),
@@ -396,6 +398,10 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
     accuracy: formatMetric(metrics.val_accuracy, 'percent'),
     sensitivity: formatMetric(metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'),
     specificity: formatMetric(metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'),
+    threshold: formatMetric(result.selected_threshold ?? metrics.selected_threshold, 'decimal'),
+    weightingMethod: result.weighting_method || metrics.weighting_method || 'Not available',
+    classDistribution: classDistributionText(result.class_distribution || metrics.class_distribution),
+    calibration: calibrationText(result.calibration || metrics.calibration),
   }
 
   return (
@@ -438,6 +444,8 @@ function TrainingReport({ status, selectedModelType, latestModel, file }) {
           </div>
 
           <ClinicalInterpretation metrics={metrics} />
+          <CostSensitiveLearningReport result={result} metrics={metrics} />
+          <ReliabilityPlot calibration={result.calibration || metrics.calibration} />
           <DeterminantsRankingTable
             predictors={result.top_predictors || metrics.top_predictors}
             fallbackColumns={[...(result.numeric_columns || []), ...(result.categorical_columns || [])]}
@@ -468,6 +476,7 @@ function SavedModelReport({ model, activatingId, onActivate, canActivate = false
     ['Sensitivity', metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'],
     ['Specificity', metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'],
     ['AUC Score', metrics.val_roc_auc ?? metrics.val_roc_auc_weighted_ovr, 'decimal'],
+    ['Brier Score', metrics.test_brier_score ?? metrics.val_brier_score, 'decimal'],
   ]
   const hasMetrics = Object.keys(metrics).length > 0
   const details = {
@@ -480,6 +489,9 @@ function SavedModelReport({ model, activatingId, onActivate, canActivate = false
     accuracy: formatMetric(metrics.val_accuracy, 'percent'),
     sensitivity: formatMetric(metrics.val_sensitivity ?? metrics.sensitivity ?? metrics.val_recall_weighted, 'percent'),
     specificity: formatMetric(metrics.val_specificity ?? metrics.specificity ?? calculateSpecificity(metrics), 'percent'),
+    threshold: formatMetric(metrics.selected_threshold, 'decimal'),
+    classDistribution: classDistributionText(metrics.class_distribution),
+    calibration: calibrationText(metrics.calibration),
   }
 
   return (
@@ -540,6 +552,8 @@ function SavedModelReport({ model, activatingId, onActivate, canActivate = false
           </div>
 
           <ClinicalInterpretation metrics={metrics} />
+          <CostSensitiveLearningReport result={{}} metrics={metrics} />
+          <ReliabilityPlot calibration={metrics.calibration} />
           <DeterminantsRankingTable predictors={metrics.top_predictors} />
           <DatasetCleaningReport report={metrics.dataset_cleaning} />
           <ClassificationReport report={metrics.classification_report} />
@@ -582,6 +596,9 @@ function ModelDetails({ details, result }) {
     ['Validation Accuracy', details.accuracy],
     ['Sensitivity', details.sensitivity],
     ['Specificity', details.specificity],
+    ['Selected Threshold', details.threshold],
+    ['Class Distribution', details.classDistribution],
+    ['Calibration', details.calibration],
     ['Feature Count', result.feature_count ?? 'Not available'],
     ['Train / Validation Rows', `${result.training_row_count ?? '-'} / ${result.validation_row_count ?? '-'}`],
   ]
@@ -604,6 +621,135 @@ function ModelDetails({ details, result }) {
         ))}
       </div>
     </div>
+  )
+}
+
+function CostSensitiveLearningReport({ result, metrics }) {
+  const classWeights = result.class_weights || metrics.class_weights || {}
+  const subgroupRows = result.subgroup_report || metrics.subgroup_report || []
+
+  return (
+    <section className="mt-7 rounded-[12px] border border-[#bfdbfe] bg-[#f8fbff] p-5">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="section-title font-black text-[#0b63ce]">Cost-sensitive learning</h3>
+          <p className="small-text mt-1 font-semibold text-[#53668a]">
+            Outcome imbalance handled through class weighting or fold-local resampling; predictor-specific rarity weights are not used.
+          </p>
+        </div>
+        <span className="risk-badge-text w-fit rounded-full bg-[#dcfce7] px-4 py-2 text-[#166534]">
+          Test set untouched
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <ReportTile label="Weighting method" value={result.weighting_method || metrics.weighting_method || 'Not available'} />
+        <ReportTile label="Positive class weight" value={formatMetric(classWeights.positive_class_weight, 'decimal')} />
+        <ReportTile label="Selected threshold" value={formatMetric(result.selected_threshold ?? metrics.selected_threshold, 'decimal')} />
+        <ReportTile label="Calibration" value={calibrationText(result.calibration || metrics.calibration)} />
+      </div>
+
+      {subgroupRows.length > 0 && (
+        <div className="mt-5 overflow-x-auto">
+          <table className="table-body min-w-full text-left">
+            <thead className="bg-white text-[#263957]">
+              <tr>
+                <th className="px-4 py-3">Subgroup</th>
+                <th className="px-4 py-3">N</th>
+                <th className="px-4 py-3">Observed O2 rate</th>
+                <th className="px-4 py-3">Sensitivity</th>
+                <th className="px-4 py-3">False negatives</th>
+                <th className="px-4 py-3">95% CI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subgroupRows.map((row) => (
+                <tr key={row.predictor} className="border-t border-[#d9e5f3]">
+                  <td className="px-4 py-3 font-black text-[#071b49]">{row.predictor}</td>
+                  <td className="px-4 py-3">{row.sample_size ?? 0}</td>
+                  <td className="px-4 py-3">{formatMetric(row.observed_oxygen_requirement_rate, 'percent')}</td>
+                  <td className="px-4 py-3">{formatMetric(row.sensitivity, 'percent')}</td>
+                  <td className="px-4 py-3">{row.false_negatives ?? 0}</td>
+                  <td className="px-4 py-3">{confidenceIntervalText(row.confidence_interval)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ReliabilityPlot({ calibration }) {
+  const meanPredicted = calibration?.mean_predicted_probability || []
+  const observed = calibration?.fraction_of_positives || []
+  const rows = meanPredicted
+    .map((value, index) => ({
+      predicted: Number(value),
+      observed: Number(observed[index]),
+    }))
+    .filter((row) => Number.isFinite(row.predicted) && Number.isFinite(row.observed))
+
+  return (
+    <section className="mt-7 rounded-[12px] border border-[#d9e5f3] bg-white p-5">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="section-title font-black text-[#0b63ce]">Calibration Reliability Plot</h3>
+          <p className="small-text mt-1 font-semibold text-[#53668a]">
+            Calibration method: {calibrationText(calibration)}
+          </p>
+        </div>
+        <span className="risk-badge-text w-fit rounded-full bg-[#eaf2ff] px-4 py-2 text-[#1768f2]">
+          Brier score {formatMetric(calibration?.brier_score, 'decimal')}
+        </span>
+      </div>
+
+      {!rows.length ? (
+        <p className="body-text mt-4 font-semibold text-[#53668a]">Reliability plot data is not available.</p>
+      ) : (
+        <div className="mt-5 grid gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="relative h-[220px] rounded-[10px] border border-[#d9e5f3] bg-[#f8fbff]">
+            <div className="absolute inset-x-5 bottom-5 top-5 border-l border-b border-[#9fb4d0]">
+              <div className="absolute bottom-0 left-0 h-full w-full">
+                <div className="absolute bottom-0 left-0 h-px w-full -rotate-45 origin-bottom-left bg-[#94a3b8]" />
+                {rows.map((row, index) => (
+                  <span
+                    key={`${row.predicted}-${index}`}
+                    className="absolute h-3 w-3 -translate-x-1/2 translate-y-1/2 rounded-full bg-[#1768f2] shadow"
+                    style={{
+                      left: `${Math.max(0, Math.min(100, row.predicted * 100))}%`,
+                      bottom: `${Math.max(0, Math.min(100, row.observed * 100))}%`,
+                    }}
+                    title={`Predicted ${formatMetric(row.predicted, 'percent')}, observed ${formatMetric(row.observed, 'percent')}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="table-body min-w-full text-left">
+              <thead className="text-[#53668a]">
+                <tr>
+                  <th className="px-4 py-3">Bin</th>
+                  <th className="px-4 py-3">Mean predicted risk</th>
+                  <th className="px-4 py-3">Observed oxygen requirement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={index} className="border-t border-[#edf2f8]">
+                    <td className="px-4 py-3 font-black text-[#071b49]">{index + 1}</td>
+                    <td className="px-4 py-3">{formatMetric(row.predicted, 'percent')}</td>
+                    <td className="px-4 py-3">{formatMetric(row.observed, 'percent')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -930,6 +1076,23 @@ function formatPercent(value) {
   const number = Number(value)
   if (!Number.isFinite(number)) return 'Not available'
   return `${(number * 100).toFixed(0)}%`
+}
+
+function classDistributionText(distribution) {
+  const training = distribution?.training
+  const test = distribution?.test
+  if (!training || !test) return 'Not available'
+  return `Train +${training.positive}/-${training.negative}; Test +${test.positive}/-${test.negative}`
+}
+
+function calibrationText(calibration) {
+  if (!calibration || calibration.brier_score === undefined) return 'Not available'
+  return `${calibration.method || 'Sigmoid / Platt scaling'}; Brier ${formatMetric(calibration.brier_score, 'decimal')}`
+}
+
+function confidenceIntervalText(interval) {
+  if (!interval) return 'Not available'
+  return `${formatMetric(interval.lower, 'percent')} - ${formatMetric(interval.upper, 'percent')}`
 }
 
 function calculateSpecificity(metrics) {

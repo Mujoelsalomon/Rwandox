@@ -7,43 +7,20 @@ import { API_BASE_URL } from '../config/api.js'
 const yesNo = ['No', 'Yes']
 const yesNoUnknown = ['No', 'Yes', 'Not documented']
 const requiredPredictionFields = [
-  ['patientCodedId', 'Patient Hospital ID'],
   ['age', 'Age'],
   ['sex', 'Sex'],
   ['weight', 'Weight'],
   ['height', 'Height'],
-  ['smokingHistory', 'Smoking history'],
   ['asaClass', 'ASA class'],
-  ['preExistingRespiratoryDisease', 'Pre-existing respiratory disease'],
-  ['copdAsthma', 'COPD / asthma'],
-  ['cardiovascularDisease', 'Cardiovascular disease'],
-  ['hypertension', 'Hypertension'],
-  ['diabetesMellitus', 'Diabetes mellitus'],
-  ['renalDisease', 'Renal disease'],
-  ['hivStatus', 'HIV status'],
-  ['anemia', 'Anemia'],
-  ['obesity', 'Obesity'],
-  ['sleepApnea', 'Sleep apnea'],
   ['baselineSpo2', 'Baseline room-air SpO2'],
   ['baselineRespiratoryRate', 'Baseline respiratory rate'],
   ['surgicalSpecialty', 'Expected surgical specialty'],
   ['typeOfSurgery', 'Expected type of surgery'],
   ['surgeryStatus', 'Expected surgery status'],
-  ['surgeryMagnitude', 'Expected major or minor surgery'],
-  ['surgicalApproach', 'Expected surgical approach'],
   ['durationOfSurgery', 'Expected duration of surgery'],
   ['estimatedBloodLoss', 'Expected estimated blood loss'],
   ['typeOfAnesthesia', 'Expected type of anesthesia'],
   ['airwayType', 'Expected airway type'],
-  ['intraoperativeOpioidUse', 'Expected intraoperative opioid use'],
-  ['sedativeUse', 'Expected sedative use'],
-  ['muscleRelaxantUsed', 'Expected muscle relaxant use'],
-  ['reversalAgentUsed', 'Expected reversal agent use'],
-  ['intraoperativeHypotension', 'Expected intraoperative hypotension risk'],
-  ['intraoperativeBronchospasm', 'Expected intraoperative wheezing / bronchospasm risk'],
-  ['intraoperativeDesaturation', 'Expected intraoperative desaturation risk'],
-  ['intraoperativeFluidVolume', 'Expected intraoperative fluid volume'],
-  ['vasopressorUsed', 'Expected vasopressor use'],
 ]
 const requiredPredictionFieldMap = new Map(requiredPredictionFields)
 const DEFAULT_TARGET_COLUMN = 'postop oxygen required'
@@ -248,7 +225,7 @@ export default function NewPredictionContent() {
           signal: controller.signal,
           body: JSON.stringify({ features, model_type: modelType, persist: false }),
         })
-        const data = await resp.json()
+        const data = await readJsonResponse(resp)
         if (!resp.ok) {
           if (resp.status === 401) {
             handleExpiredBackendSession()
@@ -357,7 +334,7 @@ export default function NewPredictionContent() {
         credentials: 'include',
         body: JSON.stringify({ features, model_type: modelType, persist: true }),
       })
-      const data = await resp.json()
+      const data = await readJsonResponse(resp)
       if (!resp.ok) {
         if (resp.status === 401) {
           handleExpiredBackendSession()
@@ -621,6 +598,7 @@ function DataField({ field: item, onChange, value }) {
           value={value}
           onChange={(event) => onChange(event.target.value)}
         >
+          <option value="" disabled>{t('selectAValue', 'Select a value')}</option>
           {item.options.map((option) => (
             <option key={option || 'blank'} value={option}>{option || t('notRecorded')}</option>
           ))}
@@ -735,8 +713,10 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
 
   if (!prediction) return null
 
-  const probability = normalizeProbability(prediction.predicted_probability ?? prediction.probability)
-  const riskLevel = classifyRisk(probability)
+  const calibratedProbability = prediction.calibrated_probability ?? prediction.predicted_probability ?? prediction.probability
+  const probability = normalizeProbability(calibratedProbability)
+  const displayProbability = prediction.display_probability || formatDisplayProbability(calibratedProbability)
+  const riskLevel = prediction.risk_level ? `${prediction.risk_level} Risk` : classifyRisk(probability)
   const veryCritical = isVeryCriticalSurgeryPatient(form, riskLevel)
   const recommendation = clinicalRecommendation(riskLevel, veryCritical, t)
   const keyPredictors = getKeyPredictors(prediction, form, bmi)
@@ -756,9 +736,12 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
           )}
           <h2 className="section-title mt-3 font-black text-[#06163d]">{t('oxygenRequirementAssessment')}</h2>
           <div className="mt-5 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(260px,1fr)]">
-            <OutcomeMetric label={t('probabilityOfPostopOxygen')} value={`${probability}%`} valueClass={tone.text} />
+            <OutcomeMetric label={t('probabilityOfPostopOxygen')} value={displayProbability} valueClass={tone.text} />
             <KeyPredictors predictors={keyPredictors} />
           </div>
+          <p className="mt-3 rounded-[10px] border border-[#bfdbfe] bg-white px-4 py-3 text-[14px] font-bold leading-6 text-[#20365f]">
+            The displayed probability is an estimated risk and does not represent complete certainty. Clinical assessment and monitoring remain essential.
+          </p>
           <div className={`mt-4 rounded-[12px] border-2 ${tone.border} bg-white px-4 py-4 shadow-sm`}>
             <p className="text-[13px] font-black uppercase tracking-[0.12em] text-[#071b49]">{t('recommendation')}</p>
             <p className="mt-2 text-[16px] font-bold leading-7 text-[#20365f]">{recommendation}</p>
@@ -768,7 +751,7 @@ function PredictionResultPanel({ bmi, error, form, loading, prediction, syncing 
         <div className={`w-full rounded-[14px] border-2 ${tone.border} bg-white px-5 py-5 shadow-md xl:max-w-[320px]`}>
           <p className="text-center text-[13px] font-black uppercase tracking-[0.14em] text-[#071b49]">{t('currentPrediction')}</p>
           <div className={`mx-auto mt-3 flex h-36 w-36 items-center justify-center rounded-full border-[12px] ${tone.ring}`}>
-            <span className={`prediction-value font-black ${tone.text}`}>{probability}%</span>
+            <span className={`prediction-value font-black ${tone.text}`}>{displayProbability}</span>
           </div>
           <p className={`risk-badge-text mx-auto mt-4 w-fit rounded-full px-4 py-2 text-center font-black uppercase ${tone.badge}`}>{translateRiskLabel(riskLevel, t)}</p>
           <p className="mt-3 text-center text-[14px] font-bold leading-6 text-[#20365f]">
@@ -941,12 +924,14 @@ function DatasetPanel({
 
 function buildDatasetPredictionReport({ datasetName, predictions, summary, targetColumn }) {
   const normalizedPredictions = predictions.map((prediction, index) => {
-    const probability = normalizeProbability(prediction.predicted_probability)
+    const calibratedProbability = prediction.calibrated_probability ?? prediction.predicted_probability
+    const probability = normalizeProbability(calibratedProbability)
     const riskLevel = prediction.risk_level || classifyRisk(probability).replace(' Risk', '')
     const oxygenRequired = isOxygenRequiredPrediction(prediction)
     return {
       rowId: Number(prediction.row_index ?? index) + 1,
       probability,
+      displayProbability: prediction.display_probability || formatDisplayProbability(calibratedProbability),
       riskLevel,
       oxygenRequired,
       oxygenRequiredLabel: oxygenRequired ? 'Yes' : 'No',
@@ -1205,7 +1190,7 @@ function RowPredictionTable({ predictions }) {
             {predictions.map((prediction) => (
               <tr key={prediction.rowId}>
                 <td className="px-4 py-3 text-[14px] font-black text-[#071b49]">{prediction.rowId}</td>
-                <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{prediction.probability}%</td>
+                <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{prediction.displayProbability}</td>
                 <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{prediction.riskLevel}</td>
                 <td className="px-4 py-3 text-[14px] font-bold text-[#20365f]">{prediction.oxygenRequiredLabel}</td>
                 <td className="px-4 py-3 text-[14px] font-semibold text-[#20365f]">{prediction.recommendation}</td>
@@ -1239,7 +1224,7 @@ function RowPredictionDetails({ onClose, prediction }) {
             Row {prediction.rowId} Prediction Details
           </h4>
           <p className="mt-2 text-[14px] font-semibold text-[#20365f]">
-            This row was predicted as {prediction.riskLevel} risk with {prediction.probability}% probability.
+            This row was predicted as {prediction.riskLevel} risk with {prediction.displayProbability} probability.
           </p>
         </div>
         <button
@@ -1252,7 +1237,7 @@ function RowPredictionDetails({ onClose, prediction }) {
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <ReportMetric label="Row ID" value={prediction.rowId} />
-        <ReportMetric label="Probability" value={`${prediction.probability}%`} />
+        <ReportMetric label="Probability" value={prediction.displayProbability} />
         <ReportMetric label="Risk level" value={prediction.riskLevel} />
         <ReportMetric label="Oxygen required" value={prediction.oxygenRequiredLabel} />
       </div>
@@ -1573,11 +1558,31 @@ function validatePredictionFields(form, bmi) {
   return missing
 }
 
+async function readJsonResponse(response) {
+  const text = await response.text()
+  if (!text) return {}
+  try {
+    return JSON.parse(text)
+  } catch (error) {
+    console.error(error)
+    return { error: response.ok ? '' : `Backend returned ${response.status}: ${text.slice(0, 180)}` }
+  }
+}
+
 function normalizeProbability(value) {
   const numericValue = Number(value)
   if (!Number.isFinite(numericValue)) return 0
   const percentValue = numericValue <= 1 ? numericValue * 100 : numericValue
   return Math.min(100, Math.max(0, Math.round(percentValue)))
+}
+
+function formatDisplayProbability(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return 'Not available'
+  const probability = numericValue > 1 ? numericValue / 100 : numericValue
+  if (probability <= 0.01) return '<1%'
+  if (probability >= 0.99) return '>99%'
+  return `${(probability * 100).toFixed(1)}%`
 }
 
 function formatTrainingMetric(value) {
@@ -1685,7 +1690,7 @@ function exportDatasetPredictionCsv(report) {
   const header = ['Row ID', 'Probability', 'Risk level', 'Oxygen required', 'Recommendation']
   const rows = report.predictions.map((prediction) => [
     prediction.rowId,
-    `${prediction.probability}%`,
+    prediction.displayProbability,
     prediction.riskLevel,
     prediction.oxygenRequiredLabel,
     prediction.recommendation,

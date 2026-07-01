@@ -28,10 +28,17 @@ def dashboard_view(request):
     active_model = active_model_artifact()
     model_metrics = enrich_metric_benchmarks(active_model.metrics) if active_model and isinstance(active_model.metrics, dict) else {}
     model_auc = (
-        model_metrics.get("val_roc_auc")
+        model_metrics.get("test_auc")
+        or model_metrics.get("val_roc_auc")
         or model_metrics.get("val_roc_auc_weighted_ovr")
         or model_metrics.get("val_auc")
         or model_metrics.get("auc")
+    )
+    model_sensitivity = (
+        model_metrics.get("test_sensitivity")
+        or model_metrics.get("val_sensitivity")
+        or model_metrics.get("sensitivity")
+        or model_metrics.get("val_recall_weighted")
     )
 
     context = {
@@ -40,7 +47,9 @@ def dashboard_view(request):
         "avg_probability": round(avg_probability * 100, 1) if avg_probability <= 1 else round(avg_probability, 1),
         "recent_predictions": recent_predictions,
         "model_auc": model_auc,
+        "model_sensitivity": model_sensitivity,
         "model_auc_classification": model_metrics.get("auc_classification"),
+        "model_sensitivity_classification": model_metrics.get("sensitivity_classification"),
         "model_f1_classification": model_metrics.get("f1_classification"),
     }
     return render(request, "dashboard/home.html", context)

@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from apps.predictions.models import PredictionResult
+from metric_benchmarks import enrich_metric_benchmarks
 from ml.model_loader import load_model_assets
 
 from .audit import record_audit
@@ -325,7 +326,7 @@ def model_status_payload(force_load=False):
         except Exception as exc:
             load_error = str(exc)
 
-    metrics = active.metrics if active else {}
+    metrics = enrich_metric_benchmarks(active.metrics) if active and isinstance(active.metrics, dict) else {}
     model_path = Path(active.path) if active and active.path else None
     model_file_exists = bool(model_path and model_path.exists())
     return {
@@ -335,6 +336,19 @@ def model_status_payload(force_load=False):
         "model_loaded": loaded,
         "last_trained_date": active.created_at.isoformat() if active and getattr(active, "created_at", None) else None,
         "validation_accuracy": metrics.get("val_accuracy") if isinstance(metrics, dict) else None,
+        "auc": (
+            metrics.get("test_auc")
+            or metrics.get("val_roc_auc")
+            or metrics.get("val_roc_auc_weighted_ovr")
+            or metrics.get("val_auc")
+            or metrics.get("auc")
+        ) if isinstance(metrics, dict) else None,
+        "sensitivity": (
+            metrics.get("test_sensitivity")
+            or metrics.get("val_sensitivity")
+            or metrics.get("sensitivity")
+            or metrics.get("val_recall_weighted")
+        ) if isinstance(metrics, dict) else None,
         "f1_score": (metrics.get("val_f1_score") or metrics.get("f1_score")) if isinstance(metrics, dict) else None,
         "load_error": load_error,
     }

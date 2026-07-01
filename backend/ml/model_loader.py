@@ -5,7 +5,7 @@ import joblib
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_DATASET_PATH = BACKEND_DIR / "datasets" / "oxygen_ml_virtual_dataset_100.csv"
+DEFAULT_DATASET_PATH = BACKEND_DIR / "datasets" / "kibagabaga_oxygen_dataset_cleaned_dataset.xlsx"
 DEFAULT_MODEL_PATH = BACKEND_DIR / "models" / "oxygen_virtual_dataset_random_forest.joblib"
 
 
@@ -46,7 +46,8 @@ def _active_model_artifact():
         artifact = active_model_artifact()
         if artifact and artifact.path:
             path = Path(artifact.path)
-            return artifact if path.exists() and _metadata_for(path) else None
+            metadata = _metadata_for(path)
+            return artifact if path.exists() and is_sigmoid_calibrated(metadata) else None
     except Exception:
         return None
     return None
@@ -58,6 +59,9 @@ def _latest_model_with_metadata():
         return None
 
     candidates = sorted(models_dir.glob("*.joblib"), key=lambda path: path.stat().st_mtime, reverse=True)
+    calibrated = [path for path in candidates if is_sigmoid_calibrated(_metadata_for(path))]
+    if calibrated:
+        return calibrated[0]
     return next((path for path in candidates if _metadata_for(path)), None)
 
 
@@ -66,6 +70,13 @@ def _metadata_for(model_path):
     if not metadata_path.exists():
         return None
     return json.loads(metadata_path.read_text())
+
+
+def is_sigmoid_calibrated(metadata):
+    if not metadata:
+        return False
+    method = metadata.get("calibration_method") or (metadata.get("calibration") or {}).get("method")
+    return str(method or "").strip().lower() == "sigmoid / platt scaling"
 
 
 def _train_default_model():

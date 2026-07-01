@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 
 from django.conf import settings
@@ -10,7 +11,11 @@ MODEL_NAME = "A Machine Learning Model for Predicting Postoperative Oxygen Requi
 
 
 def bootstrap_model_artifacts(models_dir=None):
+    custom_models_dir = models_dir is not None
     models_dir = Path(models_dir) if models_dir else Path(settings.BASE_DIR) / "models"
+    existing_active = ModelArtifact.objects.filter(is_active=True).first()
+    if not custom_models_dir and ModelArtifact.objects.exists():
+        return {"created": 0, "active": existing_active or ModelArtifact.objects.first()}
     if not models_dir.exists():
         return {"created": 0, "active": None}
 
@@ -65,7 +70,7 @@ def metadata_for(model_path):
 
 
 def metrics_from_metadata(metadata):
-    metrics = {}
+    metrics = dict(metadata.get("performance_metrics") or {})
     for key in (
         "row_count",
         "training_row_count",
@@ -76,10 +81,35 @@ def metrics_from_metadata(metadata):
         "categorical_feature_count",
         "dataset_cleaning",
         "model_parameters",
+        "class_weights",
+        "weighting_method",
+        "selected_threshold",
+        "threshold_selection",
+        "class_distribution",
+        "cross_validation",
+        "final_test_metrics",
+        "calibration",
+        "subgroup_report",
+        "top_predictors",
+        "random_seed",
+        "training_date",
+        "model_version",
     ):
         if key in metadata:
             metrics[key] = metadata[key]
-    return metrics
+    if isinstance(metadata.get("final_test_metrics"), dict):
+        metrics.update(metadata["final_test_metrics"])
+    return json_safe(metrics)
+
+
+def json_safe(value):
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    return value
 
 
 def model_type_from_name(name):

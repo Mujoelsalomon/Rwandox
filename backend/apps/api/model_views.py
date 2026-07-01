@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -42,12 +43,18 @@ def model_payload(artifact):
     duration_display = metrics.get("training_duration_display")
     dataset_path = metrics.get("dataset_path")
     dataset_name = metrics.get("dataset_name") or (Path(dataset_path).name if dataset_path else None)
+    auc_value = first_metric(metrics, "test_auc", "val_roc_auc", "val_roc_auc_weighted_ovr", "val_auc", "auc")
+    sensitivity_value = first_metric(metrics, "test_sensitivity", "val_sensitivity", "sensitivity", "val_recall_weighted")
     return {
         "id": artifact.id,
         "name": artifact.name,
         "model_type": artifact.model_type,
         "path": artifact.path,
         "metrics": metrics,
+        "auc": auc_value,
+        "sensitivity": sensitivity_value,
+        "auc_classification": metrics.get("auc_classification"),
+        "sensitivity_classification": metrics.get("sensitivity_classification"),
         "is_active": artifact.is_active,
         "created_at": artifact.created_at.isoformat() if artifact.created_at else None,
         "training_duration_seconds": duration_seconds,
@@ -59,6 +66,14 @@ def model_payload(artifact):
         "training_row_count": metrics.get("training_row_count"),
         "validation_row_count": metrics.get("validation_row_count"),
     }
+
+
+def first_metric(metrics, *keys):
+    for key in keys:
+        value = metrics.get(key)
+        if value is not None:
+            return value
+    return None
 
 
 @csrf_exempt
@@ -77,11 +92,28 @@ def models_activate_view(request):
     except (ModelArtifact.DoesNotExist, TypeError, ValueError):
         return cors(JsonResponse({"error": "model not found"}, status=404))
 
+    if not is_sigmoid_calibrated_artifact(artifact):
+        return cors(JsonResponse({
+            "error": "Only sigmoid / Platt-calibrated model artifacts can be activated for predictions."
+        }, status=400))
+
     ModelArtifact.objects.update(is_active=False)
     artifact.is_active = True
     artifact.save(update_fields=["is_active"])
     record_audit(request, "Activated model", object_type="ModelArtifact", object_id=artifact.id, details={"name": artifact.name})
     return cors(JsonResponse({"model": {"id": artifact.id, "name": artifact.name, "is_active": artifact.is_active}}))
+
+
+def is_sigmoid_calibrated_artifact(artifact):
+    metadata_path = Path(f"{artifact.path}.meta.json")
+    if not metadata_path.exists():
+        return False
+    try:
+        metadata = json.loads(metadata_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return False
+    method = metadata.get("calibration_method") or (metadata.get("calibration") or {}).get("method")
+    return str(method or "").strip().lower() == "sigmoid / platt scaling"
 
 
 def models_download_view(request):

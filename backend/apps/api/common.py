@@ -6,17 +6,18 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 
 
-def cors(resp):
+def cors(resp, request=None):
     allowed_origins = getattr(settings, "CORS_ALLOWED_ORIGINS", [])
     allowed_origin_regexes = getattr(settings, "CORS_ALLOWED_ORIGIN_REGEXES", [])
     fallback_origin = getattr(settings, "FRONTEND_ORIGIN", "http://localhost:5173")
-    request_origin = getattr(resp, "wsgi_request", None)
-    origin = fallback_origin
-    if request_origin:
-        request_origin = request_origin.headers.get("Origin")
-        if request_origin in allowed_origins or origin_matches_any(request_origin, allowed_origin_regexes):
-            origin = request_origin
-    resp["Access-Control-Allow-Origin"] = origin
+    request_origin = request.headers.get("Origin") if request else ""
+    existing_origin = resp.get("Access-Control-Allow-Origin")
+    if request_origin in allowed_origins or origin_matches_any(request_origin, allowed_origin_regexes):
+        resp["Access-Control-Allow-Origin"] = request_origin
+    elif existing_origin:
+        resp["Access-Control-Allow-Origin"] = existing_origin
+    elif request:
+        resp["Access-Control-Allow-Origin"] = fallback_origin
     resp["Access-Control-Allow-Credentials"] = "true"
     resp["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     resp["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-User-Email, X-User-Username, X-CSRFToken"

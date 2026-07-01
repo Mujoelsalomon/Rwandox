@@ -73,12 +73,7 @@ def predict_proba(model: Any, X):
         preds = model.predict(X)
         return preds
 
-    # fallback: use predict and assume output is probability-like
-    if hasattr(model, "predict"):
-        preds = model.predict(X)
-        return preds
-
-    raise RuntimeError("Model does not support prediction interface")
+    raise RuntimeError("Model does not support predict_proba; class labels cannot be used as probabilities")
 
 
 def save_model(model: Any, path: str):

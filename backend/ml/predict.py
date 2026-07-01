@@ -9,16 +9,20 @@ def make_prediction(payload, model=None, preprocessor=None, feature_order=None):
     row = {feature: _normalize_value(feature, payload.get(feature)) for feature in feature_order}
     frame = pd.DataFrame([row], columns=feature_order)
 
-    if hasattr(model, "predict_proba"):
-        probabilities = model.predict_proba(frame)[0]
-        classes = _class_labels(model, preprocessor)
-        positive_index = _positive_class_index(classes, probabilities)
-        probability = float(probabilities[positive_index])
-    else:
-        probability = float(model.predict(frame)[0])
+    probability_info = make_probability_payload(frame, model, preprocessor)
 
     factors = _contributing_factors(row)
-    return max(0.0, min(1.0, probability)), factors
+    return probability_info["calibrated_probability"], factors
+
+
+def make_prediction_with_probabilities(payload, model=None, preprocessor=None, feature_order=None):
+    if model is None:
+        raise RuntimeError("No trained prediction model is available.")
+
+    feature_order = feature_order or []
+    row = {feature: _normalize_value(feature, payload.get(feature)) for feature in feature_order}
+    frame = pd.DataFrame([row], columns=feature_order)
+    return make_probability_payload(frame, model, preprocessor), _contributing_factors(row)
 
 
 def make_predictions(payloads, model=None, preprocessor=None, feature_order=None):
@@ -32,19 +36,37 @@ def make_predictions(payloads, model=None, preprocessor=None, feature_order=None
     ]
     frame = pd.DataFrame(rows, columns=feature_order)
 
-    if hasattr(model, "predict_proba"):
-        probabilities = model.predict_proba(frame)
-        classes = _class_labels(model, preprocessor)
-        positive_index = _positive_class_index(classes, probabilities[0]) if len(probabilities) else 0
-        positive_probabilities = probabilities[:, positive_index]
-    else:
-        positive_probabilities = model.predict(frame)
+    probability_info = make_probability_payload(frame, model, preprocessor)
+    positive_probabilities = probability_info["calibrated_probabilities"]
+    raw_probabilities = probability_info["raw_probabilities"]
 
     results = []
-    for row, probability in zip(rows, positive_probabilities):
-        normalized_probability = max(0.0, min(1.0, float(probability)))
-        results.append((normalized_probability, _contributing_factors(row)))
+    for row, raw_probability, probability in zip(rows, raw_probabilities, positive_probabilities):
+        results.append(({
+            "raw_probability": float(raw_probability),
+            "calibrated_probability": float(probability),
+        }, _contributing_factors(row)))
     return results
+
+
+def make_probability_payload(frame, model, metadata):
+    if not hasattr(model, "predict_proba"):
+        raise RuntimeError("Loaded model must support predict_proba; class labels cannot be used as probabilities.")
+
+    calibrated_matrix = model.predict_proba(frame)
+    raw_matrix = model.raw_predict_proba(frame) if hasattr(model, "raw_predict_proba") else calibrated_matrix
+    calibrated_classes = _class_labels(model, metadata)
+    raw_classes = _raw_class_labels(model, metadata)
+    calibrated_index = _positive_class_index(calibrated_classes, calibrated_matrix[0])
+    raw_index = _positive_class_index(raw_classes, raw_matrix[0])
+    calibrated_probabilities = calibrated_matrix[:, calibrated_index]
+    raw_probabilities = raw_matrix[:, raw_index]
+    return {
+        "raw_probability": float(raw_probabilities[0]),
+        "calibrated_probability": float(calibrated_probabilities[0]),
+        "raw_probabilities": raw_probabilities,
+        "calibrated_probabilities": calibrated_probabilities,
+    }
 
 
 def _class_labels(model, metadata):
@@ -52,6 +74,19 @@ def _class_labels(model, metadata):
     if labels:
         return labels
     return list(getattr(model, "classes_", [0, 1]))
+
+
+def _raw_class_labels(model, metadata):
+    labels = (metadata or {}).get("class_labels")
+    if labels:
+        return labels
+    raw_model = getattr(model, "raw_pipeline", None)
+    if raw_model is not None:
+        try:
+            return list(getattr(raw_model.named_steps["model"], "classes_", [0, 1]))
+        except Exception:
+            return list(getattr(raw_model, "classes_", [0, 1]))
+    return _class_labels(model, metadata)
 
 
 def _positive_class_index(classes, probabilities):

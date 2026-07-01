@@ -17,10 +17,12 @@ function authHeaders(extraHeaders = {}) {
 
 function dashboardMetrics(activeModel, t, predictions) {
   const modelMetrics = activeModel?.metrics || {}
-  const aucMetric = modelMetrics.val_roc_auc
+  const aucMetric = modelMetrics.test_auc
+    ?? modelMetrics.val_roc_auc
     ?? modelMetrics.val_roc_auc_weighted_ovr
     ?? modelMetrics.val_auc
     ?? modelMetrics.auc
+    ?? activeModel?.test_auc
     ?? activeModel?.val_roc_auc
     ?? activeModel?.val_roc_auc_weighted_ovr
     ?? activeModel?.val_auc
@@ -28,13 +30,15 @@ function dashboardMetrics(activeModel, t, predictions) {
   const aucValue = formatModelMetric(
     aucMetric
   )
-  const f1Metric = modelMetrics.val_f1_score
-    ?? modelMetrics.f1_score
-    ?? modelMetrics.val_f1_macro
-    ?? activeModel?.val_f1_score
-    ?? activeModel?.f1_score
-    ?? activeModel?.val_f1_macro
-  const f1Value = formatModelMetric(f1Metric)
+  const sensitivityMetric = modelMetrics.test_sensitivity
+    ?? modelMetrics.val_sensitivity
+    ?? modelMetrics.sensitivity
+    ?? modelMetrics.val_recall_weighted
+    ?? activeModel?.test_sensitivity
+    ?? activeModel?.val_sensitivity
+    ?? activeModel?.sensitivity
+    ?? activeModel?.val_recall_weighted
+  const sensitivityValue = formatModelMetric(sensitivityMetric)
   const todayPredictions = predictions.filter(isTodayPrediction)
   const highRiskToday = todayPredictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
   const highRiskTotal = predictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
@@ -84,15 +88,15 @@ function dashboardMetrics(activeModel, t, predictions) {
     iconTone: 'purple',
   },
   {
-    label: t('modelF1Score'),
-    value: f1Value,
-    sub: t('balancePrecisionRecall'),
-    chip: f1Value === 'No data' ? t('noData', { defaultValue: 'No data' }) : (
-      modelMetrics.f1_classification
-      || modelMetrics.val_f1_score_classification
-      || modelMetrics.f1_score_classification
-      || modelMetrics.val_f1_macro_classification
-      || f1Classification(f1Metric)
+    label: t('modelSensitivity'),
+    value: sensitivityValue,
+    sub: t('oxygenRequirementDetection'),
+    chip: sensitivityValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : (
+      modelMetrics.test_sensitivity_classification
+      || modelMetrics.val_sensitivity_classification
+      || modelMetrics.sensitivity_classification
+      || modelMetrics.val_recall_weighted_classification
+      || sensitivityClassification(sensitivityMetric)
     ),
     chipTone: 'teal',
     icon: 'checkCircle',
@@ -485,7 +489,7 @@ function RecentPredictionsTable({ loading, predictions, status }) {
                   <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.surgery_type || t('notRecorded')}</td>
                   <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.patient_disposition || t('notRecorded')}</td>
                   <td className="min-w-[150px] px-5 py-4"><RiskBadge risk={prediction.risk_level} /></td>
-                  <td className="table-body px-5 py-4 font-black text-[#071b49]">{Math.round(Number(prediction.predicted_probability || 0))}%</td>
+                  <td className="table-body px-5 py-4 font-black text-[#071b49]">{displayPredictionProbability(prediction)}</td>
                   <td className="table-body break-words px-5 py-4 font-semibold text-[#334766]">{prediction.model_version || t('notRecorded')}</td>
                 </tr>
               ))
@@ -559,6 +563,7 @@ function normalizeEventPrediction(prediction) {
     surgery_type: prediction.surgery_type || prediction.type_of_surgery || 'Not recorded',
     patient_disposition: prediction.patient_disposition || dispositionFromRisk(riskLevel),
     predicted_probability: probability,
+    display_probability: prediction.display_probability || formatDisplayProbability(prediction.calibrated_probability ?? prediction.predicted_probability ?? prediction.probability),
     risk_level: riskLevel,
     model_version: prediction.model_version || prediction.active_model || 'Not recorded',
     generated_at: prediction.generated_at,
@@ -572,6 +577,19 @@ function normalizeProbability(value) {
   if (!Number.isFinite(numeric)) return 0
   const percent = numeric <= 1 ? numeric * 100 : numeric
   return Math.min(100, Math.max(0, Math.round(percent)))
+}
+
+function formatDisplayProbability(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 'Not available'
+  const probability = numeric > 1 ? numeric / 100 : numeric
+  if (probability <= 0.01) return '<1%'
+  if (probability >= 0.99) return '>99%'
+  return `${(probability * 100).toFixed(1)}%`
+}
+
+function displayPredictionProbability(prediction) {
+  return prediction.display_probability || formatDisplayProbability(prediction.calibrated_probability ?? prediction.predicted_probability)
 }
 
 function riskFromProbability(probability) {
@@ -832,14 +850,14 @@ function aucClassification(value) {
   return 'No data'
 }
 
-function f1Classification(value) {
+function sensitivityClassification(value) {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return 'No data'
   const normalized = numeric > 1 ? numeric / 100 : numeric
-  if (normalized >= 0.9 && normalized <= 1) return 'Outstanding/Perfect'
-  if (normalized >= 0.8 && normalized < 0.9) return 'Very Good/Excellent'
+  if (normalized >= 0.9 && normalized <= 1) return 'Excellent detection'
+  if (normalized >= 0.8 && normalized < 0.9) return 'Strong detection'
   if (normalized >= 0.7 && normalized < 0.8) return 'Good'
-  if (normalized >= 0.5 && normalized < 0.7) return 'Acceptable/Fair'
+  if (normalized >= 0.5 && normalized < 0.7) return 'Needs review'
   return 'Needs Review'
 }
 

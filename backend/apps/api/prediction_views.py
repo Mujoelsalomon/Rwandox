@@ -2,10 +2,12 @@ import base64
 import csv
 import io
 import mimetypes
+import uuid
 from html import escape
 from pathlib import Path
 
 from django.conf import settings
+from django.db import DataError
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
@@ -42,18 +44,20 @@ def predict_view(request):
 
     payload = json_body(request)
     features = payload.get("features") or payload
-    result = run_prediction(features)
+    try:
+        result = run_prediction(features)
+    except Exception as exc:
+        return cors(JsonResponse({"error": f"Prediction service error: {exc}"}, status=400))
+
     if not bool_value(payload.get("persist", True)):
         record_audit(request, "Generated preview prediction", object_type="PredictionResult")
         return cors(JsonResponse(prediction_response_payload(result)))
 
-    hospital_id = str(features.get("patient_coded_id") or features.get("hospital_id") or "").strip()
-    if not hospital_id:
-        return cors(JsonResponse({
-            "error": "A real patient hospital ID is required before saving a prediction.",
-        }, status=400))
+    try:
+        result = persist_prediction(features, payload, result)
+    except DataError as exc:
+        return cors(JsonResponse({"error": f"Could not save prediction result: {exc}"}, status=400))
 
-    result = persist_prediction(features, payload, result)
     record_audit(
         request,
         "Generated prediction",
@@ -115,6 +119,9 @@ def predict_dataset_view(request):
     for row_index, result in zip(row_indices, row_results):
         predictions.append({
             "row_index": row_index,
+            "raw_probability": result.get("raw_probability"),
+            "calibrated_probability": result.get("calibrated_probability"),
+            "display_probability": result.get("display_probability"),
             "predicted_probability": result.get("predicted_probability"),
             "predicted_class": result.get("predicted_class"),
             "risk_level": result.get("risk_level"),
@@ -1054,9 +1061,7 @@ def prediction_response_payload(result):
 
 
 def persist_prediction(features, payload, result):
-    hospital_id = str(features.get("patient_coded_id") or features.get("hospital_id") or "").strip()
-    if not hospital_id:
-        raise ValueError("A real patient hospital ID is required before saving a prediction.")
+    hospital_id = prediction_patient_identifier(features)
     urgency = str(features.get("urgency") or "elective").lower()
     if urgency not in {"elective", "emergency"}:
         urgency = "emergency" if "emerg" in urgency else "elective"
@@ -1096,12 +1101,17 @@ def persist_prediction(features, payload, result):
         active_model = ModelArtifact.objects.filter(is_active=True).first()
         prediction = PredictionResult.objects.create(
             record=record,
-            predicted_probability=float(result.get("predicted_probability") or result.get("probability") or 0),
+            raw_probability=float(result.get("raw_probability") if result.get("raw_probability") is not None else result.get("predicted_probability") or result.get("probability") or 0),
+            calibrated_probability=float(result.get("calibrated_probability") if result.get("calibrated_probability") is not None else result.get("predicted_probability") or result.get("probability") or 0),
+            display_probability=str(result.get("display_probability") or ""),
+            predicted_probability=float(result.get("calibrated_probability") if result.get("calibrated_probability") is not None else result.get("predicted_probability") or result.get("probability") or 0),
             predicted_class=str(result.get("predicted_class") or ""),
             risk_level=str(result.get("risk_level") or ""),
+            selected_threshold=float_value(result.get("selected_threshold")),
+            model_name=str(result.get("model_name") or result.get("active_model") or "")[:200],
             recommendations=result.get("recommendations") or [],
             contributing_factors=result.get("contributing_factors") or result.get("factors") or [],
-            model_version=active_model.name if active_model else str(payload.get("model_type") or "Not recorded"),
+            model_version=prediction_model_version(active_model, payload),
         )
 
     result["id"] = prediction.id
@@ -1109,3 +1119,17 @@ def persist_prediction(features, payload, result):
     result["model_version"] = prediction.model_version
     result["generated_at"] = prediction.generated_at.isoformat()
     return result
+
+
+def prediction_patient_identifier(features):
+    hospital_id = str(features.get("patient_coded_id") or features.get("hospital_id") or "").strip()
+    if hospital_id:
+        return hospital_id[:50]
+    timestamp = timezone.now().strftime("%Y%m%d%H%M%S")
+    return f"UNRECORDED-{timestamp}-{uuid.uuid4().hex[:8]}"[:50]
+
+
+def prediction_model_version(active_model, payload):
+    model_version = active_model.name if active_model else str(payload.get("model_type") or "Not recorded")
+    max_length = PredictionResult._meta.get_field("model_version").max_length
+    return str(model_version or "Not recorded")[:max_length]

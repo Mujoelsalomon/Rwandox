@@ -51,6 +51,8 @@
   "latestValidatedVersion": "Latest validated version",
   "modelF1Score": "Model F1-score",
   "balancePrecisionRecall": "Balance of precision and recall",
+  "modelSensitivity": "Model sensitivity",
+  "oxygenRequirementDetection": "Oxygen requirement detection",
   "critical": "Critical",
   "excellent": "Excellent",
   "strong": "Strong",

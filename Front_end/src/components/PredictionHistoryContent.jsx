@@ -284,7 +284,7 @@ export default function PredictionHistoryContent() {
                     <td className="table-body px-4 py-3">{prediction.surgery_type || t('notRecorded')}</td>
                     <td className="table-body px-4 py-3">{prediction.patient_disposition || t('notRecorded')}</td>
                     <td className="table-body px-4 py-3"><RiskBadge risk={prediction.risk_level} /></td>
-                    <td className="table-body px-4 py-3 fw-bold" style={{ color: '#071b49' }}>{Math.round(Number(prediction.predicted_probability || 0))}%</td>
+                    <td className="table-body px-4 py-3 fw-bold" style={{ color: '#071b49' }}>{displayPredictionProbability(prediction)}</td>
                     <td className="table-body px-4 py-3">{prediction.model_version || t('notRecorded')}</td>
                     <td className="table-body px-4 py-3 text-secondary" style={{ minWidth: 280 }}>
                       <ClinicalNote prediction={prediction} onOpen={() => setSelectedPrediction(prediction)} />
@@ -421,7 +421,7 @@ function ClinicalNote({ prediction, onOpen }) {
 
 function PredictionDetailModal({ prediction, onClose }) {
   const { t } = useTranslation()
-  const probability = Math.round(Number(prediction.predicted_probability || 0))
+  const probability = displayPredictionProbability(prediction)
   const factors = normalizeFactors(prediction.contributing_factors)
   const carePlan = buildCarePlan(prediction, t)
 
@@ -624,6 +624,16 @@ function isVeryCriticalPrediction(prediction) {
     || factors.some((factor) => factor.includes('emergency') && factor.includes('asa iii'))
 }
 
+function displayPredictionProbability(prediction) {
+  if (prediction.display_probability) return prediction.display_probability
+  const numeric = Number(prediction.calibrated_probability ?? prediction.predicted_probability)
+  if (!Number.isFinite(numeric)) return 'Not available'
+  const probability = numeric > 1 ? numeric / 100 : numeric
+  if (probability <= 0.01) return '<1%'
+  if (probability >= 0.99) return '>99%'
+  return `${(probability * 100).toFixed(1)}%`
+}
+
 function buildPredictionHistoryReport({ filters, generatedAt, logoDataUrl, predictions, summary, title }) {
   const rows = predictions.map((prediction) => ({
     generated: formatDate(prediction.generated_at),
@@ -633,7 +643,7 @@ function buildPredictionHistoryReport({ filters, generatedAt, logoDataUrl, predi
     surgery: prediction.surgery_type || 'Not recorded',
     disposition: prediction.patient_disposition || 'Not recorded',
     risk: prediction.risk_level || 'Unknown',
-    probability: `${Math.round(Number(prediction.predicted_probability || 0))}%`,
+    probability: displayPredictionProbability(prediction),
     model: prediction.model_version || 'Not recorded',
     clinicalNote: clinicalNote(prediction),
   }))
