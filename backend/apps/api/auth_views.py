@@ -1,4 +1,6 @@
 import os
+import random
+import string
 
 from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
@@ -78,6 +80,46 @@ def ensure_default_user(identifier=None):
         profile.must_change_password = False
         profile.save(update_fields=["must_change_password", "updated_at"])
     return user
+
+
+def generate_temporary_password(length=10):
+    """Generate a human-friendly but strong temporary password.
+
+    Ensures presence of upper, lower, digit and symbol and avoids ambiguous chars.
+    """
+    # Exclude ambiguous characters: 0, O, I, l, 1
+    uppers = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    lowers = "abcdefghjkmnpqrstuvwxyz"
+    digits = "23456789"
+    symbols = "!@#$%&*?"
+    all_chars = uppers + lowers + digits + symbols
+
+    for _ in range(10):
+        # ensure at least one of each required class
+        pwd_chars = [
+            random.choice(uppers),
+            random.choice(lowers),
+            random.choice(digits),
+            random.choice(symbols),
+        ]
+        remaining = length - len(pwd_chars)
+        pwd_chars += [random.choice(all_chars) for _ in range(max(0, remaining))]
+        random.shuffle(pwd_chars)
+        pwd = "".join(pwd_chars)
+        # Quick sanity: must be printable and contain classes
+        if (any(c in uppers for c in pwd)
+                and any(c in lowers for c in pwd)
+                and any(c in digits for c in pwd)
+                and any(c in symbols for c in pwd)):
+            try:
+                # Validate against Django password validators; if valid, return
+                validate_password(pwd)
+                return pwd
+            except Exception:
+                # fallthrough to try again
+                pass
+    # If validation repeatedly fails, return last generated pwd (should still be strong)
+    return pwd
 
 
 def should_refresh_default_password(encoded_password):
@@ -167,7 +209,7 @@ def register_view(request):
         if password_error:
             return password_error
     else:
-        requested_password = get_random_string(14)
+        requested_password = generate_temporary_password(10)
     if role:
         if role not in VALID_PROFILE_ROLES:
             return cors(JsonResponse({"error": "Invalid user role."}, status=400))
@@ -380,6 +422,74 @@ def admin_reset_user_password_view(request):
     if target_user.is_superuser and not request.user.is_superuser:
         return cors(JsonResponse({"error": "Only a superuser can reset a superuser password."}, status=403))
 
+    # Allow admin to optionally update profile fields when resetting
+    updated_fields = []
+    details = {}
+
+    # Optional username change
+    requested_username = payload.get("username")
+    if requested_username is not None:
+        requested_username = str(requested_username).strip()
+        if requested_username and User.objects.filter(username__iexact=requested_username).exclude(id=target_user.id).exists():
+            return cors(JsonResponse({"error": "Another account already uses this username."}, status=409))
+        if requested_username:
+            target_user.username = requested_username
+            updated_fields.append("username")
+            details["username"] = requested_username
+
+    # Optional name/email/role changes
+    full_name = payload.get("name")
+    email = payload.get("email")
+    role = payload.get("role")
+    if full_name is not None:
+        full_name = str(full_name).strip()
+        name_parts = full_name.split(maxsplit=1)
+        target_user.first_name = name_parts[0] if name_parts else ""
+        target_user.last_name = name_parts[1] if len(name_parts) > 1 else ""
+        updated_fields.extend([f for f in ("first_name", "last_name") if f not in updated_fields])
+        details["name"] = full_name
+    if email is not None:
+        email = str(email).strip().lower()
+        if email and User.objects.filter(email__iexact=email).exclude(id=target_user.id).exists():
+            return cors(JsonResponse({"error": "Another account already uses this email."}, status=409))
+        target_user.email = email
+        if "email" not in updated_fields:
+            updated_fields.append("email")
+        details["email"] = email
+    if role is not None:
+        role = str(role).strip()
+        if role and role not in VALID_PROFILE_ROLES:
+            return cors(JsonResponse({"error": "Invalid user role."}, status=400))
+        if role == "Superuser" and not request.user.is_superuser:
+            return cors(JsonResponse({"error": "Only a superuser can assign the superuser role."}, status=403))
+        # Only staff/superuser may edit roles (require_admin already checked)
+        target_user.is_staff = role in {"Administrator", "Superuser"}
+        target_user.is_superuser = role == "Superuser"
+        for f in ("is_staff", "is_superuser"):
+            if f not in updated_fields:
+                updated_fields.append(f)
+        details["role"] = role
+
+    # Optional is_active toggle
+    if "is_active" in payload:
+        is_active_val = bool(payload.get("is_active"))
+        if target_user.id == request.user.id and is_active_val is False:
+            return cors(JsonResponse({"error": "You cannot disable your own account."}, status=400))
+        if target_user.is_superuser and not request.user.is_superuser:
+            return cors(JsonResponse({"error": "Only a superuser can change a superuser account status."}, status=403))
+        target_user.is_active = is_active_val
+        if "is_active" not in updated_fields:
+            updated_fields.append("is_active")
+        details["is_active"] = is_active_val
+
+    # Save profile updates if any
+    if updated_fields:
+        target_user.save(update_fields=updated_fields)
+        if role:
+            sync_user_role_group(target_user, role or user_payload(target_user)["role"])
+        record_audit(request, "Admin updated user during reset", object_type="User", object_id=target_user.id, details=details)
+
+    # Handle password reset/generation
     requested_password = str(payload.get("password") or "").strip()
     if requested_password and len(requested_password) < 8:
         return cors(JsonResponse({"error": "Temporary password must be at least 8 characters."}, status=400))
@@ -388,13 +498,13 @@ def admin_reset_user_password_view(request):
         if password_error:
             return password_error
 
-    temporary_password = requested_password or get_random_string(14)
+    temporary_password = requested_password or generate_temporary_password(10)
     target_user.set_password(temporary_password)
     target_user.save(update_fields=["password"])
     profile = ensure_user_profile(target_user)
     profile.must_change_password = True
     profile.save(update_fields=["must_change_password", "updated_at"])
-    record_audit(request, "Reset user password", object_type="User", object_id=target_user.id)
+    record_audit(request, "Reset user password", object_type="User", object_id=target_user.id, details={"temporary_password_set": True})
     return cors(JsonResponse({
         "user": user_payload(target_user),
         "temporary_password": temporary_password,

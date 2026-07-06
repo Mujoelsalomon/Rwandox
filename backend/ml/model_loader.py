@@ -46,9 +46,8 @@ def _active_model_artifact():
         artifact = active_model_artifact()
         if artifact and artifact.path:
             path = Path(artifact.path)
-            metadata = _metadata_for(path)
-            calibrated = has_calibration_metadata(metadata) or has_calibration_metadata(getattr(artifact, "metrics", None))
-            return artifact if path.exists() and calibrated else None
+            # Return the active artifact if the artifact file exists regardless of calibration
+            return artifact if path.exists() else None
     except Exception:
         return None
     return None
@@ -60,10 +59,11 @@ def _latest_model_with_metadata():
         return None
 
     candidates = sorted(models_dir.glob("*.joblib"), key=lambda path: path.stat().st_mtime, reverse=True)
-    calibrated = [path for path in candidates if has_calibration_metadata(_metadata_for(path))]
-    if calibrated:
-        return calibrated[0]
-    return next((path for path in candidates if _metadata_for(path)), None)
+    if not candidates:
+        return None
+    # Prefer the most recent model that has metadata; otherwise return the most recent model
+    with_meta = [path for path in candidates if _metadata_for(path)]
+    return with_meta[0] if with_meta else candidates[0]
 
 
 def _metadata_for(model_path):

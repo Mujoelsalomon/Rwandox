@@ -1,0 +1,427 @@
+﻿{
+    "model":  {
+                  "id":  97,
+                  "name":  "A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda",
+                  "model_type":  "xgboost",
+                  "path":  "C:\\Users\\HP-\\Desktop\\OXYGEN_PREDICTOR_PROJECT\\backend\\models\\xgboost_model_1782909604.joblib",
+                  "metrics":  {
+                                  "f1_score":  0.5658835546475995,
+                                  "test_auc":  0.8174623194803557,
+                                  "calibration":  {
+                                                      "method":  "Sigmoid / Platt scaling",
+                                                      "summary":  "Lower Brier score indicates better probability calibration.",
+                                                      "fit_data":  "training_split_only",
+                                                      "n_splits":  5,
+                                                      "brier_score":  0.14569026012557354,
+                                                      "cv_strategy":  "StratifiedKFold",
+                                                      "curve_method":  "uniform-bin reliability curve on untouched final test set",
+                                                      "test_set_usage":  "never used for calibration, threshold selection, oversampling, or model fitting",
+                                                      "fraction_of_positives":  [
+                                                                                    0.06756756756756757,
+                                                                                    0.12087912087912088,
+                                                                                    0.22058823529411764,
+                                                                                    0.35555555555555557,
+                                                                                    0.4827586206896552,
+                                                                                    0.45588235294117646,
+                                                                                    0.6666666666666666,
+                                                                                    0.7529411764705882,
+                                                                                    0.8571428571428571
+                                                                                ],
+                                                      "mean_predicted_probability":  [
+                                                                                         0.06834419759080658,
+                                                                                         0.14487244581370953,
+                                                                                         0.25204120670620356,
+                                                                                         0.34445596080519664,
+                                                                                         0.4507862992483194,
+                                                                                         0.5526656321428646,
+                                                                                         0.6446508033864573,
+                                                                                         0.7518141771762111,
+                                                                                         0.8142852095208587
+                                                                                     ]
+                                                  },
+                                  "sensitivity":  0.8821656050955414,
+                                  "specificity":  0.5198019801980198,
+                                  "val_roc_auc":  0.8174623194803557,
+                                  "dataset_name":  "148a9d9d253d47758cbf8d0c2ae4f075_kibagabaga_oxygen_dataset__cleaned_dataset.xlsx",
+                                  "dataset_path":  "C:\\Users\\HP-\\Desktop\\OXYGEN_PREDICTOR_PROJECT\\backend\\media\\uploads\\148a9d9d253d47758cbf8d0c2ae4f075_kibagabaga_oxygen_dataset__cleaned_dataset.xlsx",
+                                  "val_accuracy":  0.6212121212121212,
+                                  "val_f1_macro":  0.5658835546475995,
+                                  "val_f1_score":  0.5658835546475995,
+                                  "class_weights":  {
+                                                        "formula":  "number_of_negative_training_cases / number_of_positive_training_cases",
+                                                        "computed_from":  "training_split_only",
+                                                        "negative_cases":  1885,
+                                                        "positive_cases":  731,
+                                                        "positive_class_weight":  2.5786593707250343
+                                                    },
+                                  "feature_count":  36,
+                                  "test_accuracy":  0.6212121212121212,
+                                  "test_f1_score":  0.5658835546475995,
+                                  "test_f2_score":  0.7209786569495055,
+                                  "test_precision":  0.41654135338345866,
+                                  "top_predictors":  [
+                                                         {
+                                                             "rank":  1,
+                                                             "predictor":  "postoperative_destination",
+                                                             "importance":  0.309671014547348,
+                                                             "contribution_percent":  30.967101613356785,
+                                                             "contribution_probability":  0.30967101613356784
+                                                         },
+                                                         {
+                                                             "rank":  2,
+                                                             "predictor":  "asa_class",
+                                                             "importance":  0.2375140292569995,
+                                                             "contribution_percent":  23.751403047361148,
+                                                             "contribution_probability":  0.23751403047361147
+                                                         },
+                                                         {
+                                                             "rank":  3,
+                                                             "predictor":  "anesthesia_type",
+                                                             "importance":  0.11577007826417685,
+                                                             "contribution_percent":  11.577007885718293,
+                                                             "contribution_probability":  0.11577007885718293
+                                                         },
+                                                         {
+                                                             "rank":  4,
+                                                             "predictor":  "baseline_room_air_spo2_percent",
+                                                             "importance":  0.04694011062383652,
+                                                             "contribution_percent":  4.694011086427664,
+                                                             "contribution_probability":  0.04694011086427664
+                                                         },
+                                                         {
+                                                             "rank":  5,
+                                                             "predictor":  "estimated_blood_loss_ml",
+                                                             "importance":  0.046271901577711105,
+                                                             "contribution_percent":  4.627190181472847,
+                                                             "contribution_probability":  0.04627190181472847
+                                                         },
+                                                         {
+                                                             "rank":  6,
+                                                             "predictor":  "type_of_surgery_performed",
+                                                             "importance":  0.04334263736382127,
+                                                             "contribution_percent":  4.334263758583414,
+                                                             "contribution_probability":  0.04334263758583414
+                                                         },
+                                                         {
+                                                             "rank":  7,
+                                                             "predictor":  "duration_of_surgery_minutes",
+                                                             "importance":  0.02529960684478283,
+                                                             "contribution_percent":  2.529960697437435,
+                                                             "contribution_probability":  0.02529960697437435
+                                                         },
+                                                         {
+                                                             "rank":  8,
+                                                             "predictor":  "preoperative_hemoglobin_gdl",
+                                                             "importance":  0.02479219250380993,
+                                                             "contribution_percent":  2.4792192630802337,
+                                                             "contribution_probability":  0.024792192630802335
+                                                         },
+                                                         {
+                                                             "rank":  9,
+                                                             "predictor":  "baseline_heart_rate_bpm",
+                                                             "importance":  0.0200946144759655,
+                                                             "contribution_percent":  2.0094614578895627,
+                                                             "contribution_probability":  0.020094614578895626
+                                                         },
+                                                         {
+                                                             "rank":  10,
+                                                             "predictor":  "ward_or_service",
+                                                             "importance":  0.019874177873134613,
+                                                             "contribution_percent":  1.98741779749356,
+                                                             "contribution_probability":  0.0198741779749356
+                                                         }
+                                                     ],
+                                  "subgroup_report":  [
+                                                          {
+                                                              "predictor":  "copd_or_asthma",
+                                                              "sample_size":  27,
+                                                              "sensitivity":  1.0,
+                                                              "class_labels":  [
+                                                                                   "No",
+                                                                                   "Yes"
+                                                                               ],
+                                                              "present_value":  "Yes/true/present",
+                                                              "weighting_note":  "Predictor retained as a normal feature; no extra predictor-specific weight applied.",
+                                                              "false_negatives":  0,
+                                                              "confidence_interval":  {
+                                                                                          "lower":  0.8513404742740388,
+                                                                                          "upper":  1.0,
+                                                                                          "method":  "Wilson"
+                                                                                      },
+                                                              "observed_oxygen_requirement_rate":  0.8148148148148148
+                                                          },
+                                                          {
+                                                              "predictor":  "sleep_apnea",
+                                                              "sample_size":  22,
+                                                              "sensitivity":  1.0,
+                                                              "class_labels":  [
+                                                                                   "No",
+                                                                                   "Yes"
+                                                                               ],
+                                                              "present_value":  "Yes/true/present",
+                                                              "weighting_note":  "Predictor retained as a normal feature; no extra predictor-specific weight applied.",
+                                                              "false_negatives":  0,
+                                                              "confidence_interval":  {
+                                                                                          "lower":  0.7008472464490407,
+                                                                                          "upper":  1.0,
+                                                                                          "method":  "Wilson"
+                                                                                      },
+                                                              "observed_oxygen_requirement_rate":  0.4090909090909091
+                                                          }
+                                                      ],
+                                  "training_job_id":  "0eee25c3d8444c93b1591f58d9f801b7",
+                                  "val_brier_score":  0.14569026012557354,
+                                  "val_sensitivity":  0.8821656050955414,
+                                  "val_specificity":  0.5198019801980198,
+                                  "confusion_matrix":  [
+                                                           [
+                                                               420,
+                                                               388
+                                                           ],
+                                                           [
+                                                               37,
+                                                               277
+                                                           ]
+                                                       ],
+                                  "cross_validation":  {
+                                                           "folds":  [
+                                                                         {
+                                                                             "f1":  0.5630354957160343,
+                                                                             "auc":  0.8249712853712018,
+                                                                             "fold":  1,
+                                                                             "sensitivity":  0.9426229508196722,
+                                                                             "calibration_method":  "Sigmoid / Platt scaling",
+                                                                             "calibration_fit_data":  "training_split_only",
+                                                                             "weight_computed_from":  "training_cv_fold_only",
+                                                                             "positive_class_weight":  2.5811088295687883
+                                                                         },
+                                                                         {
+                                                                             "f1":  0.5640362225097024,
+                                                                             "auc":  0.8151561031638301,
+                                                                             "fold":  2,
+                                                                             "sensitivity":  0.8934426229508197,
+                                                                             "calibration_method":  "Sigmoid / Platt scaling",
+                                                                             "calibration_fit_data":  "training_split_only",
+                                                                             "weight_computed_from":  "training_cv_fold_only",
+                                                                             "positive_class_weight":  2.5811088295687883
+                                                                         },
+                                                                         {
+                                                                             "f1":  0.5834464043419267,
+                                                                             "auc":  0.8131268523425387,
+                                                                             "fold":  3,
+                                                                             "sensitivity":  0.8847736625514403,
+                                                                             "calibration_method":  "Sigmoid / Platt scaling",
+                                                                             "calibration_fit_data":  "training_split_only",
+                                                                             "weight_computed_from":  "training_cv_fold_only",
+                                                                             "positive_class_weight":  2.5737704918032787
+                                                                         }
+                                                                     ],
+                                                           "std_f1":  0.01150624326043697,
+                                                           "mean_f1":  0.5701727075225544,
+                                                           "std_auc":  0.006334380454184172,
+                                                           "mean_auc":  0.8177514136258569,
+                                                           "strategy":  "stratified cross-validation on training split only",
+                                                           "threshold_rule":  "maximize F2-score on stratified CV training folds, tie-break by sensitivity then fewer false negatives",
+                                                           "training_cv_f2":  0.7331838565022422,
+                                                           "std_sensitivity":  0.031199347420618778,
+                                                           "mean_sensitivity":  0.9069464121073106,
+                                                           "model_parameters":  {
+                                                                                    "gamma":  null,
+                                                                                    "device":  null,
+                                                                                    "n_jobs":  1,
+                                                                                    "booster":  null,
+                                                                                    "max_bin":  null,
+                                                                                    "missing":  null,
+                                                                                    "callbacks":  null,
+                                                                                    "max_depth":  2,
+                                                                                    "objective":  "binary:logistic",
+                                                                                    "reg_alpha":  null,
+                                                                                    "subsample":  0.9,
+                                                                                    "verbosity":  null,
+                                                                                    "base_score":  null,
+                                                                                    "max_leaves":  null,
+                                                                                    "reg_lambda":  null,
+                                                                                    "eval_metric":  "logloss",
+                                                                                    "grow_policy":  null,
+                                                                                    "tree_method":  null,
+                                                                                    "n_estimators":  80,
+                                                                                    "random_state":  42,
+                                                                                    "feature_types":  null,
+                                                                                    "learning_rate":  0.06,
+                                                                                    "max_delta_step":  null,
+                                                                                    "multi_strategy":  null,
+                                                                                    "feature_weights":  null,
+                                                                                    "importance_type":  null,
+                                                                                    "sampling_method":  null,
+                                                                                    "colsample_bynode":  null,
+                                                                                    "colsample_bytree":  0.9,
+                                                                                    "min_child_weight":  null,
+                                                                                    "scale_pos_weight":  2.5786593707250343,
+                                                                                    "colsample_bylevel":  null,
+                                                                                    "max_cat_threshold":  null,
+                                                                                    "max_cat_to_onehot":  null,
+                                                                                    "num_parallel_tree":  null,
+                                                                                    "enable_categorical":  false,
+                                                                                    "validate_parameters":  null,
+                                                                                    "monotone_constraints":  null,
+                                                                                    "early_stopping_rounds":  null,
+                                                                                    "interaction_constraints":  null
+                                                                                },
+                                                           "selected_threshold":  0.15
+                                                       },
+                                  "dataset_cleaning":  {
+                                                           "notes":  [
+                                                                         "Empty rows or columns were removed."
+                                                                     ],
+                                                           "final_row_count":  3738,
+                                                           "renamed_columns":  [
+
+                                                                               ],
+                                                           "final_column_count":  44,
+                                                           "original_row_count":  3738,
+                                                           "dropped_empty_columns":  [
+                                                                                         "reason_for_exclusion"
+                                                                                     ],
+                                                           "original_column_count":  45,
+                                                           "dropped_empty_row_count":  0,
+                                                           "trimmed_text_cell_count":  0,
+                                                           "numeric_text_columns_converted":  [
+
+                                                                                              ],
+                                                           "dropped_missing_target_row_count":  0,
+                                                           "infinite_values_converted_to_missing":  0,
+                                                           "blank_text_values_converted_to_missing":  0
+                                                       },
+                                  "test_brier_score":  0.14569026012557354,
+                                  "test_sensitivity":  0.8821656050955414,
+                                  "test_specificity":  0.5198019801980198,
+                                  "val_recall_macro":  0.8821656050955414,
+                                  "weighting_method":  "scale_pos_weight=2.5787, computed from training data only",
+                                  "f1_classification":  "Acceptable/Fair",
+                                  "auc_classification":  "Excellent",
+                                  "class_distribution":  {
+                                                             "test":  {
+                                                                          "total":  1122,
+                                                                          "negative":  808,
+                                                                          "positive":  314,
+                                                                          "positive_rate":  0.2798573975044563
+                                                                      },
+                                                             "split":  "stratified 70:30 train:test",
+                                                             "overall":  {
+                                                                             "total":  3738,
+                                                                             "negative":  2693,
+                                                                             "positive":  1045,
+                                                                             "positive_rate":  0.2795612627073301
+                                                                         },
+                                                             "training":  {
+                                                                              "total":  2616,
+                                                                              "negative":  1885,
+                                                                              "positive":  731,
+                                                                              "positive_rate":  0.279434250764526
+                                                                          },
+                                                             "test_set_policy":  "final test set is untouched; no class weighting, resampling, SMOTE, or threshold tuning is applied to it"
+                                                         },
+                                  "final_test_metrics":  {
+                                                             "test_auc":  0.8174623194803557,
+                                                             "test_accuracy":  0.6212121212121212,
+                                                             "test_f1_score":  0.5658835546475995,
+                                                             "test_f2_score":  0.7209786569495055,
+                                                             "test_precision":  0.41654135338345866,
+                                                             "confusion_matrix":  [
+                                                                                      [
+                                                                                          420,
+                                                                                          388
+                                                                                      ],
+                                                                                      [
+                                                                                          37,
+                                                                                          277
+                                                                                      ]
+                                                                                  ],
+                                                             "test_brier_score":  0.14569026012557354,
+                                                             "test_sensitivity":  0.8821656050955414,
+                                                             "test_specificity":  0.5198019801980198,
+                                                             "test_balanced_accuracy":  0.7009837926467806,
+                                                             "confusion_matrix_labels":  [
+                                                                                             "No",
+                                                                                             "Yes"
+                                                                                         ],
+                                                             "test_auc_classification":  "Excellent",
+                                                             "test_false_negative_rate":  0.1178343949044586,
+                                                             "test_sensitivity_classification":  "Strong detection"
+                                                         },
+                                  "selected_threshold":  0.15,
+                                  "training_row_count":  2616,
+                                  "threshold_selection":  {
+                                                              "rule":  "maximize F2-score on stratified CV training folds, tie-break by sensitivity then fewer false negatives",
+                                                              "f2_score":  0.7331838565022422,
+                                                              "threshold":  0.15,
+                                                              "sensitivity":  0.8946648426812586,
+                                                              "false_negatives":  77
+                                                          },
+                                  "val_precision_macro":  0.41654135338345866,
+                                  "val_recall_weighted":  0.8821656050955414,
+                                  "raw_test_brier_score":  0.17667588591575623,
+                                  "validation_row_count":  1122,
+                                  "classification_report":  {
+                                                                "No":  {
+                                                                           "recall":  0.5198019801980198,
+                                                                           "support":  808.0,
+                                                                           "f1-score":  0.6640316205533597,
+                                                                           "precision":  0.9190371991247265
+                                                                       },
+                                                                "Yes":  {
+                                                                            "recall":  0.8821656050955414,
+                                                                            "support":  314.0,
+                                                                            "f1-score":  0.5658835546475995,
+                                                                            "precision":  0.41654135338345866
+                                                                        },
+                                                                "accuracy":  0.6212121212121212,
+                                                                "macro avg":  {
+                                                                                  "recall":  0.7009837926467806,
+                                                                                  "support":  1122.0,
+                                                                                  "f1-score":  0.6149575876004796,
+                                                                                  "precision":  0.6677892762540926
+                                                                              },
+                                                                "weighted avg":  {
+                                                                                     "recall":  0.6212121212121212,
+                                                                                     "support":  1122.0,
+                                                                                     "f1-score":  0.6365641582588778,
+                                                                                     "precision":  0.7784100194787745
+                                                                                 }
+                                                            },
+                                  "val_balanced_accuracy":  0.7009837926467806,
+                                  "test_balanced_accuracy":  0.7009837926467806,
+                                  "val_precision_weighted":  0.41654135338345866,
+                                  "confusion_matrix_labels":  [
+                                                                  "No",
+                                                                  "Yes"
+                                                              ],
+                                  "f1_score_classification":  "Acceptable/Fair",
+                                  "test_auc_classification":  "Excellent",
+                                  "test_false_negative_rate":  0.1178343949044586,
+                                  "training_duration_display":  "13s",
+                                  "training_duration_seconds":  13,
+                                  "sensitivity_classification":  "Strong detection",
+                                  "val_roc_auc_classification":  "Excellent",
+                                  "val_f1_macro_classification":  "Acceptable/Fair",
+                                  "val_f1_score_classification":  "Acceptable/Fair",
+                                  "val_sensitivity_classification":  "Strong detection",
+                                  "test_sensitivity_classification":  "Strong detection",
+                                  "val_recall_weighted_classification":  "Strong detection"
+                              },
+                  "auc":  0.8174623194803557,
+                  "sensitivity":  0.8821656050955414,
+                  "auc_classification":  "Excellent",
+                  "sensitivity_classification":  "Strong detection",
+                  "is_active":  true,
+                  "created_at":  "2026-07-01T12:40:04.184974+00:00",
+                  "training_duration_seconds":  13,
+                  "training_duration_display":  "13s",
+                  "training_job_id":  "0eee25c3d8444c93b1591f58d9f801b7",
+                  "dataset_path":  "C:\\Users\\HP-\\Desktop\\OXYGEN_PREDICTOR_PROJECT\\backend\\media\\uploads\\148a9d9d253d47758cbf8d0c2ae4f075_kibagabaga_oxygen_dataset__cleaned_dataset.xlsx",
+                  "dataset_name":  "148a9d9d253d47758cbf8d0c2ae4f075_kibagabaga_oxygen_dataset__cleaned_dataset.xlsx",
+                  "feature_count":  36,
+                  "training_row_count":  2616,
+                  "validation_row_count":  1122
+              }
+}

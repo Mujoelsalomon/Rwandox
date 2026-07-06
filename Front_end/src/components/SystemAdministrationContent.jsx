@@ -14,6 +14,34 @@ function roleOptionsForSession(session) {
   return session?.is_superuser ? ['Superuser', ...standardRoleOptions] : standardRoleOptions
 }
 
+function PasswordStrengthIndicator({ password }) {
+  if (!password) return null
+  const score = passwordStrengthScore(password)
+  const labels = ['Very weak', 'Weak', 'Okay', 'Strong', 'Very strong']
+  const colors = ['#ef4444', '#f59e0b', '#f59e0b', '#10b981', '#059669']
+  const label = labels[Math.min(Math.max(Math.floor(score), 0), labels.length - 1)]
+  const color = colors[Math.min(Math.max(Math.floor(score), 0), colors.length - 1)]
+  return (
+    <div className="inline-flex items-center gap-2">
+      <div style={{ width: 96 }} className="h-2 rounded bg-white border" aria-hidden>
+        <div style={{ width: `${(score / 5) * 100}%`, background: color }} className="h-2 rounded" />
+      </div>
+      <div className="text-[13px] font-semibold" style={{ color }}>{label}</div>
+    </div>
+  )
+}
+
+function passwordStrengthScore(pwd) {
+  let score = 0
+  if (!pwd) return score
+  if (pwd.length >= 8) score += 1
+  if (pwd.length >= 12) score += 1
+  if (/[A-Z]/.test(pwd)) score += 1
+  if (/[0-9]/.test(pwd)) score += 1
+  if (/[^A-Za-z0-9]/.test(pwd)) score += 1
+  return score
+}
+
 function notify(message, type = 'info') {
   window.dispatchEvent(new CustomEvent('app-notification', { detail: { message, type } }))
 }
@@ -202,17 +230,18 @@ export default function SystemAdministrationContent() {
     return data.user
   }
 
-  async function resetUserPassword(userId, password = '') {
+  async function resetUserPassword(userId, payload = {}) {
+    const body = { id: userId, ...(payload || {}) }
     const resp = await fetch(`${API_BASE_URL}/api/admin/users/reset-password/`, {
       method: 'POST',
       credentials: 'include',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ id: userId, password }),
+      body: JSON.stringify(body),
     })
     const data = await resp.json()
     if (!resp.ok) throw new Error(data.error || 'Could not reset user password.')
     setUsers((current) => current.map((user) => (user.id === data.user.id ? data.user : user)))
-    notify('Temporary password generated.', 'success')
+    notify('User updated and temporary password generated.', 'success')
     return data
   }
 
@@ -926,6 +955,11 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
   const [temporaryPassword, setTemporaryPassword] = useState(null)
   const [resetTargetUser, setResetTargetUser] = useState(null)
   const [resetPasswordInput, setResetPasswordInput] = useState('')
+  const [resetName, setResetName] = useState('')
+  const [resetUsername, setResetUsername] = useState('')
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetRole, setResetRole] = useState('Doctor')
+  const [resetIsActive, setResetIsActive] = useState(true)
   const [actionError, setActionError] = useState('')
   const [registrationForm, setRegistrationForm] = useState({
     name: '',
@@ -999,6 +1033,11 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
   function startResetPassword(user) {
     setResetTargetUser(user)
     setResetPasswordInput('')
+    setResetName(user.name || '')
+    setResetUsername(user.username || '')
+    setResetEmail(user.email || '')
+    setResetRole(user.role || 'Doctor')
+    setResetIsActive(user.is_active !== false)
     setTemporaryPassword(null)
     setActionError('')
   }
@@ -1006,6 +1045,11 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
   function cancelResetPassword() {
     setResetTargetUser(null)
     setResetPasswordInput('')
+    setResetName('')
+    setResetUsername('')
+    setResetEmail('')
+    setResetRole('Doctor')
+    setResetIsActive(true)
     setActionError('')
   }
 
@@ -1023,7 +1067,15 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
     setActionError('')
     setResettingUserId(resetTargetUser.id)
     try {
-      const data = await onResetPassword(resetTargetUser.id, password)
+      const payload = {
+        password: password || undefined,
+        name: resetName || undefined,
+        username: resetUsername || undefined,
+        email: resetEmail || undefined,
+        role: resetRole || undefined,
+        is_active: !!resetIsActive,
+      }
+      const data = await onResetPassword(resetTargetUser.id, payload)
       setTemporaryPassword({
         userName: data.user?.name || resetTargetUser.name,
         username: data.user?.username || resetTargetUser.username,
@@ -1031,6 +1083,11 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
       })
       setResetTargetUser(null)
       setResetPasswordInput('')
+      setResetName('')
+      setResetUsername('')
+      setResetEmail('')
+      setResetRole('Doctor')
+      setResetIsActive(true)
     } catch (error) {
       setActionError(error.message || 'Could not reset password.')
     } finally {
@@ -1173,22 +1230,37 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
 
       {resetTargetUser && (
         <form onSubmit={submitResetPassword} className="border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,320px)_auto] lg:items-end">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,360px)_auto] lg:items-start">
             <div>
               <p className="text-[14px] font-black text-[#071b49]">Reset password for {resetTargetUser.name}</p>
               <p className="mt-1 text-[13px] font-semibold text-[#64799e]">
-                Enter a temporary password or leave blank to auto-generate one.
+                Edit user details below as needed, and enter a temporary password or leave blank to auto-generate one.
               </p>
             </div>
-            <RegistrationField
-              label="Temporary password"
-              type="password"
-              value={resetPasswordInput}
-              onChange={setResetPasswordInput}
-              placeholder="Blank auto-generates"
-              autoComplete="new-password"
-            />
-            <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+
+            <div className="grid gap-3">
+              <RegistrationField label="Full name" value={resetName} onChange={setResetName} placeholder="Full name" />
+              <RegistrationField label="Username" value={resetUsername} onChange={setResetUsername} placeholder="Optional username" />
+              <RegistrationField label="Email" type="email" value={resetEmail} onChange={setResetEmail} placeholder="name@hospital.org" />
+              <label className="block">
+                <span className="mb-2 block text-[12px] font-black uppercase tracking-[0.1em] text-[#64799e]">Role</span>
+                <RoleSelect value={resetRole} roleOptions={roleOptions} onChange={setResetRole} />
+              </label>
+              <div className="flex items-center gap-3">
+                <input id="reset-is-active" type="checkbox" checked={resetIsActive} onChange={(e) => setResetIsActive(e.target.checked)} className="h-4 w-4 rounded" />
+                <label htmlFor="reset-is-active" className="text-[13px] font-semibold text-[#64799e]">Account active</label>
+              </div>
+              <RegistrationField
+                label="Temporary password"
+                type="password"
+                value={resetPasswordInput}
+                onChange={setResetPasswordInput}
+                placeholder="Blank auto-generates"
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row lg:justify-end lg:items-start">
               <button
                 type="button"
                 onClick={cancelResetPassword}
@@ -1210,9 +1282,31 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
 
       {temporaryPassword && (
         <div className="border-b border-[#e5edf7] bg-[#ecfdf5] px-4 py-4 text-[14px] font-semibold text-[#14532d]">
-          Temporary password for <strong>{temporaryPassword.userName}</strong>
-          {temporaryPassword.username ? <> ({temporaryPassword.username})</> : null}: <code className="rounded bg-white px-2 py-1 font-black text-[#071b49]">{temporaryPassword.password}</code>
-          <span className="ml-2">Share it securely and ask the user to change it after login.</span>
+          <div className="flex items-center gap-3">
+            <div>
+              Temporary password for <strong>{temporaryPassword.userName}</strong>
+              {temporaryPassword.username ? <> ({temporaryPassword.username})</> : null}:
+              <code className="ml-2 rounded bg-white px-2 py-1 font-black text-[#071b49]">{temporaryPassword.password}</code>
+            </div>
+            <div className="ml-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(temporaryPassword.password)
+                    notify('Temporary password copied to clipboard.', 'success')
+                  } catch (e) {
+                    notify('Could not copy password to clipboard.', 'danger')
+                  }
+                }}
+                className="btn btn-light fw-bold rounded px-3 py-1 text-[#172a53]"
+              >
+                Copy
+              </button>
+              <PasswordStrengthIndicator password={temporaryPassword.password} />
+            </div>
+          </div>
+          <div className="mt-2">Share it securely and ask the user to change it after login.</div>
         </div>
       )}
 

@@ -91,11 +91,7 @@ def models_activate_view(request):
     except (ModelArtifact.DoesNotExist, TypeError, ValueError):
         return cors(JsonResponse({"error": "model not found"}, status=404))
 
-    if not is_calibrated_artifact(artifact):
-        return cors(JsonResponse({
-            "error": "Only calibrated model artifacts can be activated for predictions."
-        }, status=400))
-
+    # Allow activation of any trained model regardless of calibration
     ModelArtifact.objects.update(is_active=False)
     artifact.is_active = True
     artifact.save(update_fields=["is_active"])

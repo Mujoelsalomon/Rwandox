@@ -412,6 +412,30 @@ class EndpointsTest(TestCase):
         self.assertEqual(job.status, 'queued')
         self.assertEqual(job.error, '')
 
+        def test_temporary_password_meets_validators_on_reset(self):
+            # Create a regular user
+            user = User.objects.create_user(
+                username='temp-pass-user',
+                email='temp-pass-user@example.com',
+                password='initialPass123!',
+            )
+
+            resp = self.client.post(
+                '/api/admin/users/reset-password/',
+                data=json.dumps({'id': user.id}),
+                content_type='application/json',
+            )
+
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertIn('temporary_password', data)
+            temp_pwd = data['temporary_password']
+            # validate_password should not raise ValidationError for generated temporary password
+            try:
+                validate_password(temp_pwd)
+            except ValidationError as exc:
+                self.fail(f'Temporary password did not meet validators: {exc.messages}')
+
     @override_settings(TRAINING_STALE_MINUTES=1)
     def test_stale_running_training_job_is_marked_failed(self):
         job = TrainingJob.objects.create(

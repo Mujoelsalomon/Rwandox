@@ -1,0 +1,705 @@
+﻿{
+    "predictions":  [
+                        {
+                            "id":  23,
+                            "patient_id":  "UNRECORDED-20260626155121-2ecb24a6",
+                            "age":  50,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  100,
+                            "raw_probability":  0.9999999969222699,
+                            "calibrated_probability":  0.9999999969222699,
+                            "display_probability":  "\u003e99%",
+                            "risk_level":  "High",
+                            "selected_threshold":  0.05,
+                            "model_name":  "A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda",
+                            "model_version":  "A Machine Learning Model for Predicting Postoperat",
+                            "generated_at":  "2026-06-26T15:51:21.320015+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Book an ICU or HDU bed for closer postoperative monitoring.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+
+                                                     ]
+                        },
+                        {
+                            "id":  22,
+                            "patient_id":  "UNRECORDED-20260626155039-ed40b235",
+                            "age":  50,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  100,
+                            "raw_probability":  0.9999999969222699,
+                            "calibrated_probability":  0.9999999969222699,
+                            "display_probability":  "\u003e99%",
+                            "risk_level":  "High",
+                            "selected_threshold":  0.05,
+                            "model_name":  "A Machine Learning Model for Predicting Postoperative Oxygen Requirement Among Surgical Patients in Rwanda",
+                            "model_version":  "A Machine Learning Model for Predicting Postoperat",
+                            "generated_at":  "2026-06-26T15:50:39.305511+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Book an ICU or HDU bed for closer postoperative monitoring.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+
+                                                     ]
+                        },
+                        {
+                            "id":  21,
+                            "patient_id":  "UNRECORDED-20260626114550-252d4d20",
+                            "age":  68,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  100,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "A Machine Learning Model for Predicting Postoperat",
+                            "generated_at":  "2026-06-26T11:45:50.752338+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Book an ICU or HDU bed for closer postoperative monitoring.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 200.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  20,
+                            "patient_id":  "UNRECORDED-20260625093027-8a2543c9",
+                            "age":  30,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "Ward",
+                            "predicted_probability":  0,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Low",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "A Machine Learning Model for Predicting Postoperat",
+                            "generated_at":  "2026-06-25T09:30:27.766110+00:00",
+                            "recommendations":  [
+                                                    "Continue routine postoperative monitoring.",
+                                                    "Reassess according to ward protocol."
+                                                ],
+                            "contributing_factors":  [
+
+                                                     ]
+                        },
+                        {
+                            "id":  19,
+                            "patient_id":  "UNRECORDED-20260625093022-e0f033f8",
+                            "age":  30,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "Ward",
+                            "predicted_probability":  0,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Low",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "A Machine Learning Model for Predicting Postoperat",
+                            "generated_at":  "2026-06-25T09:30:22.223168+00:00",
+                            "recommendations":  [
+                                                    "Continue routine postoperative monitoring.",
+                                                    "Reassess according to ward protocol."
+                                                ],
+                            "contributing_factors":  [
+
+                                                     ]
+                        },
+                        {
+                            "id":  18,
+                            "patient_id":  "UNRECORDED-20260625092903-680caf4f",
+                            "age":  78,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  96,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "A Machine Learning Model for Predicting Postoperat",
+                            "generated_at":  "2026-06-25T09:29:03.167661+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Book an ICU or HDU bed for closer postoperative monitoring.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.1,
+                                                             "display":  "Post-op SpO2 90.0%",
+                                                             "feature":  "postop_spo2"
+                                                         },
+                                                         {
+                                                             "impact":  0.09,
+                                                             "display":  "Baseline SpO2 90.0%",
+                                                             "feature":  "baseline_spo2"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 30.8",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  17,
+                            "patient_id":  "TEST-CODEX-005",
+                            "age":  45,
+                            "sex":  "Female",
+                            "surgery_type":  "Not recorded",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  100,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "A Machine Learning Model for Predicting Postoperat",
+                            "generated_at":  "2026-06-25T09:24:33.624739+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Book an ICU or HDU bed for closer postoperative monitoring.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+
+                                                     ]
+                        },
+                        {
+                            "id":  12,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "HDU",
+                            "predicted_probability":  46,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Moderate",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "random_forest_model_1780491861.joblib",
+                            "generated_at":  "2026-06-04T12:38:20.071102+00:00",
+                            "recommendations":  [
+                                                    "Continue close monitoring.",
+                                                    "Repeat SpO2 assessment.",
+                                                    "Prepare oxygen if clinical condition worsens."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         },
+                                                         {
+                                                             "impact":  0.03,
+                                                             "display":  "Airway event: Difficult Intubation",
+                                                             "feature":  "airway_event"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  11,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "Ward",
+                            "predicted_probability":  25,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Low",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost_model_1780405779.joblib",
+                            "generated_at":  "2026-06-03T08:25:08.954085+00:00",
+                            "recommendations":  [
+                                                    "Continue routine postoperative monitoring.",
+                                                    "Reassess according to ward protocol."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         },
+                                                         {
+                                                             "impact":  0.03,
+                                                             "display":  "Airway event: Difficult Intubation",
+                                                             "feature":  "airway_event"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  10,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "Ward",
+                            "predicted_probability":  25,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Low",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost_model_1780405779.joblib",
+                            "generated_at":  "2026-06-02T20:26:13.642810+00:00",
+                            "recommendations":  [
+                                                    "Continue routine postoperative monitoring.",
+                                                    "Reassess according to ward protocol."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         },
+                                                         {
+                                                             "impact":  0.03,
+                                                             "display":  "Airway event: Difficult Intubation",
+                                                             "feature":  "airway_event"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  9,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "Ward",
+                            "predicted_probability":  25,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Low",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost_model_1780405779.joblib",
+                            "generated_at":  "2026-06-02T20:18:09.485967+00:00",
+                            "recommendations":  [
+                                                    "Continue routine postoperative monitoring.",
+                                                    "Reassess according to ward protocol."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         },
+                                                         {
+                                                             "impact":  0.03,
+                                                             "display":  "Airway event: Difficult Intubation",
+                                                             "feature":  "airway_event"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  8,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "Ward",
+                            "predicted_probability":  25,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Low",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost_model_1780405779.joblib",
+                            "generated_at":  "2026-06-02T13:12:14.007709+00:00",
+                            "recommendations":  [
+                                                    "Continue routine postoperative monitoring.",
+                                                    "Reassess according to ward protocol."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         },
+                                                         {
+                                                             "impact":  0.03,
+                                                             "display":  "Airway event: Difficult Intubation",
+                                                             "feature":  "airway_event"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  7,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  88,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost",
+                            "generated_at":  "2026-06-02T11:22:30.897734+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  6,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  88,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost",
+                            "generated_at":  "2026-05-30T12:35:11.086652+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  5,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  88,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost",
+                            "generated_at":  "2026-05-28T19:44:59.044040+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  4,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  88,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost",
+                            "generated_at":  "2026-05-28T11:07:11.647834+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  3,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  88,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost",
+                            "generated_at":  "2026-05-28T10:42:33.699947+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  2,
+                            "patient_id":  "KBH-2026-00128",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "ICU",
+                            "predicted_probability":  88,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "High",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "xgboost",
+                            "generated_at":  "2026-05-25T10:07:52.478013+00:00",
+                            "recommendations":  [
+                                                    "Start close oxygen monitoring immediately.",
+                                                    "Prepare supplemental oxygen in PACU or ward.",
+                                                    "Repeat SpO2 and respiratory rate within 15 minutes.",
+                                                    "Escalate clinical review if saturation remains below target."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.07,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "Duration 210.0 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.05,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        },
+                        {
+                            "id":  1,
+                            "patient_id":  "KBH-BTN-002",
+                            "age":  62,
+                            "sex":  "Female",
+                            "surgery_type":  "Abdominal",
+                            "patient_disposition":  "HDU",
+                            "predicted_probability":  42,
+                            "raw_probability":  null,
+                            "calibrated_probability":  null,
+                            "display_probability":  "",
+                            "risk_level":  "Moderate",
+                            "selected_threshold":  null,
+                            "model_name":  "",
+                            "model_version":  "v1.0",
+                            "generated_at":  "2026-05-09T21:30:32.109529+00:00",
+                            "recommendations":  [
+                                                    "Continue close monitoring.",
+                                                    "Repeat SpO2 assessment.",
+                                                    "Prepare oxygen if clinical condition worsens."
+                                                ],
+                            "contributing_factors":  [
+                                                         {
+                                                             "impact":  0.1,
+                                                             "display":  "Emergency surgery",
+                                                             "feature":  "urgency"
+                                                         },
+                                                         {
+                                                             "impact":  0.08,
+                                                             "display":  "Duration 210 min",
+                                                             "feature":  "surgery_duration"
+                                                         },
+                                                         {
+                                                             "impact":  0.06,
+                                                             "display":  "BMI 31.2",
+                                                             "feature":  "bmi"
+                                                         }
+                                                     ]
+                        }
+                    ]
+}

@@ -27,9 +27,7 @@ function dashboardMetrics(activeModel, t, predictions) {
     ?? activeModel?.val_roc_auc_weighted_ovr
     ?? activeModel?.val_auc
     ?? activeModel?.auc
-  const aucValue = formatModelMetric(
-    aucMetric
-  )
+  const aucValue = formatModelMetric(aucMetric)
   const sensitivityMetric = modelMetrics.test_sensitivity
     ?? modelMetrics.val_sensitivity
     ?? modelMetrics.sensitivity
@@ -56,7 +54,7 @@ function dashboardMetrics(activeModel, t, predictions) {
   },
   {
     label: t('averageRiskScore'),
-    value: averageRisk === null ? 'No data' : `${averageRisk}%`,
+    value: averageRisk == null ? '0%' : `${averageRisk}%`,
     sub: predictions.length ? t('acrossAllAssessedPatients') : t('noRecentPredictions'),
     chip: `${predictions.length}`,
     chipTone: 'green',
@@ -76,7 +74,7 @@ function dashboardMetrics(activeModel, t, predictions) {
     label: t('modelAuc'),
     value: aucValue,
     sub: t('latestValidatedVersion'),
-    chip: aucValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : (
+    chip: aucValue == null ? '' : (
       modelMetrics.auc_classification
       || modelMetrics.val_roc_auc_classification
       || modelMetrics.val_roc_auc_weighted_ovr_classification
@@ -90,8 +88,9 @@ function dashboardMetrics(activeModel, t, predictions) {
   {
     label: t('modelSensitivity'),
     value: sensitivityValue,
+    valueIsPercent: true,
     sub: t('oxygenRequirementDetection'),
-    chip: sensitivityValue === 'No data' ? t('noData', { defaultValue: 'No data' }) : (
+    chip: sensitivityValue == null ? '' : (
       modelMetrics.test_sensitivity_classification
       || modelMetrics.val_sensitivity_classification
       || modelMetrics.sensitivity_classification
@@ -235,7 +234,8 @@ function HeroCard() {
   )
 }
 
-function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
+function MetricCard({ label, value, valueIsPercent = false, sub, chip, chipTone, icon, iconTone }) {
+  const displayValue = value ?? (valueIsPercent ? '0%' : '0')
   return (
     <article className="card shadow-sm rounded-4 flex h-full min-w-0 flex-col rounded-[14px] border border-[#cbd8e8] bg-white px-4 py-4">
       <div className="flex flex-1 gap-4">
@@ -244,7 +244,7 @@ function MetricCard({ label, value, sub, chip, chipTone, icon, iconTone }) {
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-[20px] font-extrabold leading-6 text-[#071b49]">{label}</h2>
-          <p className="mt-2 text-[38px] font-black leading-none text-[#071b49]">{value}</p>
+          <p className="mt-2 text-[38px] font-black leading-none text-[#071b49]">{displayValue}</p>
           <p className="mt-2 text-[16px] font-semibold leading-6 text-[#334766]">{sub}</p>
         </div>
       </div>
@@ -395,7 +395,7 @@ function AssessmentPredictionPanel({ factorChips, predictions, predictionsLoadin
             {hasPredictions ? <RiskStatusCard risk={riskLabel} /> : null}
           </div>
           <p className={`prediction-value mt-7 ${hasPredictions ? riskTone.text : 'text-[#64748b]'}`}>
-            {hasPredictions ? `${riskScore}%` : 'No data'}
+            {hasPredictions ? `${riskScore}%` : '0%'}
           </p>
           <p className="body-text mt-5 max-w-[340px] font-extrabold text-[#20365f]">
             {hasPredictions ? t('probabilityExplanation') : t('noRecentPredictions')}
@@ -832,40 +832,40 @@ function formatDate(value) {
   })
 }
 
-function formatModelMetric(value, fallback = 'No data') {
+function formatModelMetric(value) {
   const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return fallback
+  if (!Number.isFinite(numeric)) return null
   const normalized = numeric > 1 ? numeric / 100 : numeric
   return normalized.toFixed(2)
 }
 
-function formatSensitivityAsPercent(value, fallback = 'No data') {
+function formatSensitivityAsPercent(value) {
   const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return fallback
+  if (!Number.isFinite(numeric)) return null
   const normalized = numeric > 1 ? numeric : numeric * 100
   return `${normalized.toFixed(2)}%`
 }
 
 function aucClassification(value) {
   const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return 'No data'
+  if (!Number.isFinite(numeric)) return ''
   const normalized = numeric > 1 ? numeric / 100 : numeric
   if (normalized >= 0.9 && normalized < 1) return 'Outstanding'
   if (normalized >= 0.8 && normalized < 0.9) return 'Excellent'
   if (normalized >= 0.7 && normalized < 0.8) return 'Acceptable/Good'
   if (normalized >= 0.5 && normalized < 0.7) return 'Poor'
-  return 'No data'
+  return ''
 }
 
 function sensitivityClassification(value) {
   const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return 'No data'
+  if (!Number.isFinite(numeric)) return ''
   const normalized = numeric > 1 ? numeric / 100 : numeric
   if (normalized >= 0.9 && normalized <= 1) return 'Excellent detection'
   if (normalized >= 0.8 && normalized < 0.9) return 'Strong detection'
   if (normalized >= 0.7 && normalized < 0.8) return 'Good'
   if (normalized >= 0.5 && normalized < 0.7) return 'Needs review'
-  return 'Needs Review'
+  return ''
 }
 
 function toneClass(tone, kind) {
