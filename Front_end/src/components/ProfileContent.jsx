@@ -6,6 +6,16 @@ function notify(message, type = 'info') {
   window.dispatchEvent(new CustomEvent('app-notification', { detail: { message, type } }))
 }
 
+function authHeaders(extraHeaders = {}) {
+  const session = getSession()
+  return {
+    Authorization: `Bearer ${session?.token || ''}`,
+    'X-User-Email': session?.email || '',
+    'X-User-Username': session?.username || '',
+    ...extraHeaders,
+  }
+}
+
 export default function ProfileContent() {
   const [profile, setProfile] = useState(() => normalizeUser(getSession()))
   const [form, setForm] = useState(() => normalizeUser(getSession()))
@@ -19,7 +29,10 @@ export default function ProfileContent() {
 
     async function loadProfile() {
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          credentials: 'include',
+          headers: authHeaders(),
+        })
         const data = await response.json()
         if (!active) return
         if (!response.ok) throw new Error(data.error || 'Could not load profile.')
@@ -69,7 +82,7 @@ export default function ProfileContent() {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         credentials: 'include',
         body: JSON.stringify({
           name,

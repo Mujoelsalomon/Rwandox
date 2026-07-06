@@ -10,10 +10,12 @@ from unittest.mock import patch
 import joblib
 
 from apps.api.models import ModelArtifact, TrainingJob
+from apps.accounts.models import ensure_user_profile
 from apps.support.models import SupportTicket
 from apps.predictions.services import build_prediction_result
 import trainer
 from ml.predict import make_prediction
+from ml.model_loader import has_calibration_metadata
 
 class EndpointsTest(TestCase):
     def setUp(self):
@@ -32,6 +34,66 @@ class EndpointsTest(TestCase):
         self.assertIsNotNone(data)
         # Expect list or dict with models
         self.assertTrue(isinstance(data, (list, dict)))
+
+    @patch('apps.api.model_views.Path.exists', return_value=True)
+    @patch('apps.api.model_views.Path.read_text')
+    def test_admin_can_activate_non_sigmoid_calibrated_model(self, read_text, _exists):
+        read_text.return_value = json.dumps({
+            'algorithm': 'random_forest',
+            'calibration_method': 'Isotonic regression',
+            'calibration': {'method': 'Isotonic regression', 'brier_score': 0.11},
+        })
+        artifact = ModelArtifact.objects.create(
+            name='Isotonic calibrated model',
+            path='models/isotonic_model.joblib',
+            model_type='random_forest',
+            metrics={'calibration': {'method': 'Isotonic regression'}},
+        )
+
+        resp = self.client.post(
+            '/models/activate',
+            data=json.dumps({'id': artifact.id}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        artifact.refresh_from_db()
+        self.assertTrue(artifact.is_active)
+
+    def test_model_loader_accepts_any_named_calibration_method(self):
+        self.assertTrue(has_calibration_metadata({'calibration_method': 'Isotonic regression'}))
+        self.assertTrue(has_calibration_metadata({'calibration': {'method': 'Temperature scaling'}}))
+        self.assertTrue(has_calibration_metadata({'calibration': {'brier_score': 0.11}}))
+        self.assertTrue(has_calibration_metadata({'calibration': {'mean_predicted_probability': [0.2]}}))
+        self.assertFalse(has_calibration_metadata({'calibration': {}}))
+
+    def test_default_admin_env_credentials_repair_login_obstacles(self):
+        admin = User.objects.get(username='anesthetist')
+        admin.set_password('BrokenPass123')
+        admin.email = 'wrong@example.com'
+        admin.is_active = False
+        admin.is_staff = False
+        admin.is_superuser = False
+        admin.save(update_fields=['password', 'email', 'is_active', 'is_staff', 'is_superuser'])
+        profile = ensure_user_profile(admin)
+        profile.must_change_password = True
+        profile.save(update_fields=['must_change_password', 'updated_at'])
+
+        self.client.logout()
+        resp = self.client.post(
+            '/auth/login',
+            data=json.dumps({'username': 'munyanezajoel3@gmail.com', 'password': 'Munyaneza@123'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()['user']
+        self.assertEqual(data['username'], 'anesthetist')
+        self.assertEqual(data['email'], 'munyanezajoel3@gmail.com')
+        self.assertTrue(data['is_active'])
+        self.assertTrue(data['is_staff'])
+        self.assertTrue(data['is_superuser'])
+        self.assertFalse(data['must_change_password'])
 
     def test_doctor_cannot_access_model_registry(self):
         doctor = User.objects.create_user(
@@ -262,6 +324,23 @@ class EndpointsTest(TestCase):
         self.assertEqual(result['display_probability'], '69.5%')
         self.assertEqual(result['risk_level'], 'Moderate')
         self.assertEqual(result['predicted_class'], 'No')
+
+    def test_prediction_uses_training_threshold_and_imbalance_metadata(self):
+        result = build_prediction_result(
+            {'raw_probability': 0.65, 'calibrated_probability': 0.55},
+            [],
+            {
+                'selected_threshold': 0.7,
+                'class_weights': {'positive_class_weight': 2.5},
+                'weighting_method': 'class-weighted training',
+                'class_distribution': {'training': {'negative': 80, 'positive': 20}},
+            },
+        )
+
+        self.assertEqual(result['selected_threshold'], 0.7)
+        self.assertEqual(result['risk_level'], 'Moderate')
+        self.assertEqual(result['imbalance_management']['weighting_method'], 'class-weighted training')
+        self.assertEqual(result['imbalance_management']['class_weights']['positive_class_weight'], 2.5)
 
     def test_training_jobs_endpoint_returns_jobs_list(self):
         resp = self.client.get('/train/jobs')
@@ -690,6 +769,27 @@ class EndpointsTest(TestCase):
             content_type='application/json',
         )
         self.assertEqual(target_resp.status_code, 403)
+
+    @override_settings(DEBUG=True)
+    def test_current_user_accepts_saved_frontend_session_headers_in_debug(self):
+        self.client.logout()
+        doctor = User.objects.create_user(
+            username='profile-header-doctor',
+            email='profile-header-doctor@example.com',
+            password='pass12345',
+            first_name='Profile',
+            last_name='Header',
+        )
+
+        resp = self.client.get(
+            '/auth/me',
+            HTTP_X_USER_EMAIL='profile-header-doctor@example.com',
+            HTTP_X_USER_USERNAME='profile-header-doctor',
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['authenticated'])
+        self.assertEqual(resp.json()['user']['id'], doctor.id)
 
     def test_invalid_profile_role_is_rejected(self):
         target_user = User.objects.create_user(

@@ -47,7 +47,8 @@ def _active_model_artifact():
         if artifact and artifact.path:
             path = Path(artifact.path)
             metadata = _metadata_for(path)
-            return artifact if path.exists() and is_sigmoid_calibrated(metadata) else None
+            calibrated = has_calibration_metadata(metadata) or has_calibration_metadata(getattr(artifact, "metrics", None))
+            return artifact if path.exists() and calibrated else None
     except Exception:
         return None
     return None
@@ -59,7 +60,7 @@ def _latest_model_with_metadata():
         return None
 
     candidates = sorted(models_dir.glob("*.joblib"), key=lambda path: path.stat().st_mtime, reverse=True)
-    calibrated = [path for path in candidates if is_sigmoid_calibrated(_metadata_for(path))]
+    calibrated = [path for path in candidates if has_calibration_metadata(_metadata_for(path))]
     if calibrated:
         return calibrated[0]
     return next((path for path in candidates if _metadata_for(path)), None)
@@ -72,11 +73,17 @@ def _metadata_for(model_path):
     return json.loads(metadata_path.read_text())
 
 
-def is_sigmoid_calibrated(metadata):
-    if not metadata:
+def has_calibration_metadata(metadata):
+    if not isinstance(metadata, dict):
         return False
-    method = metadata.get("calibration_method") or (metadata.get("calibration") or {}).get("method")
-    return str(method or "").strip().lower() == "sigmoid / platt scaling"
+    calibration = metadata.get("calibration") if isinstance(metadata.get("calibration"), dict) else {}
+    method = metadata.get("calibration_method") or calibration.get("method")
+    if str(method or "").strip():
+        return True
+    return any(
+        key in calibration
+        for key in ("brier_score", "mean_predicted_probability", "fraction_of_positives")
+    )
 
 
 def _train_default_model():

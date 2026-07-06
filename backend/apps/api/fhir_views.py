@@ -1,10 +1,9 @@
 from django.http import HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.patients.models import Patient
 from apps.predictions.models import PredictionResult
 
-from .common import cors, require_login
+from .common import cors, csrf_exempt_trusted as csrf_exempt, require_login
 
 
 FHIR_VERSION = "4.0.1"

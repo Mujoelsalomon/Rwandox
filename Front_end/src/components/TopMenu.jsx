@@ -193,7 +193,7 @@ export default function TopMenu({ isSidebarOpen, onToggleSidebar }) {
               >
                 <div className="border-b border-[#edf2f8] px-4 py-3">
                   <p className="small-text truncate font-extrabold text-[#0d1c3d]">{session?.name || 'Anesthetist'}</p>
-                  <p className="small-text mt-0.5 truncate text-[#526383]">{session?.role || 'Doctor'}</p>
+                  <p className="small-text mt-0.5 truncate text-[#526383]">{session?.role || 'Clinician'}</p>
                 </div>
                 <div className="px-4 py-3 lg:hidden">
                   <LanguageSelector />

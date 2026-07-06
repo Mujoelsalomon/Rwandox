@@ -1,9 +1,12 @@
 import json
 import re
+from functools import wraps
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 
 def cors(resp, request=None):
@@ -28,6 +31,48 @@ def origin_matches_any(origin, patterns):
     if not origin:
         return False
     return any(re.match(pattern, origin) for pattern in patterns)
+
+
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
+
+
+def csrf_exempt_trusted(view_func):
+    return csrf_exempt(trusted_origin_required(view_func))
+
+
+def trusted_origin_required(view_func):
+    @wraps(view_func)
+    def wrapped(request, *args, **kwargs):
+        if request.method not in SAFE_METHODS and not request_has_trusted_origin(request):
+            return cors(JsonResponse({"error": "Untrusted request origin."}, status=403), request)
+        return view_func(request, *args, **kwargs)
+
+    return wrapped
+
+
+def request_has_trusted_origin(request):
+    origin = request.headers.get("Origin")
+    if origin:
+        return is_trusted_origin(origin)
+
+    referer = request.headers.get("Referer")
+    if referer:
+        parsed = urlparse(referer)
+        if parsed.scheme and parsed.netloc:
+            return is_trusted_origin(f"{parsed.scheme}://{parsed.netloc}")
+
+    return True
+
+
+def is_trusted_origin(origin):
+    allowed_origins = getattr(settings, "CORS_ALLOWED_ORIGINS", [])
+    allowed_origin_regexes = getattr(settings, "CORS_ALLOWED_ORIGIN_REGEXES", [])
+    csrf_trusted_origins = getattr(settings, "CSRF_TRUSTED_ORIGINS", [])
+    return (
+        origin in allowed_origins
+        or origin in csrf_trusted_origins
+        or origin_matches_any(origin, allowed_origin_regexes)
+    )
 
 
 def json_body(request):

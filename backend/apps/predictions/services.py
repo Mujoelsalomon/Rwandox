@@ -2,10 +2,10 @@ from ml.model_loader import load_model_assets
 from ml.predict import make_prediction_with_probabilities, make_predictions
 
 
-def classify_risk(probability: float) -> str:
-    if probability < 0.30:
+def classify_risk(probability: float, threshold: float = 0.50) -> str:
+    if probability < max(0.30, threshold * 0.50):
         return "Low"
-    if probability < 0.70:
+    if probability < threshold:
         return "Moderate"
     return "High"
 
@@ -66,10 +66,13 @@ def build_prediction_result(probability_info, contributing_factors: list[dict], 
     else:
         raw_probability = float(probability_info)
         calibrated_probability = float(probability_info)
+
     threshold = float(preprocessor.get("selected_threshold") or 0.50)
     predicted_class = "Yes" if calibrated_probability >= threshold else "No"
-    risk_level = classify_risk(calibrated_probability)
+    risk_level = classify_risk(calibrated_probability, threshold=threshold)
     recommendations = build_recommendations(risk_level)
+    class_weights = preprocessor.get("class_weights") or {}
+    class_distribution = preprocessor.get("class_distribution") or {}
 
     return {
         "raw_probability": raw_probability,
@@ -87,6 +90,11 @@ def build_prediction_result(probability_info, contributing_factors: list[dict], 
         "model_type": preprocessor.get("_model_type"),
         "training_metrics": preprocessor.get("_training_metrics") or {},
         "used_trained_model": bool(preprocessor.get("_used_trained_model")),
+        "imbalance_management": {
+            "class_weights": class_weights,
+            "weighting_method": preprocessor.get("weighting_method") or "balanced thresholding",
+            "class_distribution": class_distribution,
+        },
     }
 
 

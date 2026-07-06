@@ -6,8 +6,7 @@ import postopO2Logo from '../assets/postop-o2-ai-logo.svg'
 
 const SUPER_USER = {
   username: 'anesthetist',
-  email: 'munyanezajoel3@gmail.com',
-  password: 'Munyaneza@123',
+  email: '',
   name: 'Anesthetist',
   role: 'Doctor',
 }
@@ -189,6 +188,14 @@ export default function Login_Form() {
 
       if (!response.ok) {
         setError(data.error || 'Could not update your password.')
+        return
+      }
+
+      // If backend signals a redirect (e.g., after first-login password change), follow it.
+      if (data && data.redirect) {
+        // Clear any existing session info and navigate to the login portal.
+        // createSession is intentionally not called because backend logged out the user.
+        navigate(data.redirect)
         return
       }
 

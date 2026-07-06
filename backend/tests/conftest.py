@@ -6,6 +6,9 @@ from django.test.utils import setup_databases, setup_test_environment, teardown_
 
 
 def pytest_configure(config):
+    os.environ.setdefault("BOOTSTRAP_DEFAULT_ADMIN", "1")
+    os.environ.setdefault("DEFAULT_ADMIN_EMAIL", "munyanezajoel3@gmail.com")
+    os.environ.setdefault("DEFAULT_ADMIN_PASSWORD", "Munyaneza@123")
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend_project.settings")
     django.setup()
     setup_test_environment()

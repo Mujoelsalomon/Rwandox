@@ -8,14 +8,13 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from apps.predictions.models import PredictionResult
 from metric_benchmarks import enrich_metric_benchmarks
 from ml.model_loader import load_model_assets
 
 from .audit import record_audit
-from .common import cors, require_admin
+from .common import cors, csrf_exempt_trusted as csrf_exempt, require_admin
 from .model_bootstrap import active_model_artifact
 from .models import EmrSyncLog, ModelArtifact, TrainingJob
 

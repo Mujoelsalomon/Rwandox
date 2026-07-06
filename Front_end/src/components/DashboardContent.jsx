@@ -38,7 +38,7 @@ function dashboardMetrics(activeModel, t, predictions) {
     ?? activeModel?.val_sensitivity
     ?? activeModel?.sensitivity
     ?? activeModel?.val_recall_weighted
-  const sensitivityValue = formatModelMetric(sensitivityMetric)
+  const sensitivityValue = formatSensitivityAsPercent(sensitivityMetric)
   const todayPredictions = predictions.filter(isTodayPrediction)
   const highRiskToday = todayPredictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
   const highRiskTotal = predictions.filter((prediction) => riskBucket(prediction.risk_level) === 'High').length
@@ -837,6 +837,13 @@ function formatModelMetric(value, fallback = 'No data') {
   if (!Number.isFinite(numeric)) return fallback
   const normalized = numeric > 1 ? numeric / 100 : numeric
   return normalized.toFixed(2)
+}
+
+function formatSensitivityAsPercent(value, fallback = 'No data') {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  const normalized = numeric > 1 ? numeric : numeric * 100
+  return `${normalized.toFixed(2)}%`
 }
 
 function aucClassification(value) {

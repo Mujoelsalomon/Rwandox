@@ -70,6 +70,8 @@ TAB_TRANSFORMER_MAX_ROWS = int(os.getenv("TRAINING_TAB_TRANSFORMER_MAX_ROWS", "0
 TRAINING_RANDOM_SEED = int(os.getenv("TRAINING_RANDOM_SEED", "42"))
 LARGE_DATASET_ROW_COUNT = int(os.getenv("TRAINING_LARGE_DATASET_ROWS", "5000"))
 PERMUTATION_IMPORTANCE_MAX_ROWS = int(os.getenv("TRAINING_PERMUTATION_IMPORTANCE_MAX_ROWS", "1200"))
+MIN_THRESHOLD_SPECIFICITY = float(os.getenv("TRAINING_MIN_THRESHOLD_SPECIFICITY", "0.05"))
+MIN_THRESHOLD_PREDICTED_NEGATIVE_RATE = float(os.getenv("TRAINING_MIN_THRESHOLD_PREDICTED_NEGATIVE_RATE", "0.01"))
 
 
 def read_dataset(dataset_path: str, **kwargs) -> pd.DataFrame:
@@ -322,7 +324,7 @@ class TabularTransformerNet(nn.Module if nn is not None else object):
         return self.head(encoded.mean(dim=1))
 
 
-class WeightedTorchMLPClassifier(BaseEstimator, ClassifierMixin):
+class WeightedTorchMLPClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, hidden_units=64, max_epochs=25, batch_size=512, learning_rate=0.001, random_state=42):
         self.hidden_units = hidden_units
         self.max_epochs = max_epochs
@@ -388,7 +390,7 @@ class WeightedTorchMLPClassifier(BaseEstimator, ClassifierMixin):
         return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
 
 
-class ResampledKNNClassifier(BaseEstimator, ClassifierMixin):
+class ResampledKNNClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, n_neighbors=5, categorical_feature_indices=None, random_state=42):
         self.n_neighbors = n_neighbors
         self.categorical_feature_indices = categorical_feature_indices
@@ -423,7 +425,7 @@ class ResampledKNNClassifier(BaseEstimator, ClassifierMixin):
         return self.estimator_.predict(X)
 
 
-class TabTransformerClassifier(BaseEstimator, ClassifierMixin):
+class TabTransformerClassifier(ClassifierMixin, BaseEstimator):
     def __init__(
         self,
         max_epochs=4,
@@ -1075,25 +1077,68 @@ def model_classes(model):
 
 
 def choose_threshold(y_true, probabilities):
-    best = {"threshold": 0.5, "f2_score": -1.0, "sensitivity": -1.0, "false_negatives": math.inf}
+    best = None
+    best_fallback = None
     for threshold in np.linspace(0.05, 0.9, 35):
         preds = (np.asarray(probabilities) >= threshold).astype(int)
         f2 = safe_float(fbeta_score(y_true, preds, beta=2, zero_division=0)) or 0.0
         sensitivity = sensitivity_score(y_true, preds) or 0.0
+        balanced_accuracy = safe_float(balanced_accuracy_score(y_true, preds)) or 0.0
         matrix = confusion_matrix(y_true, preds, labels=[0, 1])
-        false_negatives = int(matrix[1][0]) if matrix.shape == (2, 2) else 0
+        if matrix.shape == (2, 2):
+            tn, fp, fn, tp = (int(matrix[0][0]), int(matrix[0][1]), int(matrix[1][0]), int(matrix[1][1]))
+        else:
+            tn = fp = fn = tp = 0
+        negative_total = tn + fp
+        predicted_negative_total = tn + fn
+        sample_total = len(preds)
+        specificity = safe_float(tn / negative_total) if negative_total else None
+        predicted_negative_rate = safe_float(predicted_negative_total / sample_total) if sample_total else 0.0
+        degenerate_prediction = bool(negative_total and predicted_negative_total == 0)
+        eligible = not degenerate_prediction
+        if specificity is not None:
+            eligible = eligible and specificity >= MIN_THRESHOLD_SPECIFICITY
+        if negative_total:
+            eligible = eligible and predicted_negative_rate >= MIN_THRESHOLD_PREDICTED_NEGATIVE_RATE
         candidate = {
             "threshold": float(threshold),
             "f2_score": f2,
             "sensitivity": sensitivity,
-            "false_negatives": false_negatives,
-            "rule": "maximize F2-score on stratified CV training folds, tie-break by sensitivity then fewer false negatives",
+            "specificity": specificity,
+            "balanced_accuracy": balanced_accuracy,
+            "false_negatives": fn,
+            "true_negatives": tn,
+            "false_positives": fp,
+            "true_positives": tp,
+            "predicted_negative_rate": predicted_negative_rate,
+            "degenerate_prediction": degenerate_prediction,
+            "eligible": eligible,
+            "rule": (
+                "maximize F2-score on stratified CV training folds, requiring non-degenerate predictions "
+                f"with specificity >= {MIN_THRESHOLD_SPECIFICITY:g}; tie-break by sensitivity then fewer false negatives"
+            ),
         }
-        if (candidate["f2_score"], candidate["sensitivity"], -candidate["false_negatives"]) > (
-            best["f2_score"], best["sensitivity"], -best["false_negatives"]
-        ):
+        if best_fallback is None or threshold_sort_key(candidate) > threshold_sort_key(best_fallback):
+            best_fallback = candidate
+        if not eligible:
+            continue
+        if best is None or threshold_sort_key(candidate) > threshold_sort_key(best):
             best = candidate
+    if best is None and best_fallback is not None:
+        best_fallback["eligible"] = False
+        best_fallback["rule"] += "; no threshold satisfied the non-degenerate guard, so the best fallback was used"
+        return best_fallback
     return best
+
+
+def threshold_sort_key(candidate):
+    return (
+        candidate["f2_score"],
+        candidate["sensitivity"],
+        -candidate["false_negatives"],
+        candidate["balanced_accuracy"],
+        candidate["specificity"] or 0.0,
+    )
 
 
 def cv_summary(fold_metrics, candidate, threshold_selection, preds, y_train):

@@ -98,7 +98,7 @@ Notes:
 - The React frontend defaults to `VITE_API_URL=http://localhost:8000`.
 - `FRONTEND_ORIGIN` defaults to `http://localhost:5173` for CORS with Django session cookies.
 - For deployment on `rwandoxy.com`, set `FRONTEND_ORIGIN=https://rwandoxy.com` and include `https://rwandoxy.com,https://www.rwandoxy.com` in `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`.
-- The development login bootstrap user is `anesthetist` / `munyanezajoel3@gmail.com` with password `Munyaneza@123`.
+- To create a local bootstrap admin, set `BOOTSTRAP_DEFAULT_ADMIN=1`, `DEFAULT_ADMIN_EMAIL`, and `DEFAULT_ADMIN_PASSWORD` in your private environment.
 - Local Wi-Fi QR access is for local testing only.
 - Users must be connected to the same Wi-Fi as the laptop running Django and Vite.
 - Do not use real patient identifiers or sensitive hospital data during local testing.

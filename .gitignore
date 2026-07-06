@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+.venv/
+
+# Node/Vite
+node_modules/
+Front_end/dist/
+backend/node_modules/
+
+# Local configuration and runtime data
+.env
+.env.*
+!.env.example
+!**/.env.example
+!*.env.example
+!*.env.production.example
+*.log
+*.sqlite3
+*.db
+uvicorn_stdout.txt
+uvicorn_stderr.txt
+lan_access_watcher.log
+
+# Uploaded/generated application artifacts
+backend/media/
+backend/models/
+backend/backups/
+backend/staticfiles/
+
+# Local scratch/backup files
+old_*.jsx
+older_*.jsx

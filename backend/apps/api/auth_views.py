@@ -1,13 +1,16 @@
+import os
+
 from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
 from django.contrib.auth.models import Group, User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.contrib.sessions.models import Session
 from django.http import HttpResponse, JsonResponse
 from django.utils.crypto import get_random_string
-from django.views.decorators.csrf import csrf_exempt
 
 from .audit import record_audit
-from .common import cors, json_body, require_login
+from .common import cors, csrf_exempt_trusted as csrf_exempt, json_body, require_login
 from .serializers import CLINICAL_ROLE_NAMES, user_payload
 from .models import SystemSetting
 from .hospitals import HOSPITALS_BY_ID
@@ -18,34 +21,63 @@ from .common import require_admin
 
 
 DEFAULT_USERNAME = "anesthetist"
-DEFAULT_EMAIL = "munyanezajoel3@gmail.com"
-DEFAULT_PASSWORD = "Munyaneza@123"
+DEFAULT_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL") or ""
+DEFAULT_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD") or ""
+BOOTSTRAP_DEFAULT_ADMIN = str(
+    os.getenv("BOOTSTRAP_DEFAULT_ADMIN", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
 FAST_LOGIN_PBKDF2_ITERATIONS = int(getattr(settings, "FAST_LOGIN_PBKDF2_ITERATIONS", 120000))
 VALID_PROFILE_ROLES = {*CLINICAL_ROLE_NAMES, "Administrator", "Superuser"}
 
 
 def ensure_default_user(identifier=None):
+    if not BOOTSTRAP_DEFAULT_ADMIN or not DEFAULT_EMAIL or not DEFAULT_PASSWORD:
+        return None
+
     normalized_identifier = str(identifier or "").strip().lower()
     if normalized_identifier not in {DEFAULT_USERNAME, DEFAULT_EMAIL}:
         return None
 
     existing_user = User.objects.filter(username=DEFAULT_USERNAME).only("id", "password").first()
     if existing_user:
-        if should_refresh_default_password(existing_user.password):
+        update_fields = []
+        if should_refresh_default_password(existing_user.password) or not existing_user.check_password(DEFAULT_PASSWORD):
             existing_user.set_password(DEFAULT_PASSWORD)
+            update_fields.append("password")
+        if existing_user.email != DEFAULT_EMAIL:
             existing_user.email = DEFAULT_EMAIL
+            update_fields.append("email")
+        if existing_user.first_name != "Anesthetist":
             existing_user.first_name = "Anesthetist"
+            update_fields.append("first_name")
+        if not existing_user.is_staff:
             existing_user.is_staff = True
+            update_fields.append("is_staff")
+        if not existing_user.is_superuser:
             existing_user.is_superuser = True
-            existing_user.save(update_fields=["password", "email", "first_name", "is_staff", "is_superuser"])
+            update_fields.append("is_superuser")
+        if not existing_user.is_active:
+            existing_user.is_active = True
+            update_fields.append("is_active")
+        if update_fields:
+            existing_user.save(update_fields=update_fields)
+        profile = ensure_user_profile(existing_user)
+        if profile.must_change_password:
+            profile.must_change_password = False
+            profile.save(update_fields=["must_change_password", "updated_at"])
         return existing_user
 
-    return User.objects.create_superuser(
+    user = User.objects.create_superuser(
         username=DEFAULT_USERNAME,
         email=DEFAULT_EMAIL,
         password=DEFAULT_PASSWORD,
         first_name="Anesthetist",
     )
+    profile = ensure_user_profile(user)
+    if profile.must_change_password:
+        profile.must_change_password = False
+        profile.save(update_fields=["must_change_password", "updated_at"])
+    return user
 
 
 def should_refresh_default_password(encoded_password):
@@ -125,8 +157,17 @@ def register_view(request):
     password = payload.get("password") or ""
     role = str(payload.get("role") or "").strip()
 
-    if not full_name or not email or not password:
-        return cors(JsonResponse({"error": "Name, email, and password are required."}, status=400))
+    if not full_name or not email:
+        return cors(JsonResponse({"error": "Name and email are required."}, status=400))
+
+    # Allow admin to omit password: generate a temporary password and return it.
+    requested_password = password or ""
+    if requested_password:
+        password_error = validate_password_response(requested_password)
+        if password_error:
+            return password_error
+    else:
+        requested_password = get_random_string(14)
     if role:
         if role not in VALID_PROFILE_ROLES:
             return cors(JsonResponse({"error": "Invalid user role."}, status=400))
@@ -144,11 +185,12 @@ def register_view(request):
         suffix += 1
         username = f"{base_username}{suffix}"
 
-    user = User.objects.create_user(username=username, email=email, password=password)
+    user = User.objects.create_user(username=username, email=email, password=requested_password)
     name_parts = full_name.split(maxsplit=1)
     user.first_name = name_parts[0]
     user.last_name = name_parts[1] if len(name_parts) > 1 else ""
     update_fields = ["first_name", "last_name"]
+    # Admin-created users should be active immediately.
     user.is_active = True
     update_fields.append("is_active")
     if role:
@@ -161,7 +203,7 @@ def register_view(request):
     profile.save(update_fields=["must_change_password", "updated_at"])
     sync_user_role_group(user, role or "Doctor")
     record_audit(request, "Registered user account", object_type="User", object_id=user.id)
-    return cors(JsonResponse({"user": user_payload(user)}, status=201))
+    return cors(JsonResponse({"user": user_payload(user), "temporary_password": requested_password}, status=201))
 
 
 @csrf_exempt
@@ -189,7 +231,8 @@ def logout_all_view(request):
 def current_user_view(request):
     if request.method == "OPTIONS":
         return cors(HttpResponse())
-    if not request.user.is_authenticated:
+    auth_error = require_login(request)
+    if auth_error:
         return cors(JsonResponse({"authenticated": False}, status=401))
     record_audit(request, "Viewed current profile", object_type="User", object_id=request.user.id)
     return cors(JsonResponse({"authenticated": True, "user": user_payload(request.user)}))
@@ -217,15 +260,19 @@ def change_password_view(request):
         return cors(JsonResponse({"error": "New password must be at least 8 characters."}, status=400))
     if current_password == new_password:
         return cors(JsonResponse({"error": "Choose a new password different from the temporary password."}, status=400))
+    password_error = validate_password_response(new_password, request.user)
+    if password_error:
+        return password_error
 
     request.user.set_password(new_password)
     request.user.save(update_fields=["password"])
     profile = ensure_user_profile(request.user)
     profile.must_change_password = False
     profile.save(update_fields=["must_change_password", "updated_at"])
-    login(request, request.user)
+    # End the session and instruct the client to redirect to the login portal
+    logout(request)
     record_audit(request, "Changed first-login password", object_type="User", object_id=request.user.id)
-    return cors(JsonResponse({"user": user_payload(request.user)}))
+    return cors(JsonResponse({"ok": True, "redirect": "/auth/login", "message": "Password changed; please sign in with your new password."}))
 
 
 @csrf_exempt
@@ -336,6 +383,10 @@ def admin_reset_user_password_view(request):
     requested_password = str(payload.get("password") or "").strip()
     if requested_password and len(requested_password) < 8:
         return cors(JsonResponse({"error": "Temporary password must be at least 8 characters."}, status=400))
+    if requested_password:
+        password_error = validate_password_response(requested_password, target_user)
+        if password_error:
+            return password_error
 
     temporary_password = requested_password or get_random_string(14)
     target_user.set_password(temporary_password)
@@ -410,6 +461,14 @@ def admin_delete_user_view(request):
     target_user.delete()
     record_audit(request, "Deleted user account", object_type="User", object_id=target_user_id)
     return cors(JsonResponse({"deleted": True, "user": deleted_user}))
+
+
+def validate_password_response(password, user=None):
+    try:
+        validate_password(password, user=user)
+    except ValidationError as exc:
+        return cors(JsonResponse({"error": " ".join(exc.messages)}, status=400))
+    return None
 
 
 @csrf_exempt

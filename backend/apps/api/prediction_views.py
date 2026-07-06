@@ -11,7 +11,6 @@ from django.db import DataError
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 import trainer
 from metric_benchmarks import enrich_metric_benchmarks
@@ -23,7 +22,7 @@ from apps.predictions.services import prediction_results_from_assets, run_predic
 from ml.model_loader import load_model_assets
 
 from .audit import record_audit
-from .common import bool_value, cors, float_value, int_or_none, int_value, json_body, require_login
+from .common import bool_value, cors, csrf_exempt_trusted as csrf_exempt, float_value, int_or_none, int_value, json_body, require_login
 from .models import ModelArtifact
 from .serializers import prediction_history_payload
 from .training_views import validate_uploaded_dataset_path

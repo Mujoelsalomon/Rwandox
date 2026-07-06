@@ -7,12 +7,11 @@ from django.core.files.storage import FileSystemStorage
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.utils.text import get_valid_filename
-from django.views.decorators.csrf import csrf_exempt
 
 import trainer
 
 from metric_benchmarks import enrich_metric_benchmarks
-from .common import cors, json_body, require_login, require_training_access
+from .common import cors, csrf_exempt_trusted as csrf_exempt, json_body, require_login, require_training_access
 from .models import ModelArtifact, TrainingJob
 
 

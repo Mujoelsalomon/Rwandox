@@ -2,10 +2,9 @@ from pathlib import Path
 import json
 
 from django.http import FileResponse, HttpResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
 from .audit import record_audit
-from .common import cors, json_body, require_admin, require_login, require_training_access
+from .common import cors, csrf_exempt_trusted as csrf_exempt, json_body, require_admin, require_login, require_training_access
 from .model_bootstrap import bootstrap_model_artifacts
 from .models import ModelArtifact
 from metric_benchmarks import enrich_metric_benchmarks
@@ -92,9 +91,9 @@ def models_activate_view(request):
     except (ModelArtifact.DoesNotExist, TypeError, ValueError):
         return cors(JsonResponse({"error": "model not found"}, status=404))
 
-    if not is_sigmoid_calibrated_artifact(artifact):
+    if not is_calibrated_artifact(artifact):
         return cors(JsonResponse({
-            "error": "Only sigmoid / Platt-calibrated model artifacts can be activated for predictions."
+            "error": "Only calibrated model artifacts can be activated for predictions."
         }, status=400))
 
     ModelArtifact.objects.update(is_active=False)
@@ -104,7 +103,7 @@ def models_activate_view(request):
     return cors(JsonResponse({"model": {"id": artifact.id, "name": artifact.name, "is_active": artifact.is_active}}))
 
 
-def is_sigmoid_calibrated_artifact(artifact):
+def is_calibrated_artifact(artifact):
     metadata_path = Path(f"{artifact.path}.meta.json")
     if not metadata_path.exists():
         return False
@@ -112,8 +111,20 @@ def is_sigmoid_calibrated_artifact(artifact):
         metadata = json.loads(metadata_path.read_text())
     except (OSError, json.JSONDecodeError):
         return False
-    method = metadata.get("calibration_method") or (metadata.get("calibration") or {}).get("method")
-    return str(method or "").strip().lower() == "sigmoid / platt scaling"
+    return has_calibration_metadata(metadata) or has_calibration_metadata(artifact.metrics)
+
+
+def has_calibration_metadata(metadata):
+    if not isinstance(metadata, dict):
+        return False
+    calibration = metadata.get("calibration") if isinstance(metadata.get("calibration"), dict) else {}
+    method = metadata.get("calibration_method") or calibration.get("method")
+    if str(method or "").strip():
+        return True
+    return any(
+        key in calibration
+        for key in ("brier_score", "mean_predicted_probability", "fraction_of_positives")
+    )
 
 
 def models_download_view(request):

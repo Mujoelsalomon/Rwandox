@@ -924,6 +924,8 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
   const [statusLoadingUserId, setStatusLoadingUserId] = useState(null)
   const [deletingUserId, setDeletingUserId] = useState(null)
   const [temporaryPassword, setTemporaryPassword] = useState(null)
+  const [resetTargetUser, setResetTargetUser] = useState(null)
+  const [resetPasswordInput, setResetPasswordInput] = useState('')
   const [actionError, setActionError] = useState('')
   const [registrationForm, setRegistrationForm] = useState({
     name: '',
@@ -994,8 +996,24 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
     }
   }
 
-  async function resetPassword(user) {
-    const password = window.prompt(`Enter a temporary password for ${user.name}. Leave blank to auto-generate one.`) || ''
+  function startResetPassword(user) {
+    setResetTargetUser(user)
+    setResetPasswordInput('')
+    setTemporaryPassword(null)
+    setActionError('')
+  }
+
+  function cancelResetPassword() {
+    setResetTargetUser(null)
+    setResetPasswordInput('')
+    setActionError('')
+  }
+
+  async function submitResetPassword(event) {
+    event.preventDefault()
+    if (!resetTargetUser) return
+
+    const password = resetPasswordInput.trim()
     if (password && password.length < 8) {
       setActionError('Temporary password must be at least 8 characters.')
       return
@@ -1003,19 +1021,25 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
 
     setTemporaryPassword(null)
     setActionError('')
-    setResettingUserId(user.id)
+    setResettingUserId(resetTargetUser.id)
     try {
-      const data = await onResetPassword(user.id, password)
+      const data = await onResetPassword(resetTargetUser.id, password)
       setTemporaryPassword({
-        userName: data.user?.name || user.name,
-        username: data.user?.username || user.username,
+        userName: data.user?.name || resetTargetUser.name,
+        username: data.user?.username || resetTargetUser.username,
         password: data.temporary_password,
       })
+      setResetTargetUser(null)
+      setResetPasswordInput('')
     } catch (error) {
       setActionError(error.message || 'Could not reset password.')
     } finally {
       setResettingUserId(null)
     }
+  }
+
+  function viewPassword(user) {
+    startResetPassword(user)
   }
 
   async function changeStatus(user) {
@@ -1147,6 +1171,43 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
         </form>
       )}
 
+      {resetTargetUser && (
+        <form onSubmit={submitResetPassword} className="border-b border-[#e5edf7] bg-[#f8fbff] px-4 py-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,320px)_auto] lg:items-end">
+            <div>
+              <p className="text-[14px] font-black text-[#071b49]">Reset password for {resetTargetUser.name}</p>
+              <p className="mt-1 text-[13px] font-semibold text-[#64799e]">
+                Enter a temporary password or leave blank to auto-generate one.
+              </p>
+            </div>
+            <RegistrationField
+              label="Temporary password"
+              type="password"
+              value={resetPasswordInput}
+              onChange={setResetPasswordInput}
+              placeholder="Blank auto-generates"
+              autoComplete="new-password"
+            />
+            <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+              <button
+                type="button"
+                onClick={cancelResetPassword}
+                className="btn btn-light fw-bold min-h-10 rounded-[10px] px-4 py-2 text-[#172a53]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resettingUserId === resetTargetUser.id}
+                className="btn btn-primary fw-bold min-h-10 rounded-[10px] px-4 py-2 text-white disabled:opacity-70"
+              >
+                {resettingUserId === resetTargetUser.id ? 'Resetting...' : 'Reset'}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
       {temporaryPassword && (
         <div className="border-b border-[#e5edf7] bg-[#ecfdf5] px-4 py-4 text-[14px] font-semibold text-[#14532d]">
           Temporary password for <strong>{temporaryPassword.userName}</strong>
@@ -1199,7 +1260,13 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-4 text-[14px] font-black tracking-[0.1em] text-[#53668a]">{user.password_display || '********'}</td>
+                <td className="px-4 py-4">
+                  <PasswordDisplay
+                    user={user}
+                    isLoading={resettingUserId === user.id}
+                    onView={viewPassword}
+                  />
+                </td>
                 <td className="px-4 py-4 text-[13px] font-semibold text-[#53668a]">{formatUserDate(user.last_login)}</td>
                 <td className="px-4 py-4">
                   <span className={`rounded-full px-3 py-2 text-[12px] font-black ${user.is_active ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
@@ -1232,7 +1299,7 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
                           type="button"
                           aria-label={`Reset ${user.name} password`}
                           disabled={resettingUserId === user.id}
-                          onClick={() => resetPassword(user)}
+                          onClick={() => startResetPassword(user)}
                           className="btn btn-outline-primary fw-bold min-h-10 rounded-full px-3 py-2 text-[13px] disabled:opacity-60"
                         >
                           {resettingUserId === user.id ? 'Resetting...' : 'Reset'}
@@ -1296,7 +1363,14 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
               )}
             </div>
             <div className="mt-3 grid gap-2 rounded-[10px] bg-white px-3 py-3 text-[13px] font-semibold text-[#53668a]">
-              <p>Password: <span className="font-black tracking-[0.1em]">{user.password_display || '********'}</span></p>
+              <div className="flex items-center justify-between gap-3">
+                <span>Password:</span>
+                <PasswordDisplay
+                  user={user}
+                  isLoading={resettingUserId === user.id}
+                  onView={viewPassword}
+                />
+              </div>
               <p>Status: <span className={user.is_active ? 'text-[#166534]' : 'text-[#991b1b]'}>{user.is_active ? 'Active' : 'Disabled'}</span></p>
               <p>Last login: {formatUserDate(user.last_login)}</p>
             </div>
@@ -1321,7 +1395,7 @@ function UsersTable({ users, loading, editingUserId, roleOptions, onRegister, on
                 <button
                   type="button"
                   disabled={resettingUserId === user.id}
-                  onClick={() => resetPassword(user)}
+                  onClick={() => startResetPassword(user)}
                   className="btn btn-outline-primary fw-bold min-h-10 rounded-full px-3 py-2 disabled:opacity-60"
                 >
                   {resettingUserId === user.id ? 'Resetting...' : 'Reset password'}
@@ -1389,6 +1463,30 @@ function RegistrationField({ label, value, onChange, type = 'text', placeholder 
   )
 }
 
+function PasswordDisplay({ user, isLoading, onView }) {
+  return (
+    <div className="inline-flex items-center gap-2">
+      <span className="text-[14px] font-black tracking-[0.1em] text-[#53668a]">
+        {user.password_display || '********'}
+      </span>
+      <button
+        type="button"
+        aria-label={`Reset ${user.name} password`}
+        title="Reset password"
+        disabled={isLoading}
+        onClick={() => onView(user)}
+        className="btn btn-light inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#f1f6fd] text-[#172a53] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isLoading ? (
+          <span className="text-[11px] font-black">...</span>
+        ) : (
+          <Icon name="key" className="h-4 w-4" />
+        )}
+      </button>
+    </div>
+  )
+}
+
 function RoleSelect({ value, roleOptions, onChange }) {
   return (
     <select
@@ -1443,6 +1541,13 @@ function Icon({ name, className = '' }) {
       <>
         <path d="M12 20h9" />
         <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+      </>
+    ),
+    key: (
+      <>
+        <circle cx="7.5" cy="15.5" r="4.5" />
+        <path d="m10.7 12.3 8-8" />
+        <path d="M15 8h4v4" />
       </>
     ),
     mail: (
