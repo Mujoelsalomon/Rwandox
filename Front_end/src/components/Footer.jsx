@@ -163,7 +163,7 @@ export default function Footer() {
               <span className="text-[14px] font-black sm:text-[15px]">About us</span>
             </button>
           </div>
-          <p className="justify-self-end text-[13px] font-bold text-[#365314] sm:text-[15px]">
+          <p className="justify-self-end text-[15px] font-bold text-[#365314] sm:text-[17px]">
             ML-powered risk assessment for postoperative oxygen needs
           </p>
         </div>

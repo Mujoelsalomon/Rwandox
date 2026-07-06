@@ -161,9 +161,14 @@ export default function DashboardContent({
     function handlePredictionHistoryUpdated(event) {
       const prediction = normalizeEventPrediction(event?.detail?.prediction)
       if (prediction) {
+        // Update in-memory predictions list using the incoming prediction
         setPredictions((current) => sortPredictionsByDate(upsertPrediction(current, prediction)))
+        // Do not force a full backend refresh here — update derived UI from the new prediction only.
+        // If the prediction indicates a different active model, trigger model refresh.
+        if (typeof onRefreshModel === 'function' && prediction.model_version && prediction.model_version !== (activeModel?.name || activeModel?.model_version)) {
+          onRefreshModel()
+        }
       }
-      refreshDashboard({ showLoading: true })
     }
 
     function handleModelRegistryUpdated() {
